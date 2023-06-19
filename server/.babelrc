@@ -1,0 +1,6 @@
+{
+  "ignore": ["node_modules","./node_modules","kowloon","./kowloon"],
+    "presets": [
+      "@babel/preset-env", "@babel/preset-react"
+    ]
+  }

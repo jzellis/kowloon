@@ -6,7 +6,7 @@ export default async function handler(req, res, next) {
 
   Kowloon.setUser(req.user || null);
   let page = req.query.page || 1;
-  if (Kowloon.user && Kowloon.user.username == req.params.username) {
+  if (Kowloon.user.actor && Kowloon.user.username == req.params.username) {
     let actor = `@${req.params.username}${Kowloon.settings.apDomain}`;
     let query = { to: actor };
     if (!req.query.mine) query["activity.actor"] = { $ne: actor };
@@ -14,11 +14,10 @@ export default async function handler(req, res, next) {
     console.log(query);
     let items = await Kowloon.getInboxItems(query, page);
     // items = items.map((i) => i.id);
-
     response = {
       "@context": "https://www.w3.org/ns/activitystreams",
       id: `${Kowloon.settings.domain}/${req.params.username}/inbox`,
-      name: `${Kowloon.user.actor.name}'s inbox`,
+      // name: `${Kowloon.user.actor.name}'s inbox`,
       type: "OrderedCollection",
       current: page,
       totalItems: items.length,

@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:ital,wght@0,400;0,700;1,400&family=Raleway:ital,wght@0,100;0,400;0,700;1,100;1,400;1,700&family=Roboto:ital,wght@0,400;0,700;1,400;1,700&family=Work+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap');
+
+@font-face {
+    font-family: "Railway Sans";
+    src: url("../public/fonts/Railway-PlyE.otf");
+  }
+
+  @font-face {
+    font-family: "Kabel Black";
+    src: url("../public/fonts/Kabel-Black.ttf");
+  }
+
+  html, body{
+    @apply bg-gray-50
+  }
+
+  * {
+    overscroll-behavior-y: contain;
+  }
+
+  .site-title{
+    font-family: "Railway Sans", sans-serif;
+  }
+
+  .postEditorModal, .profileEditorModal{
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 99999;
+    @apply bg-black bg-opacity-20
+  }
+  
+  .postEditorBox, .profileEditorBox{
+  
+    @apply bg-white mx-auto p-4 rounded-b-2xl max-h-fit;
+  }
+
+  .postEditor.Note .ql-editor{
+    @apply border-t-2
+  }
+  .postEditor.Note .ql-editor, .postEditor.Media .ql-editor,.postEditor.Link .ql-editor{
+    @apply h-48
+  }
+  
+  .postEditor.Note .ql-toolbar, .postEditor.Link .ql-toolbar, .postEditor.Media .ql-toolbar{
+    @apply hidden
+  }
+
+  
+  .postEditor.Article .ql-editor{
+    @apply h-96 max-h-fit
+  }
+
+  .post{
+    @apply mb-8 text-sm sm:text-base
+  }
+  
+  .post .title{
+
+    @apply font-baskerville text-xl mb-2 
+  }
+
+  /* .post.Note .body{
+    @apply font-roboto text-lg;
+  }
+
+  .post.Article .body{
+    @apply text-sm;
+  } */
+
+  .post .body{
+    @apply  text-sm font-light
+  }
+
+  .post.Note .body{
+    @apply font-normal text-base
+  }
+
+  .post .body p{
+    @apply leading-5 mb-5
+  }
+  .post .body a{
+    @apply link text-blue-500
+  }
+  
+  .post .body ul{
+    @apply list-disc list-inside
+  }
+  
+  .post .body ol{
+    @apply list-inside list-decimal
+  }

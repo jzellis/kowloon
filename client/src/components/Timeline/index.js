@@ -14,6 +14,7 @@ import { GrArticle, GrMultimedia } from "react-icons/gr";
 import { setPosts, setActors } from "../../store/ui";
 import Kowloon from "../../lib/Kowloon";
 import {
+  togglePostEditor,
   toggleShowRead,
   toggleShowNotes,
   toggleShowArticles,
@@ -37,6 +38,7 @@ export default function Timeline(props) {
   const showArticles = useSelector((state) => state.ui.showArticles);
   const showMedia = useSelector((state) => state.ui.showMedia);
   const showLinks = useSelector((state) => state.ui.showLinks);
+  const showPostEditor = useSelector((state) => state.ui.showPostEditor);
   const [loaded, setLoaded] = useState(false);
   const [showFilters, toggleFilters] = useState(false);
   const [timelineIsScrolled, setTimelineIsScrolled] = useState(false);
@@ -101,6 +103,12 @@ export default function Timeline(props) {
     <div className={`${props.className} timelineWrapper`}>
       <div className="text-right">
         <div className="join text-right">
+          <button
+            className="btn join-item btn-success"
+            onClick={() => dispatch(togglePostEditor())}
+          >
+            + New Post
+          </button>
           <button
             className="btn join-item"
             onClick={() => {

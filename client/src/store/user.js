@@ -13,6 +13,7 @@ export const userSlice = createSlice({
       // which detects changes to a "draft state" and produces a brand new
       // immutable state based off those changes
       state.user = action.payload;
+      localStorage.setItem("user", JSON.stringify(state.user));
     },
     changeUser: (state, action) => {
       // Redux Toolkit allows us to write "mutating" logic in reducers. It
@@ -21,6 +22,7 @@ export const userSlice = createSlice({
       // immutable state based off those changes
       const payload = action.payload;
       state.user = { ...state.user, payload };
+      localStorage.setItem("user", JSON.stringify(state.user));
     },
     addActor: (state, action) => {
       if (state.actors) state.actors[action.payload.id] = action.payload;

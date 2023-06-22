@@ -43,6 +43,8 @@ const Layout = ({ children }) => {
     return (
         <>
             <PostEditor />
+            
+
             <ProfileEditor />
             <main className="overflow-y-hidden h-screen">
 <div className="drawer min-h-screen">
@@ -57,11 +59,12 @@ const Layout = ({ children }) => {
                             </label>}
       </div> 
                         <div className="site-title uppercase flex-1 px-2 mx-2">{title}</div>
-      <div className="flex-none hidden lg:block">
+      <div className="flex-none block">
         <ul className="menu menu-horizontal">
                                 {/* Navbar menu content here */}
 
-          <li><a href="/login">Login</a></li>
+                                    {!user && (<li><a href="/login">Login</a></li>)}
+                                    {user && <a href="/profile"><img className="avatar h-12 rounded-full cursor-pointer hover:border-4" src={user && user.actor && user.actor.icon.url && user.actor.icon.url} /></a>}
         </ul>
       </div>
                     </div>
@@ -105,14 +108,15 @@ const Layout = ({ children }) => {
                                             <div className="collapse-content">
                                                 <ul className="h-48 overflow-y-scroll">
                                                     {c.items.map((f, j) => {
-                                                        if(actors[f])
-                                                        return (
+                                                        
+                                                        return ( actors && actors[f] ?
                                                             <li key={`circle-${i}-friend=${j}`} className="group text-sm rounded p-2 hover:font-bold cursor-pointer" title={actors[f].id}>
 
                                                                 <a href={`/${f}`}>
-                                                                    <img className="avatar w-8 rounded-full" src={actors[f].icon.url} /> {actors[f].name}
+                                                                    <img className="avatar w-8 rounded-full" src={actors[f].icon && actors[f].icon.url} /> {actors[f].name}
                                                                     </a>
                                                             </li>
+                                                            : ""
                                                         )
                                                     })
                                                     }    

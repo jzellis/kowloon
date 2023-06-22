@@ -7,14 +7,8 @@ export default async function handler(req, res, next) {
   Kowloon.setUser(req.user || undefined);
 
   if (Kowloon.user && Kowloon.user.username == req.params.username) {
-    const user = req.body;
-    user.isAdmin =
-      user.accessToken =
-      user.lastLogin =
-      user.created =
-      user.updated =
-      user._id =
-        false;
+    let user = req.body;
+    console.log("API user: ", user);
     response = await Kowloon.updateUser(user);
   }
 

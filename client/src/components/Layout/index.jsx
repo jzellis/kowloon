@@ -58,7 +58,7 @@ const Layout = ({ children }) => {
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="inline-block w-6 h-6 stroke-current"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
                             </label>}
       </div> 
-                        <div className="site-title uppercase flex-1 px-2 mx-2">{title}</div>
+                        <div className="site-title uppercase flex-1 px-2 mx-2 cursor-pointer"><a href="/">{title}</a></div>
       <div className="flex-none block">
         <ul className="menu menu-horizontal">
                                 {/* Navbar menu content here */}
@@ -90,7 +90,7 @@ const Layout = ({ children }) => {
                                             <div className="text-xs">({user.actor.id})</div>
                                             <div className="text-xs mb-4">{user.actor.location.name}</div>
                                             <div className="text-sm">{user.actor.summary}</div>
-                                            <div className="text-sm">{Object.values(user.actor.pronouns).slice(0,2).join("/")}</div>
+                                            <div className="text-sm">Pronouns: {Object.values(user.actor.pronouns).slice(0,2).join("/")}</div>
                                             </div>
 
                                         <div className="float-none clear-both w-full"></div>    

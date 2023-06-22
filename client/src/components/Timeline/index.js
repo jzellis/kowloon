@@ -118,7 +118,7 @@ export default function Timeline(props) {
               Kowloon.getUserTimeline();
             }}
           >
-            <BiRefresh /> Reload
+            <BiRefresh /> Refresh
           </button>
           <span
             className={`btn join-item  ${

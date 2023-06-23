@@ -251,7 +251,7 @@ export default function Post(props) {
       </div>
       <div className={`comments mt-4 ${!showReplies && "hidden"}`}>
         Comments ({post.replies ? post.replies.items.length : "0"})
-        <ul className="comments my-4 mx-8">
+        <ul className="comments my-4 lg:mx-8">
           {post.replies &&
             post.replies.items.map((comment, idx) => {
               return (
@@ -268,7 +268,9 @@ export default function Post(props) {
                     )}
                   </div>
                   <div className="flex-1">
-                    <div className="font-bold">{comment.actor.name}</div>
+                    <div className="font-bold">
+                      {comment.actor && comment.actor.name}
+                    </div>
                     <div
                       dangerouslySetInnerHTML={{ __html: comment.content }}
                     ></div>

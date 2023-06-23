@@ -17,8 +17,23 @@ export default async function handler(req, res, next) {
       : {
           actor: `@${req.params.username}${domain}`,
         };
-  if (req.query.replies) query.inReplyTo = { $exists: req.query.replies };
+  query.inReplyTo = req.query.replies
+    ? { $exists: req.query.replies }
+    : { $exists: false };
+  query.type = "Create";
+  console.log(query);
   let items = await Kowloon.getActivities(query, page);
+  await Promise.all(
+    items.map(async (i, idx) => {
+      await Promise.all(
+        i.object.replies.items.map(async (r, ridx) => {
+          let reply = await Kowloon.getObject(r);
+          reply.actor = await Kowloon.getActor(reply.actor);
+          i.object.replies.items[ridx] = reply;
+        })
+      );
+    })
+  );
 
   response = {
     "@context": "https://www.w3.org/ns/activitystreams",

@@ -4,7 +4,7 @@ import endpoints from '../../lib/endpoints';
 import Kowloon from '../../lib/Kowloon';
 // import { useRouter } from "next/router";
 import { useSelector, useDispatch } from "react-redux";
-import { setUser } from "../../store/user";
+import { setToken, setUser } from "../../store/user";
 
 
 export default function Handler() {
@@ -23,8 +23,7 @@ export default function Handler() {
     
         if (token && user) {
           
-          localStorage.setItem("token", token);
-          localStorage.setItem("user", JSON.stringify(user));
+          dispatch(setToken(token));
           dispatch(setUser(user));
           window.location.href = "/";
           // router.push("/");

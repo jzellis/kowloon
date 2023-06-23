@@ -49,35 +49,24 @@ export default function Timeline(props) {
   const toggleShowType = (e) => {};
 
   const loadTimeline = async () => {
-    let startTime = Date.now();
     await Kowloon.getUserTimeline();
     setTotalItems(posts.length);
-    let endTime = Date.now();
-    setRetrieveTime((endTime - startTime) / 1000);
-    console.log(retrieveTime);
     setLoaded(true);
   };
 
   useEffect(() => {
-    setLoaded(false);
-  }, [user]);
-
-  useEffect(() => {
-    if (loaded === false) loadTimeline();
+    if (user.actor) loadTimeline();
   }, [user]);
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
         dispatch(incrementTimelineCurrentPage(currentPage + 1));
-        console.log("Page:", currentPage);
         loadTimeline();
       }
     });
     observer.observe(bottom.current);
-  }, []);
 
-  useEffect(() => {
     timeline.current.addEventListener("scroll", (e) => {
       if (e.currentTarget.scrollTop > 100) {
         setTimelineIsScrolled(true);
@@ -86,13 +75,6 @@ export default function Timeline(props) {
       }
     });
   }, []);
-
-  // useEffect(() => {
-  //   if (timeline && timeline.current)
-  //     timeline.current.addEventListener("scroll", (e) => {
-  //       console.log(e.currentTarget.scrollTop);
-  //     });
-  // }, []);
 
   const scrollToTop = () => {
     timeline.current.scrollTop = 0;
@@ -223,15 +205,17 @@ export default function Timeline(props) {
         </button>
       </div>
       <ul
-        className="timeline mt-8 max-h-screen overflow-y-auto pb-96"
+        className={`timeline mt-8 max-h-screen ${
+          posts && posts.length > 0 && "overflow-y-auto pb-96"
+        }`}
         ref={timeline}
       >
-        {!posts ||
-          (posts.length === 0 && (
-            <div className="text-center text-lg">
-              <CgSpinner className="avatar animate-spin" /> Loading Timeline...
-            </div>
-          ))}
+        {!posts && (
+          <div className="text-center text-lg">
+            <CgSpinner className="avatar animate-spin" /> Loading Timeline...
+          </div>
+        )}
+        {posts && posts.length === 0 && <div>No posts found.</div>}
         {posts &&
           posts.length > 0 &&
           posts.map((activity, idx) => {

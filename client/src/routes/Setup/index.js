@@ -119,8 +119,8 @@ export default function Handler() {
   return (
     <>
       <h1 className="text-2xl font-thin mb-8">Setup Kowloon</h1>
-      <form>
-        <div className="mx-48 grid grid-cols-2 gap-48">
+      <form className="overflow-y-scroll h-auto">
+        <div className="mx-48 grid grid-cols-2 gap-48 overflow-y-scroll">
           <div>
             <h2 className="text-lg mb-8">Server Info</h2>
 

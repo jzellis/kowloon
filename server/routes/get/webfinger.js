@@ -9,7 +9,6 @@ export default async function handler(req, res, next) {
       Kowloon.settings.apDomain
     }`;
   }
-  console.log(resource);
   let response = await Kowloon.getActor(resource);
   let status = 200;
 

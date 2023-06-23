@@ -6,7 +6,11 @@ export default async function handler(req, res, next) {
 
   Kowloon.setUser(req.user || null);
   let page = req.query.page || 1;
-  if (Kowloon.user.actor && Kowloon.user.username == req.params.username) {
+  if (
+    Kowloon.user &&
+    Kowloon.user.actor &&
+    Kowloon.user.username == req.params.username
+  ) {
     let actor = `@${req.params.username}${Kowloon.settings.apDomain}`;
     let query = { to: actor, page };
     if (req.query.type) query.types = req.query.type;

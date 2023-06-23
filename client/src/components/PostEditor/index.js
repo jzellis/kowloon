@@ -10,6 +10,7 @@ import {
   setPosts,
   setActors,
 } from "../../store/ui";
+import Kowloon from "../../lib/Kowloon";
 
 const modules = {
   toolbar: [
@@ -30,8 +31,8 @@ const modules = {
 export default function PostEditor(props) {
   const dispatch = useDispatch();
   const showEditor = useSelector((state) => state.ui.postEditorOpen);
-  const [user, setUser] = useState();
-  const [actor, setActor] = useState();
+  const user = useSelector((state) => state.user.user);
+  const actor = useSelector((state) => state.user.user.actor);
   const [activityType, setActivityType] = useState("Create");
   const [postType, setPostType] = useState("Note");
   const [name, setName] = useState();
@@ -42,13 +43,18 @@ export default function PostEditor(props) {
   const [isPublic, setIsPublic] = useState(false);
   const [publicCanComment, setPublicCanComment] = useState(false);
   const [canComment, setCanComment] = useState([]);
-
   const [circles, setCircles] = useState([]);
+
   const [to, setTo] = useState([]);
   const [bto, setBto] = useState([]);
   const [cc, setCc] = useState([]);
   const [bcc, setBcc] = useState([]);
-  const [inReplyTo, setInReplyTo] = useState();
+  const [inReplyTo, setInReplyTo] = useState(undefined);
+
+  useEffect(() => {
+    if (user.actor) setCircles(user.actor.circles);
+    if (user.actor) setTo([user.actor.id]);
+  }, [user]);
 
   const updateContent = (e) => {
     setContent(e);
@@ -86,7 +92,7 @@ export default function PostEditor(props) {
             }
           : undefined,
       },
-      to,
+      to: [actor.id],
       bto,
       cc,
       bcc,
@@ -94,19 +100,13 @@ export default function PostEditor(props) {
       publicCanComment,
       whoCanComment: canComment && canComment,
     };
-    let addResponse = await fetch(actor.outbox, {
-      method: "POST",
-      headers: {
-        authorization: "Bearer " + localStorage.getItem("token"),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(activity),
+    let addResponse = await Kowloon.post({
+      url: user.actor.outbox,
+      body: activity,
     });
 
-    let data = await addResponse.json();
-    console.log(data);
     setName();
-    setContent();
+    setContent("");
     setPostType(user.prefs.defaultPostType);
     setIsPublic(user.prefs.defaultIsPublic);
     setPublicCanComment(user.prefs.defaultPublicCanComment);
@@ -114,64 +114,44 @@ export default function PostEditor(props) {
     setBto([]);
     setCc([]);
     setBcc([]);
-    setContent(localStorage.setItem("draft", ""));
+    localStorage.setItem("draft", "");
     dispatch(
-      showNotification({ type: "success", message: data.summary.actor })
+      showNotification({
+        type: "success",
+        message: addResponse.summary.actor,
+      })
     );
     dispatch(togglePostEditor());
-
     // reload the timeline
-
-    let timeline = actor.inbox;
-    let token = localStorage.getItem("token") || null;
-    if (token) {
-      let response = await fetch(timeline, {
-        headers: {
-          authorization: "Bearer " + token,
-        },
-      });
-      let collection = await response.json();
-      let allActors = {};
-      let actorList =
-        collection.items &&
-        Array.from(new Set(collection.items.map((a) => a.actor)));
-      await Promise.all(
-        actorList.map(async (a) => {
-          let ares = await fetch(a);
-          allActors[a] = await ares.json();
-        })
-      );
-      console.log(collection.items);
-      dispatch(setPosts(collection.items));
-      dispatch(setActors(allActors));
-    }
+    window.scrollTo(0, 0);
+    window.location.reload();
   };
 
-  useEffect(() => {
-    let user = JSON.parse(localStorage.getItem("user"));
-    setUser(user);
-    user && setActor(user.actor);
-    setContent(localStorage.getItem("draft"));
-    user && setIsPublic(user.prefs.defaultIsPublic || false);
-    user && setPublicCanComment(user.prefs.defaultPublicCanComment || false);
-    user && setCircles(user.actor.circles);
+  // useEffect(() => {
+  //   let user = JSON.parse(localStorage.getItem("user"));
+  //   setUser(user);
+  //   user && setActor(user.actor);
+  //   setContent(localStorage.getItem("draft"));
+  //   user && setIsPublic(user.prefs.defaultIsPublic || false);
+  //   user && setPublicCanComment(user.prefs.defaultPublicCanComment || false);
+  //   user && setCircles(user.actor.circles);
 
-    const getCircles = async () => {
-      if (actor) {
-        const token = localStorage.getItem("token");
-        const creq = await fetch(actor.id + "/c/", {
-          headers: {
-            authorization: "Bearer " + token,
-          },
-        });
-        let collection = await creq.json();
-        console.log(collection);
-        setCircles(collection.items);
-      }
-    };
+  //   const getCircles = async () => {
+  //     if (actor) {
+  //       const token = localStorage.getItem("token");
+  //       const creq = await fetch(actor.id + "/c/", {
+  //         headers: {
+  //           authorization: "Bearer " + token,
+  //         },
+  //       });
+  //       let collection = await creq.json();
+  //       console.log(collection);
+  //       setCircles(collection.items);
+  //     }
+  //   };
 
-    getCircles();
-  }, []);
+  //   getCircles();
+  // }, []);
 
   const linkPreview = async (e) => {
     const preview = await (

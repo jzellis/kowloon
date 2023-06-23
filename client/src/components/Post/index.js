@@ -14,10 +14,13 @@ import {
   FaBookmark,
   FaRegBookmark,
 } from "react-icons/fa";
+import Kowloon from "../../lib/Kowloon";
+import endpoints from "../../lib/endpoints";
 dayjs.extend(relativeTime);
-export default function Note(props) {
+export default function Post(props) {
   let { actor, className, activity } = props;
   const [showContent, toggleContent] = useState(false);
+  const [showImageModal, toggleImageModal] = useState(false);
   const [showReplies, toggleReplies] = useState(false);
   const user = useSelector((state) => state.user.user);
   const [post, setPost] = useState(activity.object);
@@ -44,15 +47,10 @@ export default function Note(props) {
       publicCanComment: false,
     };
 
-    let addResponse = await fetch(user.actor.outbox, {
-      method: "POST",
-      headers: {
-        authorization: "Bearer " + localStorage.getItem("token"),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(commentActivity),
+    let addResponse = await Kowloon.post({
+      url: user.actor.outbox,
+      body: commentActivity,
     });
-    let createdComment = await addResponse.json();
     commentActivity.object.content = commentActivity.object.source.content;
     commentActivity.object.actor = user.actor;
 
@@ -71,29 +69,13 @@ export default function Note(props) {
     e.preventDefault();
     const likeActivity = {
       type: "Like",
-      actor: user.actor,
+      actor: user.actor.id,
       target: post.id,
-      // object: {
-      //   type: "Note",
-      //   inReplyTo: post.id,
-      //   source: { content: commentBody },
-      //   published: Date.now(),
-      // },
-      // _kowloon: {
-      //   isPublic: activity.public,
-      //   canComment: true,
-      //   publicCanComment: activity.public,
-      // },
     };
-    console.log(likeActivity);
 
-    let likeResponse = await fetch(user.actor.outbox, {
-      method: "POST",
-      headers: {
-        authorization: "Bearer " + localStorage.getItem("token"),
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(likeActivity),
+    let likeResponse = await Kowloon.post({
+      url: user.actor.outbox,
+      body: likeActivity,
     });
     setPost((currentPost) => {
       return {
@@ -108,6 +90,21 @@ export default function Note(props) {
   };
   return (
     <>
+      <div
+        className={`post-image-modal cursor-pointer top-0 left-0 w-screen h-screen ${
+          showImageModal ? "absolute visible" : "relative hidden"
+        }`}
+        onClick={() => toggleImageModal(false)}
+      >
+        <div className="absolute w-full text-center mx-auto flex justify-center items-center">
+          <img
+            src={image}
+            className="absolute top-0 mx-auto h-screen z-[9999] opacity-100 "
+          />
+        </div>
+        <div className="absolute z-[9998] post-image-modal-overlay top-0 left-0 w-full h-full bg-black opacity-50"></div>
+      </div>
+
       {post.name && (
         <div className={`title ${post.url ? "hover:underline" : ""}`}>
           <a href={post.url}>{post.name}</a>
@@ -181,10 +178,14 @@ export default function Note(props) {
         </div>
       </div>
       {image && (
-        <div>
-          <a href={post.url && post.url}>
-            <img src={image} className="rounded-xl w-full" />
-          </a>
+        <div
+          title="Click to expand"
+          onClick={() => {
+            toggleImageModal(!showImageModal);
+            console.log("Open ");
+          }}
+        >
+          <img src={image} className="rounded-xl w-full cursor-pointer" />
         </div>
       )}
       {post.attachment && (

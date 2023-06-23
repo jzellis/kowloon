@@ -8,7 +8,6 @@ export default async function handler(req, res, next) {
 
   if (Kowloon.user && Kowloon.user.username == req.params.username) {
     let user = req.body;
-    console.log("API user: ", user);
     response = await Kowloon.updateUser(user);
   }
 

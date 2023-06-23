@@ -16,36 +16,9 @@ const Loader = ({children}) => {
 
 
   useEffect(() => {
+    Kowloon.loadSettings();
+    Kowloon.loadUser();
 
-    const doKowloonStuff = async () => {
-
-      await Kowloon.loadSettings();
-      await Kowloon.loadUser();
-
-    }
-
-    doKowloonStuff();
-    // const getSettings = async () => {
-    //   try {
-
-    //           const settings = await Kowloon.get(endpoints.root,{token: null});
-    //         dispatch(setSettings(settings));
-    //         console.log(settings)
-    //     document.title = settings.title;
-        
-    //       } catch (e) {
-    //           console.log(e)
-    //       }
-    // };
-
-    // const getUser = async () => {
-    //     let user = JSON.parse(localStorage.getItem("user"));
-    //     if (user) dispatch(setUser(user));
-
-    // };
-
-    // getSettings();
-    // getUser();
   }, []);
 
   return <>          {children}</>;

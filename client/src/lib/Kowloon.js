@@ -4,34 +4,36 @@
 import store from "../store";
 import endpoints from "./endpoints";
 import { setSettings } from "../store/settings";
-import { addActors, setUser } from "../store/user";
+import { addActors, setUser, setToken } from "../store/user";
 import { openDB, deleteDB, wrap, unwrap } from "idb";
-import { setPosts } from "../store/ui";
+import { setPosts, resetPosts } from "../store/ui";
 
 const kowloon = {
   db: null,
   actors: null,
   init: async function () {
-    this.db = await openDB("kowloon", 1, {
-      upgrade(db) {},
-    });
+    // this.db = await openDB("kowloon", 1, {
+    //   upgrade(db) {},
+    // });
   },
   get: async (url, options) => {
+    const state = store.getState();
     options = options || null;
     return await (
       await fetch(url, {
         headers: {
-          Authorization:
-            options && options.token ? `Bearer ${options.token}` : undefined,
+          Authorization: state.user.token
+            ? `Bearer ${state.user.token}`
+            : undefined,
           Accept: "application/activity+json",
         },
       })
     ).json();
   },
 
-  post: async ({ url, token, body }) => {
-    console.log("URL ", url);
-    console.log("Body ", body);
+  post: async ({ url, body }) => {
+    const state = store.getState();
+    let token = state.user.token;
     try {
       let response = await fetch(url, {
         method: "POST",
@@ -61,6 +63,8 @@ const kowloon = {
   loadUser: async function () {
     const user = JSON.parse(localStorage.getItem("user")) || null;
     if (user) store.dispatch(setUser(user));
+    const token = localStorage.getItem("token") || null;
+    if (token) store.dispatch(setToken(token));
   },
 
   loadActors: async function (actors) {
@@ -78,21 +82,20 @@ const kowloon = {
   },
 
   getUserTimeline: async function (page) {
+    console.log("Getting timeline...");
     page = page || 1;
     let state = store.getState();
-    if (state.user.user.actor) {
-      let url = `${endpoints.inbox(state.user.user.actor.id)}?${
+    let user = state.user.user;
+    if (user.actor) {
+      let url = `${endpoints.inbox(user.actor.id)}?${
         state.ui.showRead ? "read=" + state.ui.showRead : ""
       }&type=${state.ui.showNotes ? "Note&" : ""}${
         state.ui.showArticles ? "type=Article&" : ""
       }${state.ui.showMedia ? "type=Image&type=Audio&type=Video&" : ""}${
         state.ui.showLinks ? "type=Link&" : ""
-      }&page=${state.ui.timelineCurrentPage}`;
-      console.log(url);
+      }page=${state.ui.timelineCurrentPage}`;
       try {
-        let timeline = await this.get(url, {
-          token: localStorage.getItem("token"),
-        });
+        let timeline = await this.get(url);
         if (timeline && timeline.items) {
           store.dispatch(setPosts(timeline.items));
         }
@@ -100,6 +103,7 @@ const kowloon = {
         console.log(e);
       }
     }
+    return true;
   },
 };
 

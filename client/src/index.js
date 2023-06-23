@@ -5,28 +5,33 @@ import store from "./store";
 import "./index.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Home from "./routes/Home";
+import ErrorPage from "./routes/ErrorPage";
 import Login from "./routes/Login";
 import Setup from "./routes/Setup";
-import Profile from "./routes/Profile";
+import Actor from "./routes/Actor";
 import Layout from "./components/Layout";
 import Loader from "./components/Loader";
+import { loader } from "./routes/Actor";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Home />,
+    errorElement: <ErrorPage />,
   },
   {
     path: "login",
     element: <Login />,
   },
+
   {
     path: "setup",
     element: <Setup />,
   },
   {
-    path: "profile",
-    element: <Profile />,
+    path: "/:actor",
+    element: <Actor />,
+    loader: loader,
   },
 ]);
 

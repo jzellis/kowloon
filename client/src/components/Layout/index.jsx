@@ -46,7 +46,7 @@ const Layout = ({ children }) => {
             
 
             <ProfileEditor />
-            <main className="overflow-y-hidden h-screen">
+            <main className="">
 <div className="drawer min-h-screen">
   <input id="nav-drawer" type="checkbox" className="drawer-toggle" checked={drawerOpen} readOnly /> 
                 <div className="drawer-content flex flex-col">
@@ -106,7 +106,7 @@ const Layout = ({ children }) => {
                                                  <input type="checkbox" />
                                                 <div className="collapse-title">{c.name}</div>
                                             <div className="collapse-content">
-                                                <ul className="h-48 overflow-y-scroll">
+                                                <ul className="h-48 overflow-y-scroll bg-white rounded-lg">
                                                     {c.items.map((f, j) => {
                                                         
                                                         return ( actors && actors[f] ?

@@ -35,7 +35,7 @@ const router = createBrowserRouter([
     loader: loader,
   },
 ]);
-console.log(await Kowloon.login("jzellis", "***REMOVED***"));
+
 const root = ReactDOM.createRoot(document.getElementById("root"));
 root.render(
   <React.StrictMode>

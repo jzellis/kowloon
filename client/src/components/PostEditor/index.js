@@ -31,8 +31,8 @@ const modules = {
 export default function PostEditor(props) {
   const dispatch = useDispatch();
   const showEditor = useSelector((state) => state.ui.postEditorOpen);
-  const user = useSelector((state) => state.user.user);
-  const actor = useSelector((state) => state.user.user.actor);
+  const user = useSelector((state) => state.user);
+  const actor = useSelector((state) => state.user.actor);
   const [activityType, setActivityType] = useState("Create");
   const [postType, setPostType] = useState("Note");
   const [name, setName] = useState();
@@ -166,6 +166,9 @@ export default function PostEditor(props) {
 
   return (
     <div
+      data-te-animation-init
+      data-te-animation-reset="true"
+      data-te-animation="[slide-right_1s_ease-in-out]"
       className={`postEditorModal ${showEditor === false && "hidden"}`}
       onClick={() => dispatch(togglePostEditor)}
     >

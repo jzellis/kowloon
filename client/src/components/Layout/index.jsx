@@ -4,17 +4,18 @@
 /* eslint-disable no-unused-vars */
 import { useSelector, useDispatch } from "react-redux";
 import { addActor } from "../../store/user";
-import { togglePostEditor, toggleProfileEditor } from "../../store/ui";
+import { togglePostEditor, toggleProfileEditor, toggleLogin } from "../../store/ui";
 import { useEffect, useState } from "react";
 import {FiEdit2} from "react-icons/fi"
-import endpoints from "../../lib/endpoints";
 import Kowloon from "../../lib/Kowloon";
 import PostEditor from "../PostEditor";
 import ProfileEditor from "../ProfileEditor";
+import Login from "../Login";
 const Layout = ({ children }) => {
     const dispatch = useDispatch();
-    const title = useSelector((state) => state.settings.settings.title);
-    const user = useSelector((state) => state.user.user);
+    const title = useSelector((state) => state.settings.title);
+    // const user = useSelector((state) => state.user);
+    const user = Kowloon.user;
     let actors = useSelector((state) => state.user.actors);
     const [drawerOpen, toggleDrawerOpen] = useState(false);
     const users = [];
@@ -24,7 +25,7 @@ const Layout = ({ children }) => {
     useEffect(() => {
         
         const getFriends = async () => {
-            if (user.actor) {
+            if (user && user.actor) {
                 let cached = {};
                 user.actor.circles.forEach(c => {
                         c.items.forEach(i => cached[i] = {})
@@ -33,7 +34,7 @@ const Layout = ({ children }) => {
                         // })
     
                 })
-                await Kowloon.loadActors(cached);
+                // await Kowloon.loadActors(cached);
             }
         }
         
@@ -42,6 +43,7 @@ const Layout = ({ children }) => {
 
     return (
         <>
+            {/* <Login /> */}
             <PostEditor />
             
 
@@ -64,14 +66,14 @@ const Layout = ({ children }) => {
                                 {/* Navbar menu content here */}
 
                                     {!user && (<li><a href="/login">Login</a></li>)}
-                                    {user && <a href="/profile"><img className="avatar h-12 rounded-full cursor-pointer hover:border-4" src={user && user.actor && user.actor.icon.url && user.actor.icon.url} /></a>}
+                                    {user && <div className="cursor-pointer" onClick={() => Kowloon.logout()}>Logout</div>}
         </ul>
       </div>
                     </div>
     {/* Page content here */}
     {children}
   </div> 
-  <div className="drawer-side">
+  <div className="drawer-side  lg:drawer-open">
     <label htmlFor="nav-drawer" className="drawer-overlay" onClick={() => toggleDrawerOpen(false)}></label> 
     <ul className="p-4 w-full lg:w-1/4 bg-base-200 min-h-screen">
                         {/* Sidebar content here */}

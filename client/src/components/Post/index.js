@@ -22,8 +22,9 @@ export default function Post(props) {
   const [showContent, toggleContent] = useState(false);
   const [showImageModal, toggleImageModal] = useState(false);
   const [showReplies, toggleReplies] = useState(false);
-  const user = useSelector((state) => state.user.user);
+  const user = useSelector((state) => state.user);
   const [post, setPost] = useState(activity.object);
+  if (actor) post.actor = actor;
   const [image, setImage] = useState(
     activity.object.image ? activity.object.image.url : ""
   );
@@ -110,12 +111,7 @@ export default function Post(props) {
           <a href={post.url}>{post.name}</a>
         </div>
       )}
-      <div
-        className={`mb-4 flex rounded p-2 
-        
-
-        `}
-      >
+      <div className={`mb-4 flex rounded p-2 `}>
         <div className="flex-none">
           {post.actor && post.actor.icon && (
             <a href={post.actor.id}>
@@ -153,7 +149,11 @@ export default function Post(props) {
           </div>
 
           <div className=" text-sm date mr-2">
-            <a href={`${post.id}`} className="hover:link">
+            <a
+              href={`${post.id}`}
+              className="hover:link"
+              title={dayjs(published).format("MMM DD, YYYY hh:mma")}
+            >
               {dayjs(published).fromNow()}
             </a>
           </div>
@@ -182,7 +182,6 @@ export default function Post(props) {
           title="Click to expand"
           onClick={() => {
             toggleImageModal(!showImageModal);
-            console.log("Open ");
           }}
         >
           <img src={image} className="rounded-xl w-full cursor-pointer" />
@@ -205,17 +204,21 @@ export default function Post(props) {
           <a href={post.url}>{post.url}</a>
         </div>
       )}
-      <div
-        className={`mt-4 tooltip`}
-        data-tip="Click to expand"
-        onClick={(e) => toggleContent(!showContent)}
-      >
+      <div className={`mt-4 tooltip`} data-tip="Click to expand">
         <div
           className={`body text-left ${
-            showContent === false && "line-clamp-6"
+            showContent === false && "line-clamp-[12]"
           }`}
           dangerouslySetInnerHTML={{ __html: post.content }}
         />
+        <div
+          className={`text-right text-xs cursor-pointer pt-4 hover:underline ${
+            post.content.length < 600 && "hidden"
+          }`}
+          onClick={(e) => toggleContent(!showContent)}
+        >
+          Show {showContent ? "Less" : "More"}
+        </div>
       </div>
       <div className="actions flex w-4/5 mx-auto justify-items-stretch text-center mt-2 text-gray-500 text-sm">
         <div

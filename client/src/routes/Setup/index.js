@@ -31,7 +31,7 @@ export default function Handler() {
     },
   };
 
-  const settings = useSelector((state) => state.settings.settings);
+  const settings = useSelector((state) => state.settings);
   const [title, setTitle] = useState(settings.title);
   const [domain, setDomain] = useState(settings.domain);
   const [fDomain, setFdomain] = useState(settings.apDomain);

@@ -26,8 +26,8 @@ import {
 } from "../../store/ui";
 
 export default function Timeline(props) {
-  const settings = useSelector((state) => state.settings.settings);
-  const user = useSelector((state) => state.user.user);
+  const settings = useSelector((state) => state.settings);
+  const user = useSelector((state) => state.user);
   const posts = useSelector((state) => state.ui.posts);
   const actors = useSelector((state) => state.user.actors);
   const [totalItems, setTotalItems] = useState(posts.length);
@@ -102,19 +102,19 @@ export default function Timeline(props) {
           >
             <BiRefresh /> Refresh
           </button>
-          <span
+          <button
             className={`btn join-item  ${
               showFilters === true
                 ? "bg-gray-200 rounded-t-lg rounded-b-none"
                 : "rounded-lg"
-            } font-bold uppercase mb-0 cursor-pointer`}
+            } font-bold uppercase mb-0 cursor-pointer collapse-arrow`}
             onClick={() => toggleFilters(!showFilters)}
           >
             <IconContext.Provider value={{ color: "#000" }}>
               <BsFilterRight className="avatar mr-2" />
             </IconContext.Provider>
             View Filters
-          </span>
+          </button>
         </div>
         <div
           className={`timelineControls ${
@@ -229,13 +229,9 @@ export default function Timeline(props) {
                   (activity.object.type === "Link" && !showLinks)
                     ? "hidden"
                     : "visible"
-                } bg-white shadow-lg rounded-lg p-8`}
+                } bg-white p-8`}
               >
-                <Post
-                  activity={activity}
-                  className={activity.object.type}
-                  actor={actors[activity.object.actor]}
-                />
+                <Post activity={activity} className={activity.object.type} />
               </li>
             );
           })}

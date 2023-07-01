@@ -6,12 +6,13 @@ import "./index.css";
 import { createBrowserRouter, RouterProvider } from "react-router-dom";
 import Home from "./routes/Home";
 import ErrorPage from "./routes/ErrorPage";
-import Login from "./routes/Login";
+import Login from "./components/Login";
 import Setup from "./routes/Setup";
 import Actor from "./routes/Actor";
 import Layout from "./components/Layout";
 import Loader from "./components/Loader";
 import { loader } from "./routes/Actor";
+import Kowloon from "./lib/Kowloon";
 
 const router = createBrowserRouter([
   {
@@ -34,9 +35,8 @@ const router = createBrowserRouter([
     loader: loader,
   },
 ]);
-
+console.log(await Kowloon.login("jzellis", "***REMOVED***"));
 const root = ReactDOM.createRoot(document.getElementById("root"));
-
 root.render(
   <React.StrictMode>
     <Provider store={store}>

@@ -32,6 +32,7 @@ export const uiSlice = createSlice({
     toggleShowLinks: (state) => {
       state.showLinks = !state.showLinks;
     },
+
     togglePostEditor: (state) => {
       state.postEditorOpen = !state.postEditorOpen;
     },

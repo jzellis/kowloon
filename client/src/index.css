@@ -14,8 +14,12 @@
     src: url("../public/fonts/Kabel-Black.ttf");
   }
 
+  @font-face {
+    font-family: "Type Wrong";
+    src: url("../public/fonts/typwrng.ttf");
+  }
   html, body{
-    @apply bg-gray-50
+    @apply bg-white h-screen overflow-y-hidden
   }
 
   * {
@@ -23,10 +27,10 @@
   }
 
   .site-title{
-    font-family: "Railway Sans", sans-serif;
+    font-family: "Type Wrong", sans-serif;
   }
 
-  .postEditorModal, .profileEditorModal{
+  .postEditorModal, .profileEditorModal, .loginModal{
     position: absolute;
     top: 0;
     left: 0;
@@ -36,7 +40,7 @@
     @apply bg-black bg-opacity-20
   }
   
-  .postEditorBox, .profileEditorBox{
+  .postEditorBox, .profileEditorBox, .loginBox{
   
     @apply bg-white mx-auto p-4 rounded-b-2xl max-h-fit;
   }
@@ -58,24 +62,48 @@
   }
 
   .post{
-    @apply mb-8 text-sm sm:text-base
+    @apply mb-8 text-sm sm:text-base shadow-xl border border-gray-200 rounded-lg
   }
   
   .post .title{
-
-    @apply font-baskerville text-xl mb-2 
+    font-family: "Type Wrong", sans-serif;
+    @apply mb-2 
   }
 
-  /* .post.Note .body{
-    @apply font-roboto text-lg;
+   .post.Note {
+    @apply my-20 bg-slate-50;
   }
-
-  .post.Article .body{
-    @apply text-sm;
-  } */
 
   .post .body{
-    @apply  text-sm font-light
+    @apply font-light
+  }
+
+  .post .body *{
+    @apply max-w-xs lg:max-w-full
+  }
+
+  .post .body blockquote{
+   @apply mx-8 italic;
+  }
+
+  .post .body blockquote i{
+    @apply not-italic
+  }
+
+  pre {
+    white-space: pre-wrap;       /* css-3 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word;       /* Internet Explorer 5.5+ */
+   }
+
+  .post .body img{
+    @apply lg:max-w-sm sm:max-w-xs
+  }
+
+  .post .body iframe{
+    @apply hidden
   }
 
   .post.Note .body{
@@ -83,7 +111,7 @@
   }
 
   .post .body p{
-    @apply leading-5 mb-5
+    @apply leading-5 mb-7
   }
   .post .body a{
     @apply link text-blue-500

@@ -16,8 +16,7 @@ const Loader = ({children}) => {
 
 
   useEffect(() => {
-    Kowloon.loadSettings();
-    Kowloon.loadUser();
+    console.log(Kowloon);
 
   }, []);
 

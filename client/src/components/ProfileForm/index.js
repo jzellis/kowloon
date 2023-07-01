@@ -8,7 +8,7 @@ import Kowloon from "../../lib/Kowloon";
 import { setUser } from "../../store/user";
 
 export default function ProfileEditor(props) {
-  const user = useSelector((state) => state.user.user);
+  const user = useSelector((state) => state.user);
   const [username, setUsername] = useState(
     user && user.username ? user.username : null
   );

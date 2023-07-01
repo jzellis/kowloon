@@ -6,7 +6,7 @@ import { toggleProfileEditor } from "../../store/ui";
 import ProfileForm from "../ProfileForm";
 
 export default function ProfileEditor(props) {
-  const user = useSelector((state) => state.user.user);
+  const user = useSelector((state) => state.user);
   const showEditor = useSelector((state) => state.ui.profileEditorOpen);
 
   return (

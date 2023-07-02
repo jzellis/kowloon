@@ -12,7 +12,7 @@ app.use(cors());
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
+app.use(express.static("../client/dist/"));
 app.use(async (req, res, next) => {
   // res.header("Access-Control-Allow-Credentials", true);
   // res.header("Access-Control-Allow-Origin", "*");
@@ -38,6 +38,7 @@ app.use(express.urlencoded({ extended: true, limit: "100mb" }));
 app.use(cookieParser());
 // app.use(express.static("public"));
 app.use(routes);
+
 // app.use(nocache());
 app.set("json spaces", 2);
 

@@ -1,126 +1,69 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
 
-@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:ital,wght@0,400;0,700;1,400&family=Raleway:ital,wght@0,100;0,400;0,700;1,100;1,400;1,700&family=Roboto:ital,wght@0,400;0,700;1,400;1,700&family=Work+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap');
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
 
-@font-face {
-    font-family: "Railway Sans";
-    src: url("../public/fonts/Railway-PlyE.otf");
-  }
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
 
-  @font-face {
-    font-family: "Kabel Black";
-    src: url("../public/fonts/Kabel-Black.ttf");
-  }
+a {
+  font-weight: 500;
+  color: #646cff;
+  text-decoration: inherit;
+}
+a:hover {
+  color: #535bf2;
+}
 
-  @font-face {
-    font-family: "Type Wrong";
-    src: url("../public/fonts/typwrng.ttf");
-  }
-  html, body{
-    @apply bg-white h-screen overflow-y-hidden
-  }
+body {
+  margin: 0;
+  display: flex;
+  place-items: center;
+  min-width: 320px;
+  min-height: 100vh;
+}
 
-  * {
-    overscroll-behavior-y: contain;
-  }
+h1 {
+  font-size: 3.2em;
+  line-height: 1.1;
+}
 
-  .site-title{
-    font-family: "Type Wrong", sans-serif;
-  }
+button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #1a1a1a;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+button:hover {
+  border-color: #646cff;
+}
+button:focus,
+button:focus-visible {
+  outline: 4px auto -webkit-focus-ring-color;
+}
 
-  .postEditorModal, .profileEditorModal, .loginModal{
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 99999;
-    @apply bg-black bg-opacity-20
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
   }
-  
-  .postEditorBox, .profileEditorBox, .loginBox{
-  
-    @apply bg-white mx-auto p-4 rounded-b-2xl max-h-fit;
+  a:hover {
+    color: #747bff;
   }
-
-  .postEditor.Note .ql-editor{
-    @apply border-t-2
+  button {
+    background-color: #f9f9f9;
   }
-  .postEditor.Note .ql-editor, .postEditor.Media .ql-editor,.postEditor.Link .ql-editor{
-    @apply h-48
-  }
-  
-  .postEditor.Note .ql-toolbar, .postEditor.Link .ql-toolbar, .postEditor.Media .ql-toolbar{
-    @apply hidden
-  }
-
-  
-  .postEditor.Article .ql-editor{
-    @apply h-96 max-h-fit
-  }
-
-  .post{
-    @apply mb-8 text-sm sm:text-base shadow-xl border border-gray-200 rounded-lg
-  }
-  
-  .post .title{
-    font-family: "Type Wrong", sans-serif;
-    @apply mb-2 
-  }
-
-   .post.Note {
-    @apply my-20 bg-slate-50;
-  }
-
-  .post .body{
-    @apply font-light
-  }
-
-  .post .body *{
-    @apply max-w-xs lg:max-w-full
-  }
-
-  .post .body blockquote{
-   @apply mx-8 italic;
-  }
-
-  .post .body blockquote i{
-    @apply not-italic
-  }
-
-  pre {
-    white-space: pre-wrap;       /* css-3 */
-    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
-    white-space: -pre-wrap;      /* Opera 4-6 */
-    white-space: -o-pre-wrap;    /* Opera 7 */
-    word-wrap: break-word;       /* Internet Explorer 5.5+ */
-   }
-
-  .post .body img{
-    @apply lg:max-w-sm sm:max-w-xs
-  }
-
-  .post .body iframe{
-    @apply hidden
-  }
-
-  .post.Note .body{
-    @apply font-normal text-base
-  }
-
-  .post .body p{
-    @apply leading-5 mb-7
-  }
-  .post .body a{
-    @apply link text-blue-500
-  }
-  
-  .post .body ul{
-    @apply list-disc list-inside
-  }
-  
-  .post .body ol{
-    @apply list-inside list-decimal
-  }
+}

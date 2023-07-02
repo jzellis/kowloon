@@ -12,7 +12,7 @@ module.exports = {
     {
       name: "kowloon-client",
       cwd: "./client",
-      script: "npm start",
+      script: "npm run dev",
       env: {
         NODE_ENV: "production",
       },

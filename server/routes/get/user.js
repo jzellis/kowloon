@@ -7,6 +7,10 @@ export default async function handler(req, res, next) {
     Kowloon.user && user.id == Kowloon.user.id
       ? user.actor
       : Kowloon.sanitize(user.actor);
+  response = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    ...response,
+  };
   let status = 200;
 
   res.status(status).json(response);

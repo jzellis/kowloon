@@ -29,6 +29,8 @@ import adminPostRoute from "./post/admin.js";
 import apiUserRoute from "./post/api/user.js";
 import apiSetupRoute from "./post/api/setup.js";
 
+const staticPage = await fs.readFile("./../client/dist/index.html", "utf-8");
+
 const routes = {
   get: {
     "/": rootGetRoute,
@@ -74,14 +76,25 @@ router.use(async (req, res, next) => {
   let user = token ? await Kowloon.auth(token) : undefined;
   req.user = user || undefined;
 
+  if (req.headers.accept.includes("application/ld+json")) {
+    for (const [url, route] of Object.entries(routes.get)) {
+      router.get(url, route);
+    }
+    for (const [url, route] of Object.entries(routes.post)) {
+      router.post(url, route);
+    }
+  } else {
+    res.send(staticPage);
+  }
+
   next();
 });
 
-for (const [url, route] of Object.entries(routes.get)) {
-  router.get(url, route);
-}
-for (const [url, route] of Object.entries(routes.post)) {
-  router.post(url, route);
-}
+// for (const [url, route] of Object.entries(routes.get)) {
+//   router.get(url, route);
+// }
+// for (const [url, route] of Object.entries(routes.post)) {
+//   router.post(url, route);
+// }
 
 export default router;

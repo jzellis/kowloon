@@ -1,0 +1,126 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Montserrat:ital,wght@0,400;0,700;1,400&family=Raleway:ital,wght@0,100;0,400;0,700;1,100;1,400;1,700&family=Roboto:ital,wght@0,400;0,700;1,400;1,700&family=Work+Sans:ital,wght@0,300;0,400;0,700;1,300;1,400;1,700&display=swap');
+
+@font-face {
+    font-family: "Railway Sans";
+    src: url("../public/fonts/Railway-PlyE.otf");
+  }
+
+  @font-face {
+    font-family: "Kabel Black";
+    src: url("../public/fonts/Kabel-Black.ttf");
+  }
+
+  @font-face {
+    font-family: "Type Wrong";
+    src: url("../public/fonts/typwrng.ttf");
+  }
+  html, body{
+    @apply bg-white h-screen overflow-y-hidden
+  }
+
+  * {
+    overscroll-behavior-y: contain;
+  }
+
+  .site-title{
+    font-family: "Type Wrong", sans-serif;
+  }
+
+  .postEditorModal, .profileEditorModal, .loginModal{
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 99999;
+    @apply bg-black bg-opacity-20
+  }
+  
+  .postEditorBox, .profileEditorBox, .loginBox{
+  
+    @apply bg-white mx-auto p-4 rounded-b-2xl max-h-fit;
+  }
+
+  .postEditor.Note .ql-editor{
+    @apply border-t-2
+  }
+  .postEditor.Note .ql-editor, .postEditor.Media .ql-editor,.postEditor.Link .ql-editor{
+    @apply h-48
+  }
+  
+  .postEditor.Note .ql-toolbar, .postEditor.Link .ql-toolbar, .postEditor.Media .ql-toolbar{
+    @apply hidden
+  }
+
+  
+  .postEditor.Article .ql-editor{
+    @apply h-96 max-h-fit
+  }
+
+  .post{
+    @apply mb-8 text-sm sm:text-base shadow-xl border border-gray-200 rounded-lg
+  }
+  
+  .post .title{
+    font-family: "Type Wrong", sans-serif;
+    @apply mb-2 
+  }
+
+   .post.Note {
+    @apply my-20 bg-slate-50;
+  }
+
+  .post .body{
+    @apply font-light
+  }
+
+  .post .body *{
+    @apply max-w-xs lg:max-w-full
+  }
+
+  .post .body blockquote{
+   @apply mx-8 italic;
+  }
+
+  .post .body blockquote i{
+    @apply not-italic
+  }
+
+  pre {
+    white-space: pre-wrap;       /* css-3 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word;       /* Internet Explorer 5.5+ */
+   }
+
+  .post .body img{
+    @apply lg:max-w-sm sm:max-w-xs
+  }
+
+  .post .body iframe{
+    @apply hidden
+  }
+
+  .post.Note .body{
+    @apply font-normal text-base
+  }
+
+  .post .body p{
+    @apply leading-5 mb-7
+  }
+  .post .body a{
+    @apply link text-blue-500
+  }
+  
+  .post .body ul{
+    @apply list-disc list-inside
+  }
+  
+  .post .body ol{
+    @apply list-inside list-decimal
+  }

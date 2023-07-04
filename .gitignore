@@ -1,3 +1,6 @@
 node_modules
 build
 client_old
+server/node_modules
+client/node_modules
+

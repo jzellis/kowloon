@@ -14,7 +14,7 @@ export const uiSlice = createSlice({
     showArticles: true,
     showMedia: true,
     showLinks: true,
-    timelineCurrentPage: 1,
+    currentPage: 1,
   },
   reducers: {
     toggleShowRead: (state) => {
@@ -59,11 +59,11 @@ export const uiSlice = createSlice({
     setActors: (state, action) => {
       state.actors = action.payload;
     },
-    incrementTimelineCurrentPage: (state, action) => {
-      state.timelineCurrentPage = state.timelineCurrentPage + 1;
+    incrementCurrentPage: (state, action) => {
+      state.currentPage = state.currentPage + 1;
     },
-    resetTimelineCurrentPage: (state, action) => {
-      state.timelineCurrentPage = 1;
+    resetcurrentPage: (state, action) => {
+      state.currentPage = 1;
     },
   },
 });
@@ -81,8 +81,8 @@ export const {
   hideNotification,
   setPosts,
   setActors,
-  incrementTimelineCurrentPage,
-  resetTimelineCurrentPage,
+  incrementCurrentPage,
+  resetcurrentPage,
   resetPosts,
 } = uiSlice.actions;
 

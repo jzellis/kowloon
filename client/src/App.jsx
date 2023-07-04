@@ -1,36 +1,61 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+/* eslint-disable no-unused-vars */
+import { useEffect, useState } from 'react'
 import './App.css'
+import Layout from './components/Layout';
+import Kowloon from './lib/Kowloon';
+import store from './store';
+import { Provider, useSelector, useDispatch } from "react-redux";
+import { createBrowserRouter, RouterProvider } from "react-router-dom";
+
+const pages = import.meta.glob("./pages/**/*.jsx", { eager: true });
+
+
+const routes = [];
+for (const path of Object.keys(pages)) {
+  const fileName = path.match(/\.\/pages\/(.*)\.jsx$/)?.[1];
+  if (!fileName) {
+    continue;
+  }
+
+  const normalizedPathName = fileName.includes("$")
+    ? fileName.replace("$", ":")
+    : fileName.replace(/\/index/, "");
+
+  routes.push({
+    path: fileName === "index" ? "/" : `/${normalizedPathName.toLowerCase()}`,
+    Element: pages[path].default,
+    loader: pages[path]?.loader,
+    action: pages[path]?.action,
+    ErrorBoundary: pages[path]?.ErrorBoundary,
+  });
+}
+
+const router = createBrowserRouter(
+  routes.map(({ Element, ErrorBoundary, ...rest }) => ({
+    ...rest,
+    element: <Layout><Element /></Layout>,
+    ...(ErrorBoundary && { errorElement: <ErrorBoundary /> }),
+  }))
+);
 
 function App() {
-  const [count, setCount] = useState(0)
+  
+  useEffect(() => {
+   
+    if (document.title !== Kowloon.settings.title) document.title = Kowloon.settings.title;
+
+
+ },[])
 
   return (
-    <>
-      <div>
-        <a href="https://vitejs.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <Provider store={store}>
+    <div className='app'>
+        <RouterProvider router={router}>
+      </RouterProvider>
+
       </div>
-      <h1>Vite + React</h1>
-      hi
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.jsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+      </Provider>
+      );
 }
 
 export default App

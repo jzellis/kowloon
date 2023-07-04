@@ -20,8 +20,8 @@ import {
   toggleShowArticles,
   toggleShowMedia,
   toggleShowLinks,
-  incrementTimelineCurrentPage,
-  resetTimelineCurrentPage,
+  incrementCurrentPage,
+  resetcurrentPage,
   resetPosts,
 } from "../../store/ui";
 
@@ -31,7 +31,7 @@ export default function Timeline(props) {
   const posts = useSelector((state) => state.ui.posts);
   const actors = useSelector((state) => state.user.actors);
   const [totalItems, setTotalItems] = useState(posts.length);
-  const currentPage = useSelector((state) => state.ui.timelineCurrentPage);
+  const currentPage = useSelector((state) => state.ui.currentPage);
   const [retrieveTime, setRetrieveTime] = useState(0);
   const showRead = useSelector((state) => state.ui.showRead);
   const showNotes = useSelector((state) => state.ui.showNotes);
@@ -61,7 +61,7 @@ export default function Timeline(props) {
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
       if (entries[0].isIntersecting) {
-        dispatch(incrementTimelineCurrentPage(currentPage + 1));
+        dispatch(incrementCurrentPage(currentPage + 1));
         loadTimeline();
       }
     });
@@ -94,7 +94,7 @@ export default function Timeline(props) {
           <button
             className="btn join-item"
             onClick={() => {
-              dispatch(resetTimelineCurrentPage());
+              dispatch(resetcurrentPage());
               dispatch(resetPosts());
 
               Kowloon.getUserTimeline();

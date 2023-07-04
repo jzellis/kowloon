@@ -76,18 +76,18 @@ router.use(async (req, res, next) => {
   let user = token ? await Kowloon.auth(token) : undefined;
   req.user = user || undefined;
 
-  if (req.headers.accept.includes("application/ld+json")) {
+  if ((req.headers.accept = "application/activity+json")) {
     for (const [url, route] of Object.entries(routes.get)) {
       router.get(url, route);
     }
     for (const [url, route] of Object.entries(routes.post)) {
       router.post(url, route);
     }
+    next();
   } else {
     res.send(staticPage);
+    next();
   }
-
-  next();
 });
 
 // for (const [url, route] of Object.entries(routes.get)) {

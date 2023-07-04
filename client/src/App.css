@@ -1,42 +1,150 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* @import url('https://fonts.googleapis.com/css2?family=Raleway:ital,wght@0,100;0,400;0,700;1,100;1,400;1,700&family=Roboto:ital,wght@0,400;0,700;1,400;1,700&display=swap'); */
+
+@import url('https://fonts.googleapis.com/css2?family=Libre+Caslon+Text:ital,wght@0,400;0,700;1,400&family=Raleway:ital,wght@0,100;0,400;0,700;1,100;1,400;1,700&family=Roboto:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+body{
+  @apply flex align-top items-start place-items-start min-h-screen overflow-hidden bg-base-200
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+#root{
+  @apply w-full 
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.main-nav{
+  @apply shadow-lg mb-8 bg-accent text-accent-content
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+main{
+  @apply mx-2 lg:mx-8
 }
 
-.card {
-  padding: 2em;
+.timeline-filters{
+  @apply p-4 bg-accent text-accent-content rounded-lg
 }
 
-.read-the-docs {
-  color: #888;
+#showFilterButton{
+
+  @apply bg-accent text-accent-content rounded-lg p-4 cursor-pointer uppercase;
+
+}
+
+.timeline > ul{
+  @apply h-screen overflow-y-scroll w-full mx-auto mt-8 pb-96
+}
+
+.post{
+  @apply mb-8 border border-base-300 shadow-md rounded-lg p-4 text-sm lg:text-base bg-neutral-content text-neutral
+}
+
+.post a{
+  @apply text-accent-content
+}
+
+.post-author-name{
+  @apply font-bold
+}
+
+.post-author-name a{
+  @apply text-black hover:underline
+}
+
+.post-author-id{
+  @apply font-light text-xs
+}
+.post-title{
+  @apply mt-4 font-caslon
+}
+.post-title a{
+  @apply font-bold lg:text-lg font-raleway hover:font-black text-black hover:text-black hover:underline
+}
+
+.post-meta{
+  @apply text-sm font-light 
+}
+
+.post-body{
+  @apply mt-4 leading-[1.25rem] font-caslon text-lg
+}
+
+.post.Note .post-body{
+  @apply text-lg font-oswald
+}
+.post-body a{
+  @apply underline
+}
+.post-body p{
+  @apply mb-6 leading-6 
+}
+
+.post-body p:empty{
+  @apply hidden mb-0 leading-none
+}
+
+.post-footer{
+  @apply flex mt-8
+}
+
+.post-footer div{
+  @apply flex-1 text-center
+}
+
+.post-body blockquote{
+  @apply mx-8 italic;
+ }
+
+ .post-body blockquote i{
+   @apply not-italic
+ }
+
+ pre {
+  white-space: pre-wrap;       /* css-3 */
+  white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+  white-space: -pre-wrap;      /* Opera 4-6 */
+  white-space: -o-pre-wrap;    /* Opera 7 */
+  word-wrap: break-word;       /* Internet Explorer 5.5+ */
+ }
+
+ .post-body iframe{
+  @apply hidden
+}
+
+.post-body img{
+  @apply max-w-full m-[1rem]
+}
+
+.profile{
+  @apply bg-accent text-accent-content p-4 rounded-lg
+}
+
+.profile .user-avatar{
+  @apply avatar w-24 h-24 float-left mr-4
+}
+
+.profile .user-avatar img{
+  @apply rounded-full
+}
+
+.profile .user-name{
+  @apply text-2xl font-extralight
+}
+
+.profile .user-id{
+  @apply mb-4
+}
+
+.addPostButton{
+
+@apply mt-8 btn btn-block btn-secondary text-secondary-content
+
+}
+.actor-list, .circle-list{
+  @apply text-sm h-48 overflow-y-scroll bg-neutral-content text-neutral mb-8 rounded-lg
+}
+
+.actor-list li, .circle-list li{
+  @apply w-full p-4 hover:bg-accent rounded-lg cursor-pointer
 }

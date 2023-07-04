@@ -68,26 +68,7 @@ export default function Post(props) {
 
   const addLike = async (e) => {
     e.preventDefault();
-    const likeActivity = {
-      type: "Like",
-      actor: user.actor.id,
-      target: post.id,
-    };
-
-    let likeResponse = await Kowloon.post({
-      url: user.actor.outbox,
-      body: likeActivity,
-    });
-    setPost((currentPost) => {
-      return {
-        ...currentPost,
-        likes: {
-          totalItems: currentPost.likes.totalItems
-            ? parseInt(currentPost.likes.totalItems) + 1
-            : 1,
-        },
-      };
-    });
+    await Kowloon.likeActivity(post.object.id);
   };
   return (
     <>

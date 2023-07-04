@@ -72,7 +72,7 @@ const Kowloon = {
       this.state.ui.showArticles ? "type=Article&" : ""
     }${this.state.ui.showMedia ? "type=Image&type=Audio&type=Video&" : ""}${
       this.state.ui.showLinks ? "type=Link&" : ""
-    }page=${this.state.ui.timelineCurrentPage}`;
+    }page=${this.state.ui.currentPage}`;
     store.dispatch(setPosts((await this.get(url)).items));
   },
 
@@ -83,7 +83,7 @@ const Kowloon = {
       this.state.ui.showArticles ? "type=Article&" : ""
     }${this.state.ui.showMedia ? "type=Image&type=Audio&type=Video&" : ""}${
       this.state.ui.showLinks ? "type=Link&" : ""
-    }page=${this.state.ui.timelineCurrentPage}`;
+    }page=${this.state.ui.currentPage}`;
     store.dispatch(setPosts((await this.get(url)).items));
   },
 
@@ -94,7 +94,7 @@ const Kowloon = {
       this.state.ui.showArticles ? "type=Article&" : ""
     }${this.state.ui.showMedia ? "type=Image&type=Audio&type=Video&" : ""}${
       this.state.ui.showLinks ? "type=Link&" : ""
-    }page=${this.state.ui.timelineCurrentPage}`;
+    }page=${this.state.ui.currentPage}`;
     store.dispatch(setPosts((await this.get(url)).items));
   },
 

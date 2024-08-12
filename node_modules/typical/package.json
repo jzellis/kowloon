@@ -1,0 +1,59 @@
+{
+  "name": "typical",
+  "author": "Lloyd Brookes <75pound@gmail.com>",
+  "version": "7.1.1",
+  "description": "Isomorphic, functional type-checking for Javascript",
+  "repository": "https://github.com/75lb/typical",
+  "license": "MIT",
+  "type": "module",
+  "exports": "./index.js",
+  "keywords": [
+    "type",
+    "checking",
+    "check",
+    "value",
+    "valid",
+    "is",
+    "number",
+    "object",
+    "plainobject",
+    "array",
+    "like",
+    "defined",
+    "string",
+    "boolean",
+    "function",
+    "promise",
+    "iterable",
+    "class",
+    "primitive",
+    "isstring",
+    "isclass",
+    "isiterable",
+    "isdefined",
+    "isobject",
+    "isomorphic"
+  ],
+  "engines": {
+    "node": ">=12.17"
+  },
+  "scripts": {
+    "test": "npm run test:cli && npm run test:web",
+    "test:cli": "test-runner test/*.js",
+    "test:web": "web-runner test/test.js",
+    "docs": "jsdoc2md -c jsdoc.conf -t README.hbs index.js > README.md",
+    "cover": "c8 npm test && c8 report --reporter=text-lcov | coveralls"
+  },
+  "devDependencies": {
+    "@test-runner/web": "^0.4.4",
+    "c8": "^7.8.0",
+    "coveralls": "^3.1.1",
+    "isomorphic-assert": "^1.0.0",
+    "jsdoc-to-markdown": "^7.0.1",
+    "rollup": "^2.56.2",
+    "test-object-model": "^0.7.1"
+  },
+  "files": [
+    "index.js"
+  ]
+}

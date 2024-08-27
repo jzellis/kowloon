@@ -4,7 +4,10 @@ import cookieParser from "cookie-parser";
 import nocache from "nocache";
 import cors from "cors";
 import http from "http";
+import https from "https";
+
 import routes from "./routes/index.js";
+import fs from "fs";
 
 const app = express();
 app.use(cors());
@@ -21,10 +24,16 @@ app.use(cookieParser());
 app.use(nocache());
 app.use(routes);
 
-var port = normalizePort(process.env.PORT || "3001");
+var port = normalizePort(process.env.PORT || "443");
 app.set("port", port);
 
-var server = http.createServer(app);
+var server = https.createServer(
+  {
+    key: fs.readFileSync("./ssl/kowloon.social.key"),
+    cert: fs.readFileSync("./ssl/kowloon.social.crt"),
+  },
+  app
+);
 
 /**
  * Listen on provided port, on all network interfaces.

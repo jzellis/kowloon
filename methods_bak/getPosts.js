@@ -25,7 +25,7 @@ export default async function (query = {}, options) {
       options.populateActor
         ? {
             path: "actor",
-            select: "username email profile keys.public",
+            select: "-_id username email profile.name url profile.icon",
           }
         : ""
     )

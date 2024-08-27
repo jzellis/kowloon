@@ -24,8 +24,8 @@ const UserSchema = new Schema(
         location: { type: Object, default: undefined },
       },
     },
-    following: { type: [String], default: [] },
-    followers: { type: [String], default: [] },
+    following: { type: [Object], default: [] },
+    followers: { type: [Object], default: [] },
     circles: { type: [String], default: [] },
     bookmarks: { type: [String], default: [] },
     likes: { type: [String], default: [] },
@@ -36,10 +36,12 @@ const UserSchema = new Schema(
       public: String,
       private: String,
     },
+    url: { type: String, default: undefined },
     isAdmin: { type: Boolean, default: false },
     accessToken: String,
     active: { type: Boolean, default: true },
     deletedAt: { type: Date, default: undefined },
+    lastLogin: Date,
   },
   { toJSON: { virtuals: true }, toObject: { virtuals: true }, timestamps: true }
 );
@@ -57,7 +59,8 @@ UserSchema.pre("save", async function (next) {
 
   if (this.isNew) {
     this.id = this.id || `@${this.username}@${domain}`;
-    this.icon = this.icon || `//${domain}/images/user.png`;
+    this.profile.icon = this.profile.icon || `//${domain}/images/user.png`;
+    this.url = this.url || `https://${domain}/users/${this.username}`;
 
     this.accessToken = jwt.sign(
       {

@@ -18,7 +18,7 @@ const toTitleCase = (str) =>
   );
 
 const optionDefinitions = [
-  { name: "createUsers", type: Boolean, defaultValue: false },
+  { name: "createUsers", type: Boolean, defaultValue: true },
   { name: "verbose", alias: "v", type: Boolean, defaultValue: false },
 
   { name: "users", alias: "u", type: Number, defaultValue: 100 },
@@ -49,24 +49,6 @@ if (options.verbose === true) {
   console.log("Deleting Bookmarks: ", delBookmarks);
   console.log("Deleting Likes: ", delLikes);
 }
-
-await User.create({
-  username: "admin",
-  password: "admin",
-  email: "admin@kowloon.social",
-
-  profile: {
-    name: "Administrator",
-    bio: "The administrator of this server",
-    urls: ["https://kowloon.social"],
-    location: {
-      name: "Kowloon",
-      type: "Place",
-      latitude: 22.332222,
-      longitude: 114.190278,
-    },
-  },
-});
 
 if (options.createUsers === true) {
   for (let i = 0; i < options.users; i++) {
@@ -99,6 +81,24 @@ if (options.createUsers === true) {
     }
   }
 }
+
+await User.create({
+  username: "admin",
+  password: "admin",
+  email: "admin@kowloon.social",
+
+  profile: {
+    name: "Administrator",
+    bio: "The administrator of this server",
+    urls: ["https://kowloon.social"],
+    location: {
+      name: "Kowloon",
+      type: "Place",
+      latitude: 22.332222,
+      longitude: 114.190278,
+    },
+  },
+});
 
 let allUsers = await User.find({});
 

@@ -14,7 +14,7 @@ export default async function (query = {}, options) {
     fields: "",
     ...options,
   };
-  console.log(options);
+
   let qStart = Date.now();
   let result = await Bookmark.find(
     (options.deleted = false ? { ...query, deletedAt: null } : { ...query })

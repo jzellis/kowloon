@@ -23,6 +23,7 @@ const PostSchema = new Schema(
     location: { type: Object, default: undefined },
     public: { type: Boolean, default: false },
     publicReplies: { type: Boolean, default: false },
+    target: { type: String, default: undefined },
     circleReplies: String, // which Circle can reply to this post
     circles: [String], // which circles can see this post
     groups: [String],
@@ -43,6 +44,13 @@ PostSchema.virtual("likes", {
   localField: "id",
   foreignField: "target",
 });
+
+PostSchema.virtual("replies", {
+  ref: "Reply",
+  localField: "id",
+  foreignField: "target",
+});
+
 PostSchema.virtual("actor", {
   ref: "User",
   localField: "actorId",

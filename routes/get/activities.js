@@ -1,7 +1,10 @@
+// Returns all public posts from the server
+
 import Kowloon from "../../Kowloon.js";
 export default async function (req, res) {
-  let qStart = Date.now();
   let status = 200;
+  let qStart = Date.now();
+  let page = req.query.page || 1;
   let query = req.user
     ? {
         $or: [
@@ -14,32 +17,24 @@ export default async function (req, res) {
         ],
       }
     : { public: true };
-  let options = {
-    page: req.params.page || 1,
-    pageLength: 20,
-  };
-  // let response = {
-  //   ...Kowloon.defaultResponse,
-  //   id: req.protocol + "://" + req.get("host") + req.originalUrl,
-  //   summary: `${Kowloon.settings.title} Activities`,
-  //   page: parseInt(req.query.page) || 1,
-  // };
-  let response = await Kowloon.getActivities(query, {
-    page: options.page,
-    pageLength: options.pageLength,
-    id: req.protocol + "://" + req.get("host") + req.originalUrl,
-    summary: "Activities",
+  if (req.user?.blocked.length > 0)
+    query["actorId"] = { $nin: req.user.blocked };
+  if (req.user?.muted.length > 0) query["actorId"] = { $nin: req.user.muted };
+  let activities = await Kowloon.getActivities(query, {
+    actor: true,
+    likes: true,
+    page,
   });
-  // let totalItems = items.length || 1;
-  // let response = Kowloon.response({
-  //   page: parseInt(req.query.page) || 1,
-  //   id: req.protocol + "://" + req.get("host") + req.originalUrl,
-  //   items,
-  //   totalItems,
-  //   summary: "Activities",
-  //   ordered: true,
-  // });
-
+  let response = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    type: "OrderedCollection",
+    id: "//" + Kowloon.settings.domain,
+    summary: `${Kowloon.settings.title} | Public Activities`,
+    totalItems: activities.length,
+    page,
+    items: activities,
+    queryTime: 0,
+  };
   let qEnd = Date.now();
   response.queryTime = qEnd - qStart;
   res.status(status).json(response);

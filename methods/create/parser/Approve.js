@@ -3,7 +3,7 @@ export default async function (activity) {
   let user = await User.findOne({ id: activity.actorId });
   let targetUser = await User.findOne({ id: activity.object });
   let group = await Group.findOne({ id: activity.target });
-  activity.summary = `@${user.profile.name} approved ${targetUser.profile.name}'s request to join ${group.name}`;
+  activity.summary = `${actor.profile.name} (${actor.username}) approved ${targetUser.profile.name}'s request to join ${group.name}`;
   switch (activity.objectType) {
     case "Group":
       let group = await Group.findOneAndUpdate(

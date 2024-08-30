@@ -1,6 +1,7 @@
 // Returns all public posts from the server
 
 import Kowloon from "../../Kowloon.js";
+import { Circle, Group } from "../../schema/index.js";
 export default async function (req, res) {
   let status = 200;
   let qStart = Date.now();
@@ -25,10 +26,10 @@ export default async function (req, res) {
       : { actorId: user.id, public: true };
     if (req.user?.id) {
       let circles = (
-        await Kowloon.getCircles({ actorId: user.id, members: req.user.id })
+        await Circle.find({ actorId: user.id, members: req.user.id })
       ).map((c) => c.id);
       let groups = (
-        await Kowloon.getGroups({ actorId: req.user.id, members: req.user.id })
+        await Group.find({ actorId: req.user.id, members: req.user.id })
       ).map((g) => g.id);
       query["$or"].circles = { $in: circles };
       query["$or"].groups = { $in: groups };
@@ -40,23 +41,12 @@ export default async function (req, res) {
     if (req.user?.muted.length > 0) query["actorId"] = { $nin: req.user.muted };
     if (type) query.type = type;
 
-    // console.log(query);
-    let posts = await Kowloon.getPosts(query, {
+    let response = await Kowloon.getPosts(query, {
       actor: true,
       page,
+      summary: `${user.profile.name} (${user.username})`,
     });
-    let response = {
-      "@context": "https://www.w3.org/ns/activitystreams",
-      type: "OrderedCollection",
-      id: "//" + Kowloon.settings.domain,
-      summary: `${Kowloon.settings.title} | ${user.profile.name} | Public Posts`,
-      totalItems: posts.length,
-      page,
-      items: posts,
-      queryTime: 0,
-    };
-    let qEnd = Date.now();
-    response.queryTime = qEnd - qStart;
+
     res.status(status).json(response);
   }
 }

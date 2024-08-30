@@ -8,14 +8,15 @@ const agent = new Agent({
 
 setGlobalDispatcher(agent);
 
-export default async function (url, actorId, body) {
+export default async function (url, options = { actorId: "", body: {} }) {
+  if (options.body) return new Error("No body specified");
   let user;
   let headers = {
     "Content-Type": "application/json",
     Accept: "application/json",
   };
 
-  if (actorId) {
+  if (options.actorId) {
     user = await User.findOne({ id: actorId });
     if (user) {
       headers["Authorization"] = `Basic ${user.keys.public.replaceAll(
@@ -28,7 +29,7 @@ export default async function (url, actorId, body) {
   let res = await fetch(url, {
     method: "POST",
     headers,
-    body: JSON.stringify(body),
+    body: JSON.stringify(options.body),
   });
 
   return res.headers.get("content-type").indexOf("json") !== -1

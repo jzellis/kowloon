@@ -32,7 +32,10 @@ export default async function (activity) {
       let targetDomain = activity.target.split("@").slice(-1);
       if (targetDomain != domain) {
         let url = `https://${targetDomain}/api/inbox`;
-        let response = await post(url, activity.actorId, { activity });
+        let response = await post(url, {
+          actorId: activity.actorId,
+          body: { activity },
+        });
         activity.objectId = response.activity.id;
       } else {
         const reply = await Post.findOneAndUpdate(

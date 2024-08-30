@@ -14,21 +14,10 @@ export default async function (req, res) {
         ],
       }
     : { public: true };
-  let groups = await Kowloon.getGroups(query, {
+  let response = await Kowloon.getGroups(query, {
     actor: true,
     page,
   });
-  let response = {
-    "@context": "https://www.w3.org/ns/activitystreams",
-    type: "OrderedCollection",
-    id: "//" + Kowloon.settings.domain,
-    summary: `${Kowloon.settings.title} | Public Groups`,
-    totalItems: groups.length,
-    page,
-    items: groups,
-    queryTime: 0,
-  };
-  let qEnd = Date.now();
-  response.queryTime = qEnd - qStart;
+
   res.status(status).json(response);
 }

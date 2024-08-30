@@ -49,8 +49,10 @@ import deletePost from "./methods/delete/deletePost.js";
 import addToInbox from "./methods/delivery/addToInbox.js";
 import addToOutbox from "./methods/delivery/addToOutbox.js";
 import verifyRemoteUser from "./methods/auth/verifyRemoteUser.js";
-import getInbox from "./methods/follow/getInbox.js";
+import getInbox from "./methods/get/getInbox.js";
 import updateFeeds from "./methods/follow/updateFeeds.js";
+import retrieveUser from "./methods/get/retrieveUser.js";
+import retrieveActivity from "./methods/get/retrieveActivity.js";
 
 const Kowloon = {
   settings: {},
@@ -103,6 +105,8 @@ const Kowloon = {
   verifyRemoteUser,
   getInbox,
   updateFeeds,
+  retrieveUser,
+  retrieveActivity,
 };
 
 await Kowloon.init();

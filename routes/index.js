@@ -25,6 +25,7 @@ import inboxGet from "./get/inbox.js";
 
 import loginPost from "./post/login.js";
 import verifyPost from "./post/verify.js";
+import inboxPost from "./post/inbox.js";
 
 const router = express.Router();
 
@@ -38,7 +39,7 @@ const routes = {
     groups: groupsGet,
     circles: circlesGet,
     users: usersGet,
-    "activity/:id": activityGet,
+    "activities/:id": activityGet,
     "posts/:id": postGet,
     "users/:id": userGet,
     "circles/:id": circleGet,
@@ -49,22 +50,13 @@ const routes = {
     "users/:id/circles": userCirclesGet,
     "users/:id/groups": userGroupsGet,
     "users/:id/activities": userActivitiesGet,
-    inbox: inboxGet,
-    // "/activities/:id": activityGet,
-    // "/posts/:id": postGet,
-    // "/users/:id": userGet,
-    // "/users/:id/posts": userPostsGet,
-    // "/users/:id/circles": userCirclesGet,
-    // "/users/:id/groups": userGroupsGet,
-    // "/users/:id/bookmarks": userBookmarksGet,
-    // "/groups/:id": groupGet,
-    // "/circles/:id": circleGet,
-    // "/inbox": inboxGet,
+    "users/:id/inbox": inboxGet,
+    "users/:id/outbox": userPostsGet,
   },
   post: {
     login: loginPost,
-    // "/outbox": activityPost,
     verify: verifyPost,
+    inbox: inboxPost,
   },
 };
 

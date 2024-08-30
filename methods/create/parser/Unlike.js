@@ -20,7 +20,10 @@ export default async function (activity) {
   if (targetDomain === domain) {
   } else {
     let url = `https://${targetDomain}/api/inbox`;
-    let response = await post(url, activity.actorId, { activity });
+    let response = await post(url, {
+      actorId: activity.actorId,
+      body: { activity },
+    });
     activity.objectId = response.activity.id;
   }
   return activity;

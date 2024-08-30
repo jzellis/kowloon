@@ -8,7 +8,10 @@ export default async function () {
     items.map(async (item) => {
       let server = item.to.split("@")[1];
       let url = `https://${server}/api/inbox`;
-      let response = await post(url, item.actorId, { activity: item.item });
+      let response = await post(url, {
+        actorId: item.actorId,
+        body: { activity: item.item },
+      });
       let update = {};
       if (!response.error) {
         update.response = response;

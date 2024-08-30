@@ -13,21 +13,10 @@ export default async function (req, res) {
   if (req.user?.blocked.length > 0)
     query["actorId"] = { $nin: req.user.blocked };
   if (req.user?.muted.length > 0) query["actorId"] = { $nin: req.user.muted };
-  let circles = await Kowloon.getCircles(query, {
+  let response = await Kowloon.getCircles(query, {
     actor: true,
     page,
   });
-  let response = {
-    "@context": "https://www.w3.org/ns/activitystreams",
-    type: "OrderedCollection",
-    id: "//" + Kowloon.settings.domain,
-    summary: `${Kowloon.settings.title} | Public Circles`,
-    totalItems: circles.length,
-    page,
-    items: circles,
-    queryTime: 0,
-  };
-  let qEnd = Date.now();
-  response.queryTime = qEnd - qStart;
+
   res.status(status).json(response);
 }

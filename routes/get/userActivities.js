@@ -25,23 +25,13 @@ export default async function (req, res) {
     if (req.user?.blocked.length > 0)
       query["actorId"] = { $nin: req.user.blocked };
     if (req.user?.muted.length > 0) query["actorId"] = { $nin: req.user.muted };
-    console.log(query);
-    let activities = await Kowloon.getActivities(query, {
+
+    let response = await Kowloon.getActivities(query, {
       actor: true,
       page,
+      summary: `${user.profile.name} (${user.username})`,
     });
-    let response = {
-      "@context": "https://www.w3.org/ns/activitystreams",
-      type: "OrderedCollection",
-      id: "//" + Kowloon.settings.domain,
-      summary: `${Kowloon.settings.title} | ${user.profile.name} | Public Activities`,
-      totalItems: activities.length,
-      page,
-      items: activities,
-      queryTime: 0,
-    };
-    let qEnd = Date.now();
-    response.queryTime = qEnd - qStart;
+
     res.status(status).json(response);
   }
 }

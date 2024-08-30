@@ -25,23 +25,12 @@ export default async function (req, res) {
     if (!canView) query.public = true;
     if (type) query.type = type;
 
-    console.log(query);
-    let posts = await Kowloon.getPosts(query, {
+    let response = await Kowloon.getPosts(query, {
       actor: true,
       page,
+      summary: group.name,
     });
-    let response = {
-      "@context": "https://www.w3.org/ns/activitystreams",
-      type: "OrderedCollection",
-      id: "//" + Kowloon.settings.domain,
-      summary: `${Kowloon.settings.title} | ${group.name} | Public Posts`,
-      totalItems: posts.length,
-      page,
-      items: posts,
-      queryTime: 0,
-    };
-    let qEnd = Date.now();
-    response.queryTime = qEnd - qStart;
+
     res.status(status).json(response);
   }
 }

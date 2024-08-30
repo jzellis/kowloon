@@ -15,7 +15,10 @@ export default async function (id, publicKey) {
     token: encrypted,
   };
   try {
-    let response = await post(`https://${server}/verify`, id, body);
+    let response = await post(`https://${server}/verify`, {
+      actorId: id,
+      body,
+    });
     return response == original
       ? await User.findOne({ id }, "username profile keys.public")
       : false;

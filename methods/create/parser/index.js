@@ -15,7 +15,10 @@ await Promise.all(
   files.map(async (f) => {
     let name = f.split(".")[0];
     try {
-      mainMod[name] = await import(`./${f}`);
+      let module = await import(`./${f}`);
+      mainMod[name] = function (v) {
+        return module.default(v);
+      };
     } catch (e) {
       console.error(e);
     }

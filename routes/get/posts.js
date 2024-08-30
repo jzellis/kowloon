@@ -34,21 +34,10 @@ export default async function (req, res) {
     query["$or"].groups = { $in: groups };
   }
   // console.log(util.inspect(query, false, null, true /* enable colors */));
-  let posts = await Kowloon.getPosts(query, {
+  let response = await Kowloon.getPosts(query, {
     actor: true,
     page,
   });
-  let response = {
-    "@context": "https://www.w3.org/ns/activitystreams",
-    type: "OrderedCollection",
-    id: "//" + Kowloon.settings.domain,
-    summary: `${Kowloon.settings.title} | Public Posts`,
-    totalItems: posts.length,
-    page,
-    items: posts,
-    queryTime: 0,
-  };
-  let qEnd = Date.now();
-  response.queryTime = qEnd - qStart;
+
   res.status(status).json(response);
 }

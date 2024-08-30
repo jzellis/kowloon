@@ -20,15 +20,16 @@ export default async function (req, res) {
       : { circles: circle.id, public: true };
     if (!canView) query.public = true;
     if (type) query.type = type;
-    console.log(query);
+
     let posts = await Kowloon.getPosts(query, {
       actor: true,
       page,
+      summary: circle.name,
     });
     let response = {
       "@context": "https://www.w3.org/ns/activitystreams",
       type: "OrderedCollection",
-      id: "//" + Kowloon.settings.domain,
+      id: "https//" + Kowloon.settings.domain,
       summary: `${Kowloon.settings.title} | ${circle.name} | Public Posts`,
       totalItems: posts.length,
       page,

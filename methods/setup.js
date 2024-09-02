@@ -18,7 +18,7 @@ export default async function () {
     );
     settings = await Settings.find();
     console.log("Default settings created");
-    location = (await Settings.findOne({ name: "location" })).value;
+    // location = (await Settings.findOne({ name: "location" })).value;
   }
 
   let users = await User.find();
@@ -31,7 +31,7 @@ export default async function () {
         name: "Admin User",
         bio: "I am the admin of this server.",
         urls: ["https://kowloon.social"],
-        location,
+        // location,
       },
       isAdmin: true,
     });

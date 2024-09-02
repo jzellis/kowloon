@@ -8,7 +8,7 @@ export default async function () {
   let settings = await Settings.find();
   if (settings.length === 0) {
     let defaultSettings = JSON.parse(
-      await fs.readFile("../config/defaultSettings.json", "utf8")
+      await fs.readFile("./config/defaultSettings.json", "utf8")
     );
     await Promise.all(
       Object.keys(defaultSettings).map(
@@ -16,6 +16,9 @@ export default async function () {
           await Settings.create({ name: s, value: defaultSettings[s] })
       )
     );
+    settings = await Settings.find();
+    console.log("Default settings created");
+    location = (await Settings.findOne({ name: "location" })).value;
   }
 
   let users = await User.find();
@@ -28,12 +31,7 @@ export default async function () {
         name: "Admin User",
         bio: "I am the admin of this server.",
         urls: ["https://kowloon.social"],
-        location: {
-          name: "Kowloon, Hong Kong",
-          type: "Place",
-          latitude: 22.332222,
-          longitude: 114.190278,
-        },
+        location,
       },
       isAdmin: true,
     });

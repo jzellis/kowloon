@@ -24,10 +24,10 @@ app.use(cookieParser());
 app.use(nocache());
 app.use(routes);
 
-var port = normalizePort(process.env.PORT || "443");
+var port = normalizePort(process.env.PORT || "3000");
 app.set("port", port);
 
-var server = https.createServer(
+var server = http.createServer(
   {
     key: fs.readFileSync("./ssl/kowloon.social.key"),
     cert: fs.readFileSync("./ssl/kowloon.social.crt"),

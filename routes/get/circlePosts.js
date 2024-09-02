@@ -3,7 +3,6 @@
 import Kowloon from "../../Kowloon.js";
 export default async function (req, res) {
   let status = 200;
-  let qStart = Date.now();
   let page = req.query.page || 1;
   let type = req.query.type || null;
   let circle = await Kowloon.getCircle(req.params.id);
@@ -21,23 +20,12 @@ export default async function (req, res) {
     if (!canView) query.public = true;
     if (type) query.type = type;
 
-    let posts = await Kowloon.getPosts(query, {
+    let response = await Kowloon.getPosts(query, {
       actor: true,
       page,
       summary: circle.name,
     });
-    let response = {
-      "@context": "https://www.w3.org/ns/activitystreams",
-      type: "OrderedCollection",
-      id: "https//" + Kowloon.settings.domain,
-      summary: `${Kowloon.settings.title} | ${circle.name} | Public Posts`,
-      totalItems: posts.length,
-      page,
-      items: posts,
-      queryTime: 0,
-    };
-    let qEnd = Date.now();
-    response.queryTime = qEnd - qStart;
+
     res.status(status).json(response);
   }
 }

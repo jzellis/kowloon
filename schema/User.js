@@ -18,7 +18,7 @@ const UserSchema = new Schema(
       default: {
         name: { type: String, default: undefined },
         bio: { type: String, default: undefined },
-        urls: { type: [String], default: [] },
+        urls: { type: [Object], default: [] },
         pronouns: { type: Object, default: undefined },
         icon: { type: String, default: undefined },
         location: { type: Object, default: undefined },

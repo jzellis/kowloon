@@ -24,10 +24,10 @@ export default async function (req, res) {
   if (req.user?.muted.length > 0) query["actorId"] = { $nin: req.user.muted };
   if (type) query.type = type;
   if (req.user?.id) {
-    let circles = (await Kowloon.getCircles({ members: req.user.id })).map(
-      (c) => c.id
-    );
-    let groups = (await Kowloon.getGroups({ members: req.user.id })).map(
+    let circles = (
+      await Kowloon.getCircles({ members: req.user.id })
+    ).items.map((c) => c.id);
+    let groups = (await Kowloon.getGroups({ members: req.user.id })).items.map(
       (g) => g.id
     );
     query["$or"].circles = { $in: circles };

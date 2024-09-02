@@ -11,6 +11,7 @@
   "license": "ISC",
   "dependencies": {
     "bcryptjs": "^2.4.3",
+    "chalk": "^5.3.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "crypto": "^1.0.1",
@@ -21,9 +22,11 @@
     "marked": "^12.0.2",
     "mongoose": "^8.3.5",
     "nocache": "^4.0.0",
+    "random-words": "^2.0.1",
     "rss-parser": "^3.13.0",
     "slugify": "^1.6.6",
-    "tensify": "^0.0.4"
+    "tensify": "^0.0.4",
+    "winston": "^3.14.2"
   },
   "devDependencies": {
     "@faker-js/faker": "^8.4.1",

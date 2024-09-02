@@ -6,9 +6,12 @@ export default async function (req, res) {
   let qStart = Date.now();
   let query = req.params.id;
   let user = await Kowloon.getUser(query);
-  let response = {
-    user,
-  };
+
+  let response = user
+    ? {
+        user,
+      }
+    : { error: "No user found. Maybe check the spelling?" };
   let qEnd = Date.now();
   response.queryTime = qEnd - qStart;
   res.status(status).json(response);

@@ -6,7 +6,6 @@ export default async function (id) {
   if (!activity) {
     let [aid, domain] = id.split("@");
     let url = `https://${domain}/activities/${aid}`;
-    console.log("retrieving acitivity from", url);
     try {
       activity = (await get(url)).activity;
     } catch (e) {

@@ -3,6 +3,7 @@ import { fileURLToPath } from "url";
 import * as dotenv from "dotenv";
 dotenv.config({ path: `${dirname(fileURLToPath(import.meta.url))}/.env` });
 import mongoose from "mongoose";
+import winston from "winston";
 
 import { Settings, User, Circle, Group } from "./schema/index.js";
 
@@ -59,10 +60,15 @@ const Kowloon = {
   connection: {},
 
   init: async function () {
-    const db = await mongoose.connect(process.env.MONGODB_URI);
-    this.connection.isConnected = db.connections[0].readyState === 1;
-    console.log("Kowloon database connection established");
-
+    console.log("Establishing Kowloon database connection...");
+    try {
+      const db = await mongoose.connect(process.env.MONGODB_URI);
+      this.connection.isConnected = db.connections[0].readyState === 1;
+      console.log("Kowloon database connection established");
+    } catch (e) {
+      console.error(e);
+      process.exit(0);
+    }
     let settings = await Settings.find();
     if (settings.length === 0) await setup(); //
     settings = await Settings.find();
@@ -70,6 +76,21 @@ const Kowloon = {
       this.settings[setting.name] = setting.value;
     });
   },
+  logger: winston.createLogger({
+    level: "info",
+    format: winston.format.combine(
+      winston.format.timestamp(),
+      winston.format.printf(
+        (info) => `${info.timestamp} ${info.level}: ${info.json}`
+      )
+    ),
+    defaultMeta: { service: "kowloon" },
+    transports: [
+      new winston.transports.Console(),
+      new winston.transports.File({ filename: "error.log", level: "error" }),
+      new winston.transports.File({ filename: "combined.log" }),
+    ],
+  }),
   login,
   auth,
   get,

@@ -1,7 +1,7 @@
 import Kowloon from "../Kowloon.js";
 import express from "express";
 import fs from "fs/promises";
-import mime from "mime";
+import winston from "winston";
 
 // Routes
 import home from "./get/home.js";
@@ -30,6 +30,23 @@ import inboxPost from "./post/inbox.js";
 const router = express.Router();
 
 const staticPage = await fs.readFile("./public/index.html", "utf-8");
+
+const logger = winston.createLogger({
+  // Log only if level is less than (meaning more severe) or equal to this
+  level: "info",
+  // Use timestamp and printf to create a standard log format
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.printf(
+      (info) => `${info.timestamp} ${info.level}: ${info.message}`
+    )
+  ),
+  // Log to the console and a file
+  transports: [
+    new winston.transports.Console(),
+    new winston.transports.File({ filename: "logs/server.log" }),
+  ],
+});
 
 const routes = {
   get: {
@@ -76,6 +93,9 @@ router.use(async (req, res, next) => {
     }
     req.user = user || null;
   }
+  logger.info(
+    `${req.method} ${req.url} | ${req.ip}${req.user ? " | " + req.user.id : ""}`
+  );
   for (const [url, route] of Object.entries(routes.get)) {
     router.get(`/${url}`, route);
   }

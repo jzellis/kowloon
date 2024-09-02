@@ -7,7 +7,7 @@ export default async function (req, res) {
   let page = req.query.page || 1;
   let user = await Kowloon.getUser(req.params.id);
   if (!user) {
-    res.status(500).json({ error: "User not found" });
+    res.status(200).json({ error: "User not found" });
   } else {
     let query = req.user
       ? {

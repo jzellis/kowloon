@@ -1,51 +1,56 @@
 {
-    "title": "Kowloon.social",
-    "description": "The very first Kowloon server ever!",
-    "location": {
-        "name": "Kowloon, Hong Kong",
-        "type": "Place",
-        "latitude": 22.332222,
-        "longitude": 114.190278
+  "title": "My Kowloon Server",
+  "description": "My brand new Kowloon server",
+  "location": {
+    "name": "London, England",
+    "type": "Place",
+    "latitude": "51.5074456",
+    "longitude": "-0.1277653"
+  },
+  "domain": "kowloon.social",
+  "uploadDir": "./uploads",
+  "registrationIsOpen": false,
+  "maxUploadSize": 100,
+  "defaultPronouns": {
+    "subject": "they",
+    "object": "them",
+    "possAdj": "their",
+    "possPro": "theirs",
+    "reflexive": "themselves"
+  },
+  "blockedDomains": [],
+  "likeEmojis": [
+    {
+      "name": "Like",
+      "emoji": "👍"
     },
-    "domain": "kowloon.social",
-    "asDomain": "kowloon.social",
-    "uploadDir": "./uploads",
-    "registrationIsOpen": false,
-    "maxUploadSize": 100,
-    "defaultPronouns": {
-        "subject": "they",
-        "object": "them",
-        "possAdj": "their",
-        "possPro": "theirs",
-        "reflexive": "themselves"
+    {
+      "name": "Love",
+      "emoji": "❤️"
     },
-    "blockedDomains": [],
-    "likeEmojis": [
-        {
-            "name": "Like",
-            "emoji": "👍"
-        },
-        {
-            "name": "Love",
-            "emoji": "❤️"
-        },
-        {
-            "name": "Sad",
-            "emoji": "😭"
-        },
-        {
-            "name": "Angry",
-            "emoji": "🤬"
-        },
-        {
-            "name": "Shocked",
-            "emoji": "😮"
-        },
-        {
-            "name": "Puke",
-            "emoji": "🤮"
-        }
-    ],
-    "adminEmail": "admin@kowloon.social",
-    "icon": "https://kowloon.social/icons/server.png"
+    {
+      "name": "Sad",
+      "emoji": "😭"
+    },
+    {
+      "name": "Angry",
+      "emoji": "🤬"
+    },
+    {
+      "name": "Shocked",
+      "emoji": "😮"
+    },
+    {
+      "name": "Puke",
+      "emoji": "🤮"
+    }
+  ],
+  "adminEmail": "admin@kowloon.social",
+  "emailServer": {
+    "protocol": "smtp",
+    "host": "localhost",
+    "username": "test",
+    "password": "test"
+  },
+  "icon": "https://kowloon.social/icons/server.png"
 }

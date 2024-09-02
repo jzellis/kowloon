@@ -6,7 +6,6 @@ export default async function (id) {
   if (!user) {
     let [username, domain] = id.split("@").slice(1);
     let url = `https://${domain}/users/${username}`;
-    console.log("retrieving user from", url);
     try {
       user = (await get(url)).user;
     } catch (e) {

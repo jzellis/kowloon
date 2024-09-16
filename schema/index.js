@@ -8,6 +8,7 @@ import Settings from "./Settings.js";
 import User from "./User.js";
 import Inbox from "./Inbox.js";
 import Outbox from "./Outbox.js";
+import Feed from "./Feed.js";
 
 export {
   Activity,
@@ -20,4 +21,5 @@ export {
   User,
   Inbox,
   Outbox,
+  Feed,
 };

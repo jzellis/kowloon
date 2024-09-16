@@ -10,50 +10,48 @@ import { Settings, User, Circle, Group } from "./schema/index.js";
 // Methods
 // Core methods
 import setup from "./methods/setup.js";
-import auth from "./methods/auth/auth.js";
-import login from "./methods/auth/login.js";
-import get from "./methods/remote/get.js";
-import post from "./methods/remote/post.js";
-import verifyRemoteRequest from "./methods/auth/verifyRemoteRequest.js";
-import createVerifyToken from "./methods/auth/createVerifyToken.js";
+import auth from "./methods/auth.js";
+import login from "./methods/login.js";
+import get from "./methods/get.js";
+import post from "./methods/post.js";
+import verifyRemoteRequest from "./methods/verifyRemoteRequest.js";
+import createVerifyToken from "./methods/createVerifyToken.js";
 
 // Get methods
-import getUser from "./methods/get/getUser.js";
-import getPost from "./methods/get/getPost.js";
-import getCircle from "./methods/get/getCircle.js";
-import getActivity from "./methods/get/getActivity.js";
-import getGroup from "./methods/get/getGroup.js";
-import getLike from "./methods/get/getLike.js";
-import getBookmark from "./methods/get/getBookmark.js";
-import getActivities from "./methods/get/getActivities.js";
-import getPosts from "./methods/get/getPosts.js";
-import getGroups from "./methods/get/getGroups.js";
-import getCircles from "./methods/get/getCircles.js";
-import getUsers from "./methods/get/getUsers.js";
-import getBookmarks from "./methods/get/getBookmarks.js";
-import getLikes from "./methods/get/getLikes.js";
-import findById from "./methods/get/findById.js";
+import getUser from "./methods/getUser.js";
+import getPost from "./methods/getPost.js";
+import getCircle from "./methods/getCircle.js";
+import getActivity from "./methods/getActivity.js";
+import getGroup from "./methods/getGroup.js";
+import getLike from "./methods/getLike.js";
+import getBookmark from "./methods/getBookmark.js";
+import getActivities from "./methods/getActivities.js";
+import getPosts from "./methods/getPosts.js";
+import getGroups from "./methods/getGroups.js";
+import getCircles from "./methods/getCircles.js";
+import getUsers from "./methods/getUsers.js";
+import getBookmarks from "./methods/getBookmarks.js";
+import getLikes from "./methods/getLikes.js";
+import getItemById from "./methods/getItemById.js";
 // Create methods
-import createActivity from "./methods/create/createActivity.js";
-import createUser from "./methods/create/createUser.js";
+import createActivity from "./methods/createActivity.js";
+import createUser from "./methods/createUser.js";
 // Update methods
-import updateSetting from "./methods/update/updateSetting.js";
-import updateUser from "./methods/update/updateUser.js";
+import updateSetting from "./methods/updateSetting.js";
+import updateUser from "./methods/updateUser.js";
 // Delete methods
-import deleteActivity from "./methods/delete/deleteActivity.js";
-import deleteBookmark from "./methods/delete/deleteBookmark.js";
-import deleteCircle from "./methods/delete/deleteCircle.js";
-import deleteGroup from "./methods/delete/deleteGroup.js";
-import deletePost from "./methods/delete/deletePost.js";
+import deleteActivity from "./methods/deleteActivity.js";
+import deleteBookmark from "./methods/deleteBookmark.js";
+import deleteCircle from "./methods/deleteCircle.js";
+import deleteGroup from "./methods/deleteGroup.js";
+import deletePost from "./methods/deletePost.js";
 
 //Remote methods
-import addToInbox from "./methods/delivery/addToInbox.js";
-import addToOutbox from "./methods/delivery/addToOutbox.js";
-import verifyRemoteUser from "./methods/auth/verifyRemoteUser.js";
-import getInbox from "./methods/get/getInbox.js";
-import updateFeeds from "./methods/follow/updateFeeds.js";
-import retrieveUser from "./methods/get/retrieveUser.js";
-import retrieveActivity from "./methods/get/retrieveActivity.js";
+import addToOutbox from "./methods/addToOutbox.js";
+import verifyRemoteUser from "./methods/verifyRemoteUser.js";
+import updateFeeds from "./methods/updateFeeds.js";
+import retrieveUser from "./methods/retrieveUser.js";
+import retrieveActivity from "./methods/retrieveActivity.js";
 
 const Kowloon = {
   settings: {},
@@ -91,6 +89,7 @@ const Kowloon = {
       new winston.transports.File({ filename: "combined.log" }),
     ],
   }),
+  reservedUsernames: ["admin", "kowloon", "_public", "_server", "_recipients"],
   login,
   auth,
   get,
@@ -109,7 +108,7 @@ const Kowloon = {
   getUsers,
   getBookmarks,
   getLikes,
-  findById,
+  getItemById,
   createActivity,
   createUser,
   updateSetting,
@@ -119,12 +118,10 @@ const Kowloon = {
   deleteCircle,
   deleteGroup,
   deletePost,
-  addToInbox,
   addToOutbox,
   verifyRemoteRequest,
   createVerifyToken,
   verifyRemoteUser,
-  getInbox,
   updateFeeds,
   retrieveUser,
   retrieveActivity,

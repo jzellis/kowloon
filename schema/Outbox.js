@@ -1,13 +1,16 @@
 import mongoose from "mongoose";
+import { Settings } from "./index.js";
 const Schema = mongoose.Schema;
 
 const OutboxSchema = new Schema(
   {
+    id: String,
     status: {
       type: String,
       enum: ["pending", "delivered", "error"],
       default: "pending",
     },
+    to: { type: [String], required: true },
     actorId: { type: String, required: true },
     item: { type: Object, required: true },
     response: { type: Object, default: null },
@@ -21,5 +24,12 @@ const OutboxSchema = new Schema(
     collection: "outbox",
   }
 );
+
+OutboxSchema.pre("save", async function (next) {
+  // Create the activity id and url
+  const domain = (await Settings.findOne({ name: "domain" })).value;
+  this.id = this.id || `inbox:${this._id}@${domain}`;
+  next();
+});
 
 export default mongoose.model("Outbox", OutboxSchema);

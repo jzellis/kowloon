@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 import { Settings } from "./index.js";
 const Schema = mongoose.Schema;
 
-const InboxSchema = new Schema(
+const FeedSchema = new Schema(
   {
     id: { type: [String] },
     to: { type: [String], required: true },
@@ -13,15 +13,14 @@ const InboxSchema = new Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-    collection: "inbox",
   }
 );
 
-InboxSchema.pre("save", async function (next) {
+FeedSchema.pre("save", async function (next) {
   // Create the activity id and url
   const domain = (await Settings.findOne({ name: "domain" })).value;
-  this.id = this.id || `inbox:${this._id}@${domain}`;
+  this.id = this.id || `feed:${this._id}@${domain}`;
   next();
 });
 
-export default mongoose.model("Inbox", InboxSchema);
+export default mongoose.model("Feed", FeedSchema);

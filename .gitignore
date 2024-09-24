@@ -142,3 +142,4 @@ parseopml.js
 subscriptions.opml
 ./frontend/node_modules
 ./methods_bak
+./methods_bak/*

@@ -2,13 +2,14 @@ import { Feed } from "../schema/index.js";
 
 export default async function (
   id, // User, group, circle or server id
+  options
+) {
   options = {
     page: 1,
     pageSize: 20,
     deleted: false,
     ...options,
-  }
-) {
+  };
   let startTime = Date.now();
 
   if (!id) return new Error("No user or server id provided");

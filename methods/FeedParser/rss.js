@@ -8,18 +8,18 @@ export default async function (url, actorId) {
   try {
     let feed = await parser.parseURL(url);
 
-    if (feed) {
-      let url = new URL(f.url);
-      let domain = url.hostname;
-      let feedActor = {
-        id: `@feed@${domain}`,
-        username: slugify(feed.title),
-        profile: {
-          name: feed.title,
-          icon: feed.image?.url,
-        },
-      };
+    url = new URL(url);
+    let domain = url.hostname;
+    let feedActor = {
+      id: `@feed@${domain}`,
+      username: slugify(feed.title),
+      profile: {
+        name: feed.title,
+        icon: feed.image?.url,
+      },
+    };
 
+    await Promise.all(
       feed.items.map(async (item) => {
         await Feed.findOneAndUpdate(
           { id: item.guid },
@@ -27,10 +27,7 @@ export default async function (url, actorId) {
             $set: {
               id: item.guid,
               $addToSet: {
-                to: { $each: item.to },
-                bto: { $each: item.bto },
-                cc: { $each: item.cc },
-                bcc: { $each: item.bcc },
+                to: [actorId],
               },
               item: {
                 type: "Article",
@@ -47,11 +44,12 @@ export default async function (url, actorId) {
               },
             },
           },
-          { upsert: true }
+          { upsert: true, new: true }
         );
-      });
-    }
+      })
+    );
   } catch (e) {
+    console.log(e);
     return new Error(e);
   }
 }

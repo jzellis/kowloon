@@ -7,6 +7,7 @@ export default async function (url, actorId) {
   try {
     await Promise.all(
       feed.map(async (item) => {
+        console.log(item);
         await Feed.findOneAndUpdate(
           { id: item.id },
           {

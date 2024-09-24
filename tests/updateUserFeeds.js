@@ -1,5 +1,6 @@
 import Kowloon from "../Kowloon.js";
 
-console.log(await Kowloon.updateUserFeed("@admin@kowloon.social"));
+await Kowloon.updateUserFeed("@admin@kowloon.social");
+console.log(await Kowloon.getFeed("@admin@kowloon.social"));
 
 process.exit(0);

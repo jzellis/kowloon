@@ -16,8 +16,8 @@ await Promise.all(
     let name = f.split(".")[0];
     try {
       let module = await import(`./${f}`);
-      mainMod[name] = function (v) {
-        return module.default(v);
+      mainMod[name] = function (v, x) {
+        return module.default(v, x);
       };
     } catch (e) {
       console.error(e);

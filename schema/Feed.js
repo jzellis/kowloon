@@ -4,7 +4,7 @@ const Schema = mongoose.Schema;
 
 const FeedSchema = new Schema(
   {
-    id: { type: [String] },
+    id: { type: String },
     to: { type: [String] },
     cc: { type: [String] },
     bcc: { type: [String] },

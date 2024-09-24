@@ -25,12 +25,16 @@ export default async function (url, actorId) {
       headers["kowloon-id"] = user.id;
     }
   }
-  let res = await fetch(url, {
-    method: "GET",
-    headers,
-  });
+  try {
+    let res = await fetch(url, {
+      method: "GET",
+      headers,
+    });
 
-  return res.headers.get("content-type").indexOf("json") !== -1
-    ? await res.json()
-    : await res.text();
+    return res.headers.get("content-type").indexOf("json") !== -1
+      ? await res.json()
+      : await res.text();
+  } catch (e) {
+    return new Error(e);
+  }
 }

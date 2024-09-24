@@ -6,7 +6,7 @@ export default async function (actorId) {
     let following = user.following;
     await Promise.all(
       following.map(async (f) => {
-        if (FeedParser[f.type]) await FeedParser[f.type](f.url, actorId);
+        /* if (FeedParser[f.type])  */ await FeedParser[f.type](f.url, user.id);
       })
     );
     return true;

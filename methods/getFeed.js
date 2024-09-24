@@ -1,31 +1,32 @@
-import { User } from "../schema/index.js";
+import { Feed } from "../schema/index.js";
 
-export default async function (query, options) {
+export default async function (
+  id, // User, group, circle or server id
   options = {
     page: 1,
     pageSize: 20,
-    summary: null,
-    id: null,
+    deleted: false,
     ...options,
-  };
+  }
+) {
   let startTime = Date.now();
+
+  if (!id) return new Error("No user or server id provided");
+  let query = {
+    $or: [{ from: id }, { to: id }, { bto: id }, { cc: id }, { bcc: id }],
+  };
   if (options.deleted === false) query.deletedAt = { $eq: null };
-  if (!query) return new Error("No query provided");
-  // query.active = true;
-  let items = await User.find(query)
-    .select("username profile id keys.public -_id")
+  let items = await Feed.find(query)
+    .sort({ createdAt: -1 })
     .limit(options.pageSize ? options.pageSize : 0)
     .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)
-    .sort({ createdAt: -1 });
+    .select("-_id -item._id -cc -bcc -item.cc -item.bcc");
 
-  let totalItems = await User.countDocuments(query);
+  let totalItems = await Feed.countDocuments(query);
+
   return {
     "@context": "https://www.w3.org/ns/activitystreams",
-    type: "Collection",
-    id: `https//${this.settings.domain}${options.id ? "/" + options.id : ""}`,
-    summary: `${this.settings.title}${
-      options.summary ? " | " + options.summary : ""
-    } | Users`,
+    type: "OrderedCollection",
     totalItems,
     totalPages: Math.ceil(
       totalItems / (options.page * options.pageSize ? options.pageSize : 20)

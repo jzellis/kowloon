@@ -10,7 +10,7 @@ import tensify from "tensify";
 import crypto from "crypto";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
-import follow from "../methods/follow.js";
+import follow from "../methods_bak/follow.js";
 
 const ActivitySchema = new Schema(
   {

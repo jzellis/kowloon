@@ -21,7 +21,7 @@ export default async function (query, options) {
   let totalItems = await User.countDocuments(query);
   return {
     "@context": "https://www.w3.org/ns/activitystreams",
-    type: "Collection",
+    type: "OrderedCollection",
     id: `https//${this.settings.domain}${options.id ? "/" + options.id : ""}`,
     summary: `${this.settings.title}${
       options.summary ? " | " + options.summary : ""

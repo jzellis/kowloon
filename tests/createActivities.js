@@ -1,5 +1,5 @@
-import get from "../methods/remote/get.js";
-import post from "../methods/remote/post.js";
+import get from "../methods_bak/remote/get.js";
+import post from "../methods_bak/remote/post.js";
 import { faker } from "@faker-js/faker";
 
 let baseUrl = "https://kowloon.social";

@@ -1,4 +1,4 @@
-import { User, Inbox } from "../schema/index.js";
+import { User, Feed } from "../schema/index.js";
 import get from "./get.js";
 import Parser from "rss-parser";
 import slugify from "slugify";

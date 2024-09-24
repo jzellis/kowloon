@@ -5,9 +5,11 @@ const Schema = mongoose.Schema;
 const FeedSchema = new Schema(
   {
     id: { type: [String] },
-    to: { type: [String], required: true },
+    to: { type: [String] },
+    cc: { type: [String] },
+    bcc: { type: [String] },
     item: { type: Object, required: true },
-    read: { type: Boolean, default: false },
+    deletedAt: { type: Date },
   },
   {
     timestamps: true,

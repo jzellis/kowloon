@@ -52,5 +52,5 @@
     "username": "test",
     "password": "test"
   },
-  "icon": "https://kowloon.social/icons/server.png"
+  "icon": "/images/icons/server.png"
 }

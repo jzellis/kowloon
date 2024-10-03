@@ -1,4 +1,6 @@
 import Parser from "rss-parser";
+import { getLinkPreview } from "link-preview-js";
+
 import { Feed } from "../../schema/index.js";
 import slugify from "slugify";
 import { URL } from "url";
@@ -21,26 +23,40 @@ export default async function (url, actorId) {
 
     await Promise.all(
       feed.items.map(async (item) => {
+        let image = null;
+        try {
+          let preview = await getLinkPreview(item.link, {
+            headers: {
+              "user-agent": "googlebot",
+              "Accept-Language": "en-US",
+            },
+            followRedirects: true,
+            timeout: 5000,
+          });
+          if (preview.images[0]) image = preview.images[0];
+        } catch (e) {}
         await Feed.findOneAndUpdate(
           { id: item.guid },
           {
+            $addToSet: {
+              to: actorId,
+            },
             $set: {
               id: item.guid,
-              $addToSet: {
-                to: [actorId],
-              },
+
               item: {
+                id: item.guid,
                 type: "Article",
-                source: {
-                  mediaType: "text/html",
-                  content: item.content,
-                },
-                summary: item.contentSnippet || null,
                 title: item.title || null,
-                actorId: feedActor.id,
-                actor: feedActor,
+                content_text: item.contentSnippet || null,
+                content_html: item.content || null,
                 url: item.link,
-                createdAt: new Date(item.pubDate),
+                external_url: item.href,
+                image: image,
+                date_published: item.pubDate,
+                // date_modified: object.updatedAt,
+                author: item.author,
+                // tags: item.categories || null,
               },
             },
           },

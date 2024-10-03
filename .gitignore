@@ -143,3 +143,4 @@ subscriptions.opml
 ./frontend/node_modules
 methods_bak
 node_modules
+.DS_Store

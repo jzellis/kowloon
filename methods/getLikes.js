@@ -16,6 +16,7 @@ export default async function (query = { public: true }, options) {
   let populate = "";
   if (options.actor) populate += "actor";
   let items = await Like.find(query)
+    .lean()
     .select("-deletedAt -_id -__v")
     .limit(options.pageSize ? options.pageSize : 0)
     .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)

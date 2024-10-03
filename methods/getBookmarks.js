@@ -18,6 +18,7 @@ export default async function (
   let populate = "";
   if (options.actor) populate += "actor";
   let items = await Bookmark.find(query)
+    .lean()
     .select("-deletedAt -_id -__v")
     .limit(options.pageSize ? options.pageSize : 0)
     .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)

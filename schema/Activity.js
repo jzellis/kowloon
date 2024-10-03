@@ -1,16 +1,6 @@
 import mongoose from "mongoose";
-import User from "./User.js";
 import Settings from "./Settings.js";
-import Activity from "./Activity.js";
-import Circle from "./Circle.js";
-import Group from "./Group.js";
-import Bookmark from "./Bookmark.js";
-import Like from "./Like.js";
-import tensify from "tensify";
-import crypto from "crypto";
 const Schema = mongoose.Schema;
-const ObjectId = mongoose.Types.ObjectId;
-import follow from "../methods_bak/follow.js";
 
 const ActivitySchema = new Schema(
   {

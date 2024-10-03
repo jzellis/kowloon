@@ -10,7 +10,7 @@ export default async function (
   if (typeof query === "string") query = { id: query };
   if (options.deleted === false) query.deletedAt = { $eq: null };
   if (!query) return new Error("No query provided");
-  let bookmark = await Bookmark.findOne(query);
+  let bookmark = await Bookmark.findOne(query).lean();
   if (bookmark && options.actor === true)
     await bookmark.populate("actor", "-_id username id profile keys.public");
   return bookmark;

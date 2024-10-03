@@ -19,6 +19,7 @@ export default async function (query = { public: true }, options) {
   if (options.likes) populate += " likes";
   try {
     let items = await Post.find(query)
+      .lean()
       .limit(options.pageSize ? options.pageSize : 0)
       .select("-flagged -deletedAt -deletedBy -_id -__v")
       .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)

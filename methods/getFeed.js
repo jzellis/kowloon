@@ -18,6 +18,7 @@ export default async function (
   };
   if (options.deleted === false) query.deletedAt = { $eq: null };
   let items = await Feed.find(query)
+    .lean()
     .sort({ createdAt: -1 })
     .limit(options.pageSize ? options.pageSize : 0)
     .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)

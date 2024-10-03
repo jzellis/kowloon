@@ -19,6 +19,7 @@ export default async function (query = { public: true }, options) {
   if (options.likes) populate += " likes";
   try {
     let items = await Group.find(query)
+      .lean()
       .select("-banned -flagged -deletedAt -deletedBy -_id -__v")
       .limit(options.pageSize ? options.pageSize : 0)
       .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)

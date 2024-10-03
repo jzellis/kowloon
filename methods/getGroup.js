@@ -10,7 +10,7 @@ export default async function (
   if (typeof query === "string") query = { id: query };
   if (options.deleted === false) query.deletedAt = { $eq: null };
   if (!query) return new Error("No query provided");
-  let group = await Group.findOne(query);
+  let group = await Group.findOne(query).lean();
 
   if (group && options.actor === true)
     await group.populate("actor", "-_id username id profile keys.public");

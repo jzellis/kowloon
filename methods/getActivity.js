@@ -11,7 +11,7 @@ export default async function (
   if (typeof query === "string") query = { id: query };
   if (options.deleted === false) query.deletedAt = { $eq: null };
   if (!query) return new Error("No query provided");
-  let activity = await Activity.findOne(query);
+  let activity = await Activity.findOne(query).lean();
   if (activity && options.actor === true)
     await activity.populate("actor", "-_id username id profile keys.public");
   if (activity && options.likes === true)

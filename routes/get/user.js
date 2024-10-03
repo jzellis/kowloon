@@ -6,6 +6,12 @@ export default async function (req, res) {
   let qStart = Date.now();
   let query = req.params.id;
   let user = await Kowloon.getUser(query);
+  user.endpoints = {
+    posts: `${user.url}/posts`,
+    activities: `${user.url}/activities`,
+    circles: `${user.url}/circles`,
+    groups: `${user.url}/groups`,
+  };
 
   let response = user
     ? {

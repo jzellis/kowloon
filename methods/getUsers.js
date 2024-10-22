@@ -1,4 +1,6 @@
 import { User } from "../schema/index.js";
+import getSettings from "./getSettings.js";
+const settings = await getSettings();
 
 export default async function (query, options) {
   options = {
@@ -23,8 +25,8 @@ export default async function (query, options) {
   return {
     "@context": "https://www.w3.org/ns/activitystreams",
     type: "Collection",
-    id: `https//${this.settings.domain}${options.id ? "/" + options.id : ""}`,
-    summary: `${this.settings.title}${
+    id: `https//${settings.domain}${options.id ? "/" + options.id : ""}`,
+    summary: `${settings.title}${
       options.summary ? " | " + options.summary : ""
     } | Users`,
     totalItems,

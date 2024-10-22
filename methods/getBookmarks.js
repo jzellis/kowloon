@@ -1,4 +1,6 @@
 import { Bookmark } from "../schema/index.js";
+import getSettings from "./getSettings.js";
+const settings = await getSettings();
 
 export default async function (
   query = { public: true },
@@ -29,8 +31,8 @@ export default async function (
   return {
     "@context": "https://www.w3.org/ns/activitystreams",
     type: "OrderedCollection",
-    id: `https//${this.settings.domain}${options.id ? "/" + options.id : ""}`,
-    summary: `${this.settings.title}${
+    id: `https//${settings.domain}${options.id ? "/" + options.id : ""}`,
+    summary: `${settings.title}${
       options.summary ? " | " + options.summary : ""
     } | Bookmarks`,
     totalItems,

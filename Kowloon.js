@@ -33,13 +33,13 @@ const Kowloon = {
     const __dirname = `${dirname(fileURLToPath(import.meta.url))}/methods`;
 
     let files = fs.readdirSync(__dirname).filter((f) => f.endsWith(".js"));
-    // const that = this;
+    //
     await Promise.all(
       files.map(async function (f) {
         let name = f.split(".")[0];
         let module = await import(`./methods/${f}`);
-        Kowloon[name] = function (v) {
-          return module.default(v);
+        Kowloon[name] = function () {
+          return module.default(...arguments);
         };
       })
     );
@@ -63,5 +63,4 @@ const Kowloon = {
 };
 
 await Kowloon.init();
-
 export default Kowloon;

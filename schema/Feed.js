@@ -9,20 +9,7 @@ const FeedSchema = new Schema(
     to: { type: [String] },
     cc: { type: [String] },
     bcc: { type: [String] },
-    item: {
-      id: { type: String, required: true }, // maps to object.id or for RSS, the guid
-      title: { type: String },
-      content_text: { type: String },
-      content_html: { type: String }, // maps to object.content.source
-      url: { type: String, required: true }, // Same as object.url
-      external_url: { type: String }, // maps to object.href
-      image: { type: String }, // maps t object.featuredImage
-      banner_image: { type: String },
-      date_published: { type: Date },
-      date_modified: { type: Date },
-      author: { type: Schema.Types.Mixed },
-      tags: { type: [String], default: [] },
-    },
+    object: { type: Object },
     deletedAt: { type: Date },
   },
   {

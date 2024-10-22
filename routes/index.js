@@ -22,14 +22,21 @@ import userActivitiesGet from "./get/userActivities.js";
 import groupPostsGet from "./get/groupPosts.js";
 import circlePostsGet from "./get/circlePosts.js";
 import inboxGet from "./get/inbox.js";
+import previewGet from "./get/preview.js";
+import settingsGet from "./get/settings.js";
+import checkUsernameGet from "./get/checkUsername.js";
 
 import loginPost from "./post/login.js";
 import verifyPost from "./post/verify.js";
-import inboxPost from "./post/inbox.js";
+import outboxPost from "./post/outbox.js";
+import uploadPost from "./post/upload.js";
+
+import adminStatsGet from "./admin/stats.js";
+import adminUsersGet from "./admin/users.js";
 
 const router = express.Router();
 
-const staticPage = await fs.readFile("./public/index.html", "utf-8");
+const staticPage = await fs.readFile("./frontend/dist/index.html", "utf-8");
 
 const logger = winston.createLogger({
   // Log only if level is less than (meaning more severe) or equal to this
@@ -69,11 +76,17 @@ const routes = {
     "users/:id/activities": userActivitiesGet,
     "users/:id/inbox": inboxGet,
     "users/:id/outbox": userPostsGet,
+    "admin/stats": adminStatsGet,
+    "admin/users": adminUsersGet,
+    preview: previewGet,
+    settings: settingsGet,
+    checkUsername: checkUsernameGet,
   },
   post: {
     login: loginPost,
     verify: verifyPost,
-    inbox: inboxPost,
+    outbox: outboxPost,
+    upload: uploadPost,
   },
 };
 
@@ -82,7 +95,8 @@ router.use(async (req, res, next) => {
   res.header("Access-Control-Allow-Origin", "*");
   res.header("Access-Control-Allow-Methods", "GET,HEAD,POST,OPTIONS");
   res.header("Access-Control-Allow-Headers", "*");
-  res.header("Content-Type", "application/kowloon+json");
+  if (req.originalUrl.startsWith("/api"))
+    res.header("Content-Type", "application/kowloon+json");
   let token = req.headers.authorization
     ? req.headers.authorization.split("Basic ")[1]
     : undefined;
@@ -96,11 +110,14 @@ router.use(async (req, res, next) => {
   logger.info(
     `${req.method} ${req.url} | ${req.ip}${req.user ? " | " + req.user.id : ""}`
   );
+
   for (const [url, route] of Object.entries(routes.get)) {
-    router.get(`/${url}`, route);
+    // res.header("Content-Type", "application/kowloon+json");
+    router.get(`/api/${url}`, route);
   }
   for (const [url, route] of Object.entries(routes.post)) {
-    router.post(`/${url}`, route);
+    // res.header("Content-Type", "application/kowloon+json");
+    router.post(`/api/${url}`, route);
   }
 
   next();

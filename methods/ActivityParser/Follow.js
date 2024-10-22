@@ -1,4 +1,4 @@
-import { User } from "../../schema/index.js";
+import { User, Circle } from "../../schema/index.js";
 import Parser from "rss-parser";
 export default async function (activity) {
   activity.public = false;
@@ -35,6 +35,11 @@ export default async function (activity) {
       break;
   }
   follow.followedAt = new Date();
-  await user.updateOne({ $push: { following: follow } });
+  user.following.push(follow);
+  await user.save();
+  await Circle.updateOne(
+    { actorId: user.id, name: `${user.username} - Following` },
+    { $push: { members: follow.id } }
+  );
   return activity;
 }

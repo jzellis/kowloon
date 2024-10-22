@@ -24,11 +24,18 @@ const UserSchema = new Schema(
         location: { type: Object, default: undefined },
       },
     },
+    prefs: {
+      type: Object,
+      default: {
+        defaultPostType: "Note",
+        defaultPostAudience: "@_public",
+        defaultPostReplyAudience: "",
+        defaultPostView: "",
+        defaultCircleView: "",
+      },
+    },
     following: { type: [Object], default: [] },
     followers: { type: [Object], default: [] },
-    circles: { type: [String], default: [] },
-    bookmarks: { type: [String], default: [] },
-    likes: { type: [String], default: [] },
     blocked: { type: [String], default: [] },
     muted: { type: [String], default: [] },
     lastLogin: Date,
@@ -40,6 +47,7 @@ const UserSchema = new Schema(
     isAdmin: { type: Boolean, default: false },
     accessToken: String,
     active: { type: Boolean, default: true },
+    flagged: { type: Boolean, default: false },
     deletedAt: { type: Date, default: undefined },
     lastLogin: Date,
   },
@@ -47,9 +55,26 @@ const UserSchema = new Schema(
 );
 
 UserSchema.index({
+  username: "text",
+  email: "text",
   "profile.name": "text",
   "profile.bio": "text",
   "profile.location": "2dsphere",
+  "location.name": "text",
+});
+
+UserSchema.virtual("circles", {
+  ref: "Circle",
+  localField: "actorId",
+  foreignField: "id",
+  justOne: false,
+});
+
+UserSchema.virtual("groups", {
+  ref: "Group",
+  localField: "members",
+  foreignField: "id",
+  justOne: false,
 });
 
 UserSchema.pre("save", async function (next) {
@@ -83,6 +108,14 @@ UserSchema.pre("save", async function (next) {
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Following`,
     });
+
+    if (!this.profile.pronouns) {
+      this.profile.pronouns = (
+        await Settings.findOne({
+          name: "defaultPronouns",
+        })
+      ).value;
+    }
   }
   next();
 });

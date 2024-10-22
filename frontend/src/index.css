@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.navbar.title {
+  @apply font-thin text-2xl;
+}
+
+.timeline {
+  @apply w-1/2 mx-auto;
+  .post {
+    @apply mb-20 relative;
+    .content {
+      @apply mx-2;
+      p,
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6,
+      ul {
+        @apply mb-5;
+      }
+
+      h1 {
+        @apply text-3xl;
+      }
+      h2 {
+        @apply text-2xl;
+      }
+      h3 {
+        @apply text-xl;
+      }
+      blockquote {
+        @apply m-5 font-thin;
+      }
+      ul li {
+        @apply list-disc list-inside;
+      }
+      ol li {
+        @apply list-decimal list-inside;
+      }
+    }
+
+    .postImage {
+      @apply flex;
+      img {
+        @apply flex w-full object-cover;
+      }
+      .title {
+        @apply flex-1 mt-[25%] w-full absolute text-center items-center text-white font-bold text-3xl;
+      }
+    }
+
+    .actions {
+      @apply flex w-full justify-center text-center gap-2 text-sm;
+      li {
+        @apply btn btn-sm grow flex-1;
+      }
+    }
+  }
+}
+
+.postContentEditorToolbar {
+  @apply border-none;
+}
+.postEditor {
+  z-index: 9990;
+  .title input {
+    @apply text-2xl font-thin;
+  }
+  .title,
+  .link {
+    @apply font-thin;
+  }
+  .postContentEditor {
+    @apply border focus-within:border-black rounded-md px-2 h-64;
+  }
+}

@@ -4,14 +4,19 @@ import cookieParser from "cookie-parser";
 import nocache from "nocache";
 import cors from "cors";
 import http from "http";
-import https from "https";
+import path, { dirname } from "path";
+import { fileURLToPath } from "url";
+import fileUpload from "express-fileupload";
 
 import routes from "./routes/index.js";
 import fs from "fs";
 
+const __dirname = `${dirname(fileURLToPath(import.meta.url))}`;
+
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "100mb" }));
+app.use(fileUpload());
 app.use(
   express.urlencoded({
     extended: true,
@@ -19,10 +24,14 @@ app.use(
   })
 );
 app.use(cookieParser());
-app.use(express.static("public"));
-//   app.use(routes);
+
 app.use(nocache());
 app.use(routes);
+app.use("/", express.static(path.join(__dirname + "/frontend/dist")));
+app.use(
+  "/static",
+  express.static(path.join(__dirname + "/frontend/build/assets"))
+);
 
 var port = normalizePort(process.env.PORT || "3000");
 app.set("port", port);

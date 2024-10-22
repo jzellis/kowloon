@@ -1,10 +1,13 @@
 import { Post } from "../schema/index.js";
+import getSettings from "./getSettings.js";
+const settings = await getSettings();
 
 export default async function (query = { public: true }, options) {
   let startTime = Date.now();
   options = {
     actor: false,
     likes: false,
+    replies: false,
     page: 1,
     pageSize: 20,
     deleted: false,
@@ -14,9 +17,11 @@ export default async function (query = { public: true }, options) {
   };
   if (options.deleted === false) query.deletedAt = { $eq: null };
   if (!query) return new Error("No query provided");
-  let populate = "";
+  let populate = "attachments ";
   if (options.actor) populate += "actor";
   if (options.likes) populate += " likes";
+  if (options.replies) populate += " replies";
+
   try {
     let items = await Post.find(query)
       .lean()
@@ -29,8 +34,8 @@ export default async function (query = { public: true }, options) {
     return {
       "@context": "https://www.w3.org/ns/activitystreams",
       type: "OrderedCollection",
-      id: `https//${this.settings.domain}${options.id ? "/" + options.id : ""}`,
-      summary: `${this.settings.title}${
+      // id: `https//${settings.domain}${options.id ? "/" + options.id : ""}`,
+      summary: `${settings.title}${
         options.summary ? " | " + options.summary : ""
       } | Posts`,
       totalItems,

@@ -17,6 +17,7 @@ const ReplySchema = new Schema(
       content: { type: String, default: "" },
       mediaType: { type: String, default: "text/html" },
     },
+    image: { type: String, default: undefined },
     attachments: { type: [Object], default: [] },
     flagged: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },

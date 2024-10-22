@@ -4,7 +4,7 @@ module.exports = {
       name: "kowloon",
       script: "./index.js",
       watch: ["./"],
-      ignore_watch: [".git", "public", "node_modules", "logs"],
+      ignore_watch: [".git", "public", "node_modules", "logs", "frontend"],
     },
   ],
 };

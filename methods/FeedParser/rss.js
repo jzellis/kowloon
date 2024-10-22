@@ -43,20 +43,18 @@ export default async function (url, actorId) {
             },
             $set: {
               id: item.guid,
-
-              item: {
+              object: {
                 id: item.guid,
                 type: "Article",
                 title: item.title || null,
-                content_text: item.contentSnippet || null,
-                content_html: item.content || null,
+                summary: item.contentSnippet || null,
+                source: { content: item.content || null },
                 url: item.link,
-                external_url: item.href,
+                href: item.href,
                 image: image,
-                date_published: item.pubDate,
-                // date_modified: object.updatedAt,
-                author: item.author,
-                // tags: item.categories || null,
+                createdAt: item.pubDate,
+                actorId: feedActor.id,
+                tags: item.categories || null,
               },
             },
           },

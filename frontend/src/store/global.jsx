@@ -1,5 +1,4 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { set } from "mongoose";
 
 const initialState = {
     loading: true,
@@ -32,8 +31,14 @@ export const globalSlice = createSlice({
             state.description = action.payload;
         },
 
-        togglePostEditor: (state) => {
+        togglePostEditor: (state,action) => {
             state.postEditorVisible = !state.postEditorVisible;
+        },
+        showPostEditor: (state) => {
+            state.postEditorVisible = true;
+        },
+        hidePostEditor: (state) => {
+            state.postEditorVisible = false;
         },
         setPostType: (state, action) => {
             state.postType = action.payload;
@@ -56,6 +61,6 @@ export const globalSlice = createSlice({
     },
 });
 
-export const { setLoading, setTitle, setPostLink, setDescription, togglePostEditor, setPostType, setPostTitle, setPostContent, setPostAudience, setPostReplyAudience, setSettings } = globalSlice.actions;
+export const { setLoading, setTitle, setPostLink, setDescription, togglePostEditor, showPostEditor, hidePostEditor, setPostType, setPostTitle, setPostContent, setPostAudience, setPostReplyAudience, setSettings } = globalSlice.actions;
 
 export default globalSlice.reducer;

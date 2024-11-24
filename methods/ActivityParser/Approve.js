@@ -3,7 +3,7 @@ export default async function (activity) {
   let user = await User.findOne({ id: activity.actorId });
   let targetUser = await User.findOne({ id: activity.object });
   let group = await Group.findOne({ id: activity.target });
-  activity.summary = `${actor.profile.name} (${actor.username}) approved ${targetUser.profile.name}'s request to join ${group.name}`;
+  activity.summary = `${actor.profile.name} (${actor.id}) approved ${targetUser.profile.name} (${targetUser.id})'s request to join ${group.name}`;
   switch (activity.objectType) {
     case "Group":
       let group = await Group.findOneAndUpdate(
@@ -12,8 +12,8 @@ export default async function (activity) {
           $or: { admins: activity.actorId, actorId: activity.ActorId },
         },
         {
-          $pullAll: { pending: activity.object },
-          $push: { members: activity.object },
+          $pullAll: { pending: activity.object.actorId },
+          $push: { members: activity.object.actorId },
         }
       );
 

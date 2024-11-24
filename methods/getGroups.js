@@ -2,7 +2,7 @@ import { Group } from "../schema/index.js";
 import getSettings from "./getSettings.js";
 const settings = await getSettings();
 
-export default async function (query = { public: true }, options) {
+export default async function (query = { to: "@public" }, options) {
   let startTime = Date.now();
   options = {
     actor: false,

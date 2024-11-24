@@ -12,7 +12,7 @@ const rl = readline.createInterface({
 
 let envFile = ".env",
   title = "My Kowloon Server",
-  description = "My brand new Kowloon server",
+  summary = "My brand new Kowloon server",
   location = "Kowloon, Hong Kong",
   domain = "localhost",
   dbUrl = "mongodb://localhost:27017/",
@@ -30,7 +30,7 @@ let envFile = ".env",
   geocodingApiKey = "66d4979f026ce833245063brx2e60a0",
   defaultSettings = {
     title,
-    description,
+    summary,
     location: null,
     domain,
     uploadDir,
@@ -134,7 +134,7 @@ maxUploadSize =
   )) == "y" || maxUploadSize;
 
 defaultSettings.title = title;
-defaultSettings.description = description;
+defaultSettings.summary = summary;
 defaultSettings.domain = domain;
 defaultSettings.uploadDir = uploadDir;
 defaultSettings.registrationIsOpen = registrationIsOpen;
@@ -166,8 +166,6 @@ geocodingApiKey =
   (await rl.question(`What is your Geocoding (geocode.maps.co) API key? `)) ||
   geocodingApiKey;
 let locationName = await rl.question(`What is your location (${location})? `);
-
-console.log(locationName);
 if (locationName) {
   console.log("Searching for location...");
   try {

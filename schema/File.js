@@ -8,7 +8,7 @@ const FileSchema = new Schema(
     id: { type: String, key: true },
     originalFileName: { type: String, default: undefined },
     title: { type: String, default: undefined },
-    description: { type: String, default: undefined },
+    summary: { type: String, default: undefined },
     url: { type: String, default: undefined },
     location: { type: String, default: undefined },
     mimeType: { type: String, default: undefined },

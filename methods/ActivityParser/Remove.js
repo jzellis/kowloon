@@ -10,7 +10,21 @@ export default async function (activity) {
     case "Circle":
       let circle = await Circle.findOneAndUpdate(
         { id: activity.target },
-        { $pull: { members: activity.object } }
+        { $pullAll: { members: activity.object.actorId } }
+      );
+
+      break;
+
+    case "Group":
+      let group = await Group.findOneAndUpdate(
+        {
+          id: activity.target,
+          $or: { admins: activity.actorId, actorId: activity.ActorId },
+        },
+        {
+          $pullAll: { pending: activity.object.actorId },
+          $pullAll: { members: activity.object.actorId },
+        }
       );
 
       break;

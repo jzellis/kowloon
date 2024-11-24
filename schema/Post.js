@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { marked } from "marked";
 import crypto from "crypto";
-import { Post, Settings, Reply, User, Like, File } from "./index.js";
+import { Settings, User } from "./index.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -26,12 +26,13 @@ const PostSchema = new Schema(
     tags: { type: [String], default: [] },
     location: { type: Object, default: undefined }, // A geotag for the post in the ActivityStreams geolocation format
     target: { type: String, default: undefined }, // For replies
-    replyAudience: { type: [String], default: [] }, // Who can reply. If this is set to "@_public@server.name", anyone can reply; if "@_recipients@server.name", only people in the recipients list can reply; if "@_server@server.name", only users belonging to the server can reply; if circles or groups are listed, only people in those Circles or Groups can reply. If it's empty, no one can reply.
-    to: { type: [String], default: "_public@server.name" }, // If the post is public, this is set to "_public@server.name"; if it's server-only, it's set to "_server@server.name"; if it's a DM it's set to the recipient(s)
-    bto: { type: [String], default: undefined }, // This is for posts to Circles
-    cc: { type: [String], default: undefined }, // This is for posts to publicGroups or tagging people in
-    bcc: { type: [String], default: undefined }, // This is for posts to private Groups
-    flagged: { type: Boolean, default: false }, // This is whether the post has been flagged for review
+    replyTo: { type: [String], default: [] }, // Who can reply. If this is set to "@_public@server.name", anyone can reply; if "@_recipients@server.name", only people in the recipients list can reply; if "@_server@server.name", only users belonging to the server can reply; if circles or groups are listed, only people in those Circles or Groups can reply. If it's empty, no one can reply.
+    to: { type: [String], default: [] }, // If the post is public, this is set to "_public@server.name"; if it's server-only, it's set to "_server@server.name"; if it's a DM it's set to the recipient(s)
+    cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
+    bcc: { type: [String], default: [] }, // This is for posts to private Groups
+    flaggedAt: { type: Date, default: null },
+    flaggedBy: { type: String, default: null },
+    flaggedReason: { type: String, default: null },
     deletedAt: { type: Date, default: null }, // If this post was deleted, this is when it was deleted. If it's not set the post is not deleted
     deletedBy: { type: String, default: null }, // I`f the activity is deleted, who deleted it (usually the user unless an admin does it)
     signature: Buffer, // The creator's public signature for verification
@@ -71,10 +72,8 @@ PostSchema.pre("save", async function (next) {
   this.id = this.id || `post:${this._id}@${domain}`;
   this.url = this.url || `//${domain}/posts/${this._id}`;
   this.source.mediaType = this.source.mediaType || "text/html";
-  this.replyPermissions = this.replyPermissions || [`_recipients@${domain}`];
-
   if (this.source.mediaType.includes("markdown"))
-    this.content = `${marked(this.source.content)}`;
+    this.source.content = `${marked(this.source.content)}`;
 
   let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
 
@@ -83,6 +82,13 @@ PostSchema.pre("save", async function (next) {
   const sign = crypto.createSign("RSA-SHA256");
   sign.update(stringject);
   this.signature = sign.sign(actor.keys.private, "base64");
+  next();
+});
+
+PostSchema.pre("updateOne", async function (next) {
+  this.source.mediaType = this.source.mediaType || "text/html";
+  if (this.source.mediaType.includes("markdown"))
+    this.source.content = `${marked(this.source.content)}`;
   next();
 });
 

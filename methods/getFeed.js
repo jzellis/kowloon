@@ -14,7 +14,7 @@ export default async function (
 
   if (!id) return new Error("No user or server id provided");
   let query = {
-    $or: [{ from: id }, { to: id }, { bto: id }, { cc: id }, { bcc: id }],
+    $or: [{ from: id }, { to: id }, { cc: id }, { bcc: id }],
   };
   if (options.deleted === false) query.deletedAt = { $eq: null };
   let items = await Feed.find(query)

@@ -14,8 +14,11 @@ const BookmarkSchema = new Schema(
     tags: { type: [String], default: [] },
     summary: { type: String, default: undefined },
     image: { type: String, default: undefined },
-    public: { type: Boolean, default: false },
+    to: { type: [String], default: [] }, // If the post is public, this is set to "@public"; if it's server-only, it's set to "@server"; if it's a DM it's set to the recipient(s)
+    cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
+    bcc: { type: [String], default: [] }, // This is for posts to private Groups
     deletedAt: { type: Date, default: null },
+    deletedBy: { type: String, default: null }, // I`f the activity is deleted, who deleted it (usually the user unless an admin does it)
   },
   {
     timestamps: true,

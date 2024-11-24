@@ -1,4 +1,5 @@
 import React, { useState, useEffect, createRef, useRef } from "react";
+import {useNavigate} from "react-router-dom";
 import { useSelector, useDispatch } from "react-redux";
 import { AiFillEye, AiFillEyeInvisible } from "react-icons/ai";
 import Kowloon from "../../lib/kowloon";
@@ -7,13 +8,16 @@ const doSignup = (e) => {
     e.preventDefault();
 }
 const Signup = () => {
+    const navigate = useNavigate();
     const [username, setUsername] = useState("");
     const [usernameExists, setUsernameExists] = useState(false);
     const [password, setPassword] = useState("");
     const [passwordVisible, setPasswordVisible] = useState(false);
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
-    const [location, setLocation] = "";
+    const [location, setLocation] = useState({});
+    const [locationLabel, setLocationLabel] = useState("");
+    const [locationOptions, setLocationOptions] = useState([]);
     const [urls, setUrls] = useState([]);
     const [bio, setBio] = useState("");
     const [icon, setIcon] = useState("");
@@ -22,9 +26,18 @@ const Signup = () => {
     const [error, setError] = useState(null);
     const [pronouns, setPronouns] = useState(Kowloon.pronouns.nonbinary);
     const [showCustomPronouns, setShowCustomPronouns] = useState(false);
+    const googleMapsAPIKey = useSelector((state) => state.global.settings.googleMapsAPIKey);
 
     const domain = useSelector((state) => state.global.settings.domain);
 
+    const handleIconChange = (e) => {
+        setIcon(e.target.files[0]);
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+            setIconPreview(reader.result);
+        });
+        reader.readAsDataURL(e.target.files[0]);
+    }
     const checkUsername = async (e) => {
         e.preventDefault();
         let data = await Kowloon.get(`${Kowloon.baseUrl}/checkUsername?username=${username}`);
@@ -59,21 +72,51 @@ const Signup = () => {
         }
     }
 
+    const getLocation = async (e) => {
+        setLocationLabel(e.target.value);
+        if(e.target.value.length < 4) setLocationOptions([])
+
+        let mapped = [];
+        if (locationLabel.length > 3 && googleMapsAPIKey) {
+            let options = await (await fetch(new URL(`https://maps.googleapis.com/maps/api/geocode/json?address=${locationLabel.split(" ").join("+")}&key=${googleMapsAPIKey}`))).json();
+            if (options.status === "OK") {
+                // setLocationOptions();
+                mapped = options.results.map(o => { return { type: "Point", name: o.formatted_address, latitude: o.geometry.location.lat, longitude: o.geometry.location.lng } });
+            //     
+            } else {
+                setLocationOptions([])
+            }
+            
+        }
+        if (mapped.length > 0) setLocationOptions(mapped);
+    }
+
     const doSignup = async (e) => {
         e.preventDefault();
 
-        let user = {
-            username,
-            password,
-            email,
-            name,
-            location,
-            icon,
-            bio,
-            urls: urls.length > 0 ? urls.trim().split("\\s*,\\s*"):"",
-            pronouns
+        let activity = {
+                type: "Signup",
+                object: {
+                    username,
+                    password,
+                    email,
+                    profile: {
+                        name,
+                        location,
+                        bio,
+                        urls: urls.length > 0 ? urls.trim().split(",") : "",
+                        pronouns
+                    },
+                }
+            
         }
-        console.log(user);
+        let response = await Kowloon.signup(activity, icon);
+        if (response.error) { alert(response.error); } else {
+            let res = await Kowloon.login(username, password);
+            if (res.key) {
+                navigate("../");
+        }
+        }
     }
 
         return <form onSubmit={doSignup} className=" w-1/2 mx-auto">
@@ -105,7 +148,7 @@ const Signup = () => {
             <div className="form-control mb-2">
                 <label className="label">
                     <span className="label-text font-bold">Full/Display Name *</span>
-                    <span className="label-text-alt">This does not have to be your real name</span>
+                    <span className="label-text-alt">This does not have to be your legal name</span>
                 </label>
                 <input placeholder="Name" className="input input-bordered" type="text" value={name} onChange={(e) => setName(e.target.value)} />
             </div>
@@ -114,13 +157,17 @@ const Signup = () => {
                 <label className="label">
                     <span className="label-text">Location</span>
                 </label>
-                <input placeholder="Location" className="input input-bordered" type="text" value={location} onChange={(e) => setLocation(e.target.value)} />
+                <input placeholder="Location" className="input input-bordered relative" type="text" value={locationLabel} onChange={(e) => getLocation(e) } />
+                <ul className={`${locationOptions.length > 0 ? "visible" : "hidden"} absolute bg-white border border-gray-300 p-4 rounded-md`}>
+                    {locationOptions.map((l, idx) => (<li key={idx} className="cursor-pointer hover:font-bold" onClick={() => { setLocation(l); setLocationLabel(l.name); setLocationOptions([]) }}>{l.name}</li>))}
+                </ul>
             </div>
             <div className="form-control mb-2">
                 <label className="label">
                     <span className="label-text">Icon</span>
                 </label>
-                <input placeholder="Icon" className="input input-bordered" type="text" value={icon} onChange={(e) => setIcon(e.target.value)} />
+                <input type="file" className="file-input file-input-bordered w-full max-w-xs" onChange={(e) => handleIconChange(e)} />
+                <img src={iconPreview} className="w-24 h-24" />
             </div>
             <div className="form-control mb-2">
                 <label className="label">
@@ -180,6 +227,7 @@ const Signup = () => {
                 </div>
                 </div>
             )}
+
             <div className="form-control mt-8">
                 <button className="btn btn-primary" type="submit" disabled={!submitActive}>Signup</button>
             </div>

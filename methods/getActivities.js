@@ -21,7 +21,7 @@ export default async function (query = { public: true }, options) {
   if (options.likes) populate += " likes";
   let items = await Activity.find(query)
     .lean()
-    .select("-flagged -deletedAt -deletedBy -_id -__v")
+    .select("-flagged -bcc -deletedAt -deletedBy -_id -__v")
     .limit(options.pageSize ? options.pageSize : 0)
     .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)
     .sort({ createdAt: -1 })
@@ -42,7 +42,7 @@ export default async function (query = { public: true }, options) {
     ),
     currentPage: parseInt(options.page) || 1,
     firstItem: options.pageSize * (options.page - 1) + 1,
-    lastItem: options.pageSize * (options.page - 1) + items.length + 1,
+    lastItem: options.pageSize * (options.page - 1) + items.length,
     count: items.length,
     items,
     queryTime: Date.now() - startTime,

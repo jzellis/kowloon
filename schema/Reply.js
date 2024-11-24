@@ -35,13 +35,13 @@ const ReplySchema = new Schema(
 ReplySchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;
   this.title = this.title && this.title.trim();
-  this.id = this.id || `post:${this._id}@${domain}`;
+  this.id = this.id || `reply:${this._id}@${domain}`;
   this.url = this.url || `//${domain}/posts/${this._id}`;
   this.source.mediaType = this.source.mediaType || "text/html";
 
   if (this.source.mediaType.includes("markdown"))
     this.content = `${marked(this.source.content)}`;
-
+  let actor = this.actor || (await User.findOne({ id: this.actorId }));
   let stringject = Buffer.from(this.id);
   const sign = crypto.createSign("RSA-SHA256");
   sign.update(stringject);

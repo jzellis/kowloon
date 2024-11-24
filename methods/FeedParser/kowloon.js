@@ -13,7 +13,6 @@ export default async function (url, actorId) {
           {
             $addToSet: {
               to: { $each: item.to },
-              bto: { $each: item.bto },
               cc: { $each: item.cc },
               bcc: { $each: item.bcc },
             },

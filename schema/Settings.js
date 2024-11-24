@@ -7,7 +7,7 @@ const ObjectId = mongoose.Types.ObjectId;
 const SettingsSchema = new Schema({
   name: String,
   value: Schema.Types.Mixed,
-  description: String,
+  summary: String,
   public: { type: Boolean, default: true },
   ui: {
     type: { type: String, default: "text" },

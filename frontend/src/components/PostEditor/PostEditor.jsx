@@ -1,6 +1,6 @@
 import React, { useState, createRef, useRef } from "react";
 import { useSelector, useDispatch } from "react-redux";
-import { togglePostEditor, setPostType, setPostTitle, setPostLink } from "../../store/global";
+import { togglePostEditor, setPostType, setPostTitle, setPostLink, showPostEditor, hidePostEditor } from "../../store/global";
 import { Editor } from "react-draft-wysiwyg";
 import { EditorState, ContentState, convertToRaw } from "draft-js";
 import draftToHtml from 'draftjs-to-html';
@@ -8,7 +8,6 @@ import htmlToDraft from 'html-to-draftjs';
 import "react-draft-wysiwyg/dist/react-draft-wysiwyg.css";
 import Kowloon from "../../lib/kowloon";
 const postEditor = (props) => {
-
 
     const dispatch = useDispatch();
     const defaultPostAudience = useSelector((state) => state.user.user.prefs.defaultPostAudience);
@@ -167,6 +166,7 @@ const postEditor = (props) => {
             type: "Create",
             actorId: user.id,
             bcc: [postAudience],
+            objectType: "Post",
             object: {
                 actorId: user.id,
                 type: postType,
@@ -181,7 +181,12 @@ const postEditor = (props) => {
 
             }
         }
-        console.log(activity);
+        let response = await Kowloon.createActivity(activity);
+        if (response.error) { alert(response.error); }
+        else {
+            resetEditor();
+            dispatch(hidePostEditor());
+        }
     }
 
     return (

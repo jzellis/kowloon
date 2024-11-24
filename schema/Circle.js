@@ -11,7 +11,9 @@ const CircleSchema = new Schema(
     summary: { type: String, default: undefined },
     icon: { type: String, default: undefined },
     members: { type: [String], default: [] },
-    public: { type: Boolean, default: false },
+    to: { type: [String], default: [] }, // If the post is public, this is set to "@public"; if it's server-only, it's set to "@server"; if it's a DM it's set to the recipient(s)
+    cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
+    bcc: { type: [String], default: [] }, // This is for posts to private Groups
     deletedAt: { type: Date, default: null },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }

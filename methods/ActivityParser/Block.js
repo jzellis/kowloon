@@ -1,12 +1,12 @@
-import { User } from "../../schema/index.js";
+import { User, Circle } from "../../schema/index.js";
 
 export default async function (activity) {
   activity.public = false;
   let user = await User.findOne({ id: activity.actorId });
-  activity.summary = `@${user.profile.name} blocked a user`;
-  await User.findOneAndUpdate(
-    { id: activity.actorId },
-    { $push: { blocked: activity.object } }
+  activity.summary = `@${user.profile.name} blocked ${activity.object.actorId}`;
+  await Circle.findOneAndUpdate(
+    { id: user.blocked },
+    { $push: { members: activity.object.actorId } }
   );
   return activity;
 }

@@ -25,40 +25,4 @@ await Promise.all(
   })
 );
 
-// import Create from "./Create.js";
-// import Update from "./Update.js";
-// import Delete from "./Delete.js";
-// import Like from "./Like.js";
-// import Unlike from "./Unlike.js";
-// import Add from "./Add.js";
-// import Remove from "./Remove.js";
-// import Approve from "./Approve.js";
-// import Reject from "./Reject.js";
-// import Join from "./Join.js";
-// import Leave from "./Leave.js";
-// import Block from "./Block.js";
-// import Unblock from "./Unblock.js";
-// import Mute from "./Mute.js";
-// import Unmute from "./Unmute.js";
-// import Reply from "./Reply.js";
-
-// export default {
-//   Create,
-//   Update,
-//   Delete,
-//   Like,
-//   Unlike,
-//   Add,
-//   Remove,
-//   Approve,
-//   Reject,
-//   Join,
-//   Leave,
-//   Block,
-//   Unblock,
-//   Mute,
-//   Unmute,
-//   Reply,
-// };
-
 export default mainMod;

@@ -9,6 +9,9 @@ const LikeSchema = new Schema(
     target: { type: String, required: true },
     actorId: { type: String, required: true },
     type: { type: Object, required: true },
+    to: { type: [String], default: ["@public"] }, // If the post is public, this is set to "@public"; if it's server-only, it's set to "@server"; if it's a DM it's set to the recipient(s)
+    cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
+    bcc: { type: [String], default: [] }, // This is for posts to private Groups
     deletedAt: Date,
   },
   {

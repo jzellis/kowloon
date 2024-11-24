@@ -15,9 +15,13 @@ const GroupSchema = new Schema(
     pending: { type: [String], default: [] }, // Pending members
     banned: { type: [String], default: [] }, // Banned users who cannot join
     admins: { type: [String], default: [] },
-    public: { type: Boolean, default: false },
-    approval: { type: Boolean, default: false }, // If members must be approved to join
-    flagged: { type: Object, default: false }, // Has this group been flagged? If so, it'll include a reason, who flagged it and when.
+    to: { type: [String], default: ["@public"] }, // If the post is public, this is set to "@public"; if it's server-only, it's set to "@server"; if it's a DM it's set to the recipient(s)
+    cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
+    bcc: { type: [String], default: [] }, // This is for posts to private Groups
+    requiresUserApproval: { type: Boolean, default: false }, // If members must be approved to join
+    flaggedAt: { type: Date, default: null },
+    flaggedBy: { type: String, default: null },
+    flaggedReason: { type: String, default: null },
     deletedAt: { type: Date, default: null }, // If the group is deleted, when it was deleted
     deletedBy: { type: String, default: null }, // If the group is deleted, who deleted it (usually the user unless an admin does it)
   },

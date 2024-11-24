@@ -30,14 +30,14 @@ const UserSchema = new Schema(
         defaultPostType: "Note",
         defaultPostAudience: "@_public",
         defaultPostReplyAudience: "",
-        defaultPostView: "",
+        defaultPostView: "Note,Article,Media,Link",
         defaultCircleView: "",
       },
     },
-    following: { type: [Object], default: [] },
-    followers: { type: [Object], default: [] },
-    blocked: { type: [String], default: [] },
-    muted: { type: [String], default: [] },
+    following: { type: String, default: "" },
+    followers: { type: String, default: "" },
+    blocked: { type: String, default: "" },
+    muted: { type: String, default: "" },
     lastLogin: Date,
     keys: {
       public: String,
@@ -103,11 +103,30 @@ UserSchema.pre("save", async function (next) {
     this.keys.public = publicKey;
     this.keys.private = privateKey;
 
-    await Circle.create({
-      name: `${this.username} - Following`,
+    let followingCircle = await Circle.create({
+      name: `${this.id} - Following`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Following`,
     });
+    this.following = followingCircle.id;
+    let followersCircle = await Circle.create({
+      name: `${this.id} - Followers`,
+      actorId: this.id,
+      description: `${this.profile.name} (@${this.username}) | Followers`,
+    });
+    this.followers = followersCircle.id;
+    let blockedCircle = await Circle.create({
+      name: `${this.id} - Blocked`,
+      actorId: this.id,
+      description: `${this.profile.name} (@${this.username}) | Blocked`,
+    });
+    this.blocked = blockedCircle.id;
+    let mutedCircle = await Circle.create({
+      name: `${this.id} - Muted`,
+      actorId: this.id,
+      description: `${this.profile.name} (@${this.username}) | Muted`,
+    });
+    this.muted = mutedCircle.id;
 
     if (!this.profile.pronouns) {
       this.profile.pronouns = (

@@ -3,124 +3,122 @@ import {
   Bookmark,
   Circle,
   Group,
-  Outbox,
+  File,
   User,
+  Reply,
   Settings,
-  Inbox,
 } from "../../schema/index.js";
 export default async function (activity) {
+  let domain = (await Settings.findOne({ name: "domain" })).value;
   if (!activity.object) return new Error("No object provided");
+  if (!activity.objectType) return new Error("No object type provided");
   try {
     let actor =
       activity.actor || (await User.findOne({ id: activity.actorId }));
+    activity.summary = `${actor?.profile?.name} (${actor?.id}) created a new ${activity.objectType}`;
 
-    activity.summary = `${actor.profile.name} (${actor.username}) created ${
-      "aeiouAEIOU".indexOf(activity.objectType[0]) !== -1 ? "an" : "a"
-    } new ${activity.objectType}`;
+    // This is the important part: depending on objectType we do different things.
+
     switch (activity.objectType) {
-      // If it's a Post
-
       case "Post":
-        activity.object = {
-          ...activity.object,
-          actorId: activity.object.actorId || activity.actorId,
-          to: activity.object.to || activity.to,
-          bto: activity.object.bto || activity.bto,
-          cc: activity.object.cc || activity.cc,
-          bcc: activity.object.bcc || activity.bcc,
-        };
-        if (activity.object.circles && activity.object.circles.length > 0) {
-          activity.public = false;
-          activity.object.public = false;
-        }
+        activity.summary = `${actor.profile.name} (${actor.id}) created a new ${activity.object.type}`;
 
         try {
+          await Promise.all(
+            activity.object.to.map(async (addr) => {
+              if (addr.startsWith("group")) {
+                let group = await Group.findOne({ id: addr });
+                activity.summary = `${actor.profile.name} (${actor.id}) posted a new ${activity.object.type} in ${group.name}`;
+                activity.to = activity.to.concat(group.to);
+                activity.object.to = [...activity.object.to, ...group.to];
+              }
+            })
+          );
+
+          activity.object.to = Array.from(new Set(activity.object.to));
           let post = await Post.create(activity.object);
           activity.objectId = post.id;
-          let recipients = new Array.from(
-            new Set([
-              ...activity.object.to,
-              ...activity.object.bto,
-              ...activity.object.cc,
-              ...activity.object.bcc,
-            ])
-          );
-          if (recipients.length > 0) {
-            let domain = (await Settings.findOne({ name: "domain" })).value;
-            let local = recipients.filter((r) => r.endsWith(domain));
-            let remote = recipients.filter((r) => !r.endsWith(domain));
-            local.map(async (r) => {
-              await Inbox.create({
-                to: r,
-                item: activity.object,
-              });
-            });
-            remote.map(async (r) => {
-              await Outbox.create({
-                to: r,
-                actorId: activity.actorId,
-                item: activity.object,
-              });
-            });
-          }
         } catch (e) {
+          console.log(e);
+          return new Error(e);
+        }
+        break;
+      case "Reply":
+        try {
+          let post = await Post.findOne({ id: activity.target });
+          activity.object.target = activity.object.target || post.id;
+          activity.object.cc = [post.actorId];
+          activity.cc = [post.actorId];
+          activity.summary = `${actor.profile.name} (${actor.id}) replied to a post`;
+          let reply = await Reply.create(activity.object);
+          activity.objectId = reply.id;
+          post.replyCount++;
+          await post.save();
+        } catch (e) {
+          console.log(e);
           return new Error(e);
         }
         break;
 
-      // If it's a Circle
       case "Circle":
-        activity.object = {
-          ...activity.object,
-          actorId: activity.object.actorId || activity.actorId,
-        };
         try {
-          const circle = await Circle.create(activity.object);
+          let circle = await Circle.create(activity.object);
           activity.objectId = circle.id;
         } catch (e) {
           return new Error(e);
         }
-
         break;
-
-      // If it's a Group
       case "Group":
-        activity.object = {
-          ...activity.object,
-          actorId: activity.actorId,
-        };
-        if (!activity.object.admins || activity.object.admins.length === 0)
-          activity.object.admins = [activity.actorId];
-        const group = await Group.create(activity.object);
-        activity.objectId = group.id;
+        try {
+          let group = await Group.create(activity.object);
+          group.admins.push(activity.actorId);
+          await group.save();
+          activity.to.push(group.id);
+          activity.objectId = group.id;
+        } catch (e) {
+          return new Error(e);
+        }
         break;
-
       case "Bookmark":
-        activity.object.actorId = activity.actorId;
-        const bookmark = await Bookmark.create(activity.object);
-        activity.objectId = bookmark.id;
+        try {
+          let bookmark = await Bookmark.create(activity.object);
+          activity.objectId = bookmark.id;
+        } catch (e) {
+          return new Error(e);
+        }
+        break;
+      case "Reply":
+        try {
+          let reply = await Reply.create(activity.object);
+          activity.objectId = reply.id;
+        } catch (e) {
+          return new Error(e);
+        }
+        break;
+      case "File":
+        try {
+          let file = await File.create(activity.object);
+          activity.objectId = file.id;
+        } catch (e) {
+          return new Error(e);
+        }
         break;
 
-      case "Reply":
-        activity.object = {
-          ...activity.object,
-          actorId: activity.object.actorId || activity.actorId,
-          to: activity.object.to || activity.to,
-          bto: activity.object.bto || activity.bto,
-          cc: activity.object.cc || activity.cc,
-          bcc: activity.object.bcc || activity.bcc,
-        };
-
-        post = await Post.create(activity.object);
-        await Outbox.create({
-          actorId: activity.actorId,
-          to: activity.target,
-          item: activity.object,
-        });
-        activity.objectId = post.id;
+      case "User":
+        try {
+          let actor = await User.create(activity.object);
+          activity.objectId = actor.id;
+          activity.actorId = actor.id;
+          activity.object = actor;
+          activity.object.password = undefined;
+          activity.object.keys.private = undefined;
+          activity.object.accessToken = undefined;
+          activity.summary = `${actor.profile.name} (${actor.id}) joined the server`;
+        } catch (e) {
+          return new Error(e);
+        }
         break;
     }
-
     return activity;
   } catch (e) {
     console.log(e);

@@ -17,6 +17,7 @@ const router = createBrowserRouter([
     children: [
     {index: true, element: <Timeline />},
       {
+
         path: "/signup",
         element: <Signup />,
       },

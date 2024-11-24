@@ -142,7 +142,6 @@ const Kowloon = {
         await fetch(`${this.baseUrl}/upload`, {
           method: "POST",
           headers: {
-            // Accept: "application/json",
             Authorization: this.user?.id
               ? "Basic " + this.user?.keys?.public.replaceAll("\n", "\\r\\n")
               : "",
@@ -157,7 +156,7 @@ const Kowloon = {
   },
   createActivity: async function (activity) {
     try {
-      return await this.post(`${this.baseUrl}/outbox`, activity);
+      return await this.post(`${this.baseUrl}/outbox`, { activity });
     } catch (e) {
       console.error(e);
       return new Error(e);
@@ -176,6 +175,17 @@ const Kowloon = {
     return `${words[0].charAt(0).toUpperCase() + words[0].slice(1)}${
       words[1].charAt(0).toUpperCase() + words[1].slice(1)
     }${number}${suffix}`;
+  },
+  signup: async function (activity, icon) {
+    let formData = new FormData();
+    formData.append("activity", JSON.stringify(activity));
+    formData.append("icon", icon);
+    return await (
+      await fetch(`${this.baseUrl}/signup`, {
+        method: "POST",
+        body: formData,
+      })
+    ).json();
   },
 };
 

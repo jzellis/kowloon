@@ -1,30 +1,22 @@
-import { Like, Settings, Outbox } from "../../schema/index.js";
-import post from "../post.js";
+import { Like, User, Post } from "../../schema/index.js";
 
 export default async function (activity) {
-  activity.public = false;
-  let user = await User.findOne({ id: activity.actorId });
-  let type =
-    activity.target.split(":")[0].charAt(0).toUpperCase() +
-    activity.target.split(":")[0].substring(1).toLowerCase();
+  let actor = activity.actor || (await User.findOne({ id: activity.actorId }));
+  let target = await Post.findOne({ id: activity.target });
+  activity.summary = `${actor.profile.name} (${actor.username}) unliked ${
+    target.type ? "a " + target.type : ""
+  }`;
 
-  activity.summary = `@${user.profile.name} unliked ${
-    "aeiouAEIOU".indexOf(type) !== -1 ? "an" : "a"
-  } ${type}`;
-  let like = await Like.deleteOne({
-    id: activity.target,
+  let like = await Like.findOneAndDelete({
     actorId: activity.actorId,
+    target: activity.target,
   });
-  let domain = (await Settings.findOne({ name: "server" })).value;
-  let targetDomain = activity.target.split("@").slice(-1);
-  if (targetDomain === domain) {
-  } else {
-    let url = `https://${targetDomain}/api/inbox`;
-    let response = await post(url, {
-      actorId: activity.actorId,
-      body: { activity },
-    });
-    activity.objectId = response.activity.id;
-  }
+  activity.objectId = like.id;
+
+  await Post.findOneAndUpdate(
+    { id: activity.target },
+    { $inc: { likeCount: -1 } }
+  );
+
   return activity;
 }

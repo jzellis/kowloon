@@ -8,7 +8,7 @@ import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import fileUpload from "express-fileupload";
 
-import routes from "./routes/index.js";
+import routes from "./routes/routes.js";
 import fs from "fs";
 
 const __dirname = `${dirname(fileURLToPath(import.meta.url))}`;

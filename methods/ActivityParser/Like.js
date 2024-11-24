@@ -1,28 +1,23 @@
-import { Like, Settings, Outbox } from "../../schema/index.js";
+import { Like, User, Post } from "../../schema/index.js";
 
 export default async function (activity) {
-  let user = await User.findOne({ id: activity.actorId });
-  let type =
-    activity.target.split(":")[0].charAt(0).toUpperCase() +
-    activity.target.split(":")[0].substring(1).toLowerCase();
+  let actor = activity.actor || (await User.findOne({ id: activity.actorId }));
+  let target = await Post.findOne({ id: activity.target });
+  activity.summary = `${actor.profile.name} (${actor.username}) liked ${
+    target.type ? "a " + target.type : ""
+  }`;
 
-  activity.summary = `@${user.profile.name} liked ${
-    "aeiouAEIOU".indexOf(type) !== -1 ? "an" : "a"
-  } ${type}`;
   let like = await Like.create({
     actorId: activity.actorId,
     target: activity.target,
-    type: activity.object,
+    type: activity.object.type,
   });
   activity.objectId = like.id;
-  let domain = (await Settings.findOne({ name: "server" })).value;
-  let targetDomain = activity.target.split("@").slice(-1);
-  if (targetDomain != domain) {
-    await Outbox.create({
-      actorId: activity.actorId,
-      to: activity.target,
-      item: activity.object,
-    });
-  }
+
+  await Post.findOneAndUpdate(
+    { id: activity.target },
+    { $inc: { likeCount: 1 } }
+  );
+
   return activity;
 }

@@ -5,10 +5,10 @@ const TimelineItem = (props) => {
     let post = props.post;
     return <li className={`post ${post.type}`} key={post.key}>
         <div className="grid grid-cols-12 gap-4">
-            <div className="col-span-1 pt-2"><a className="cursor-pointer" href={`/users/${post.actor.username}`}><img className="avatar w-full rounded-full" src={post.actor.profile.avatar} alt={post.actor.id} /></a></div>
+            <div className="col-span-1 pt-2"><a className="cursor-pointer" href={`/users/${post.actor?.username}`}><img className="avatar w-full rounded-full" src={post.actor?.profile.avatar} alt={post.actor?.id} /></a></div>
             <div className="postContent col-span-11">
         <div className="meta flex z-50">
-            <div className="user flex-1"><a href={`/users/${post.actor.username}`}><span className="font-bold">{post.actor.profile.name}</span> <span className="text-gray-400 ml-1">({post.actor.id})</span></a></div>
+            <div className="user flex-1"><a href={`/users/${post.actor?.username}`}><span className="font-bold">{post.actor?.profile.name}</span> <span className="text-gray-400 ml-1">({post.actor?.id})</span></a></div>
             <div className="postType flex-none">
                 {post.type === "Note" ? <BsCardText /> : null}
                 {post.type === "Article" ? <BsFileText /> : null}

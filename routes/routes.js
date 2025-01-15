@@ -5,7 +5,8 @@ import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 import winston from "winston";
-
+import klawSync from "klaw-sync";
+import expressListEndpoints from "express-list-endpoints";
 // Routes
 
 const router = express.Router();
@@ -29,95 +30,42 @@ const logger = winston.createLogger({
   ],
 });
 
-const routes = {
-  get: {},
-  post: {},
-};
+let allRoutes = { get: {}, post: {}, put: {}, delete: {} };
 
-// This loads routes from the directory structure in this folder. Each folder is an endpoint that can have GET and POST routes defined by the "get.js" and "post.js" files respectively. Folders that begin with a colon (:) are used as parameters, so for example the directory /posts/:id passes req.params.id to the get and post routes.
-const list = [];
-const rreaddir = async (dir) => {
-  let files = (await fs.readdir(dir, { withFileTypes: true }))
-    .filter((f) => f.isDirectory() && f.name != "admin")
-    .map((f) => `${f.path}/${f.name}`);
-  // return list;
-  for (const f of files) {
-    list.push(f);
-    await rreaddir(f);
-  }
-  return list;
-};
+let controllers = klawSync(__dirname, { nodir: true });
 
-await rreaddir(__dirname);
-
-list.map((f) => {
-  try {
-    routes.get[f.split(__dirname)[1]] = async function (x, y) {
-      return (await import(`${f}/get.js`)).default(x, y);
-    };
-    routes.post[f.split(__dirname)[1]] = async function (x, y) {
-      return (await import(`${f}/post.js`)).default(x, y);
-    };
-  } catch (e) {}
-});
-
-routes.get["/"] = async function (req, res) {
-  return (await import(`${__dirname}/home.js`)).default(req, res);
-};
-
-let adminRoutes = {
-  get: {},
-  post: {},
-  put: {},
-  delete: {},
-};
-let adminFiles = (
-  await fs.readdir(__dirname + "/admin", { withFileTypes: true })
-).filter((f) => !f.isDirectory());
-
-await Promise.all(
-  adminFiles.map(async (f) => {
-    try {
-      if (f.name.indexOf("get") > -1) {
-        adminRoutes.get[
-          f.name.indexOf("index") < 0
-            ? `${f.name.split(".get")[0].split(".")[0]}`
-            : "/"
-        ] = async function (x, y) {
-          return (await import(`${f.path}/${f.name}`)).default(x, y);
+controllers
+  .filter((file) => ~file.path.indexOf(".js"))
+  .map((r) => {
+    let filename = console.log(r.path.replace(__dirname, ""));
+    let [route, method, ext] = r.path.replace(__dirname, "").split(".");
+    route = route.replace("index", "");
+    switch (method) {
+      case "get":
+        allRoutes.get[route] = async function () {
+          return (await import(r.path)).default(...arguments);
         };
-      }
-      if (f.name.indexOf("post") > -1) {
-        adminRoutes.post[
-          f.name.indexOf("index") < 0
-            ? `${f.name.split(".post")[0].split(".")[0]}`
-            : "/"
-        ] = async function (x, y) {
-          return (await import(`${f.path}/${f.name}`)).default(x, y);
-        };
-      }
-      if (f.name.indexOf("put") > -1) {
-        adminRoutes.put[
-          f.name.indexOf("index") < 0
-            ? `${f.name.split(".put")[0].split(".")[0]}`
-            : "/"
-        ] = async function (x, y) {
-          return (await import(`${f.path}/${f.name}`)).default(x, y);
-        };
-      }
-      if (f.name.indexOf("delete") > -1) {
-        adminRoutes.delete[
-          f.name.indexOf("index") < 0
-            ? `${f.name.split(".delete")[0].split(".")[0]}`
-            : "/"
-        ] = async function (x, y) {
-          return (await import(`${f.path}/${f.name}`)).default(x, y);
-        };
-      }
-    } catch (e) {}
-  })
-);
 
+        break;
+      case "post":
+        allRoutes.post[route] = async function () {
+          return (await import(r.path)).default(...arguments);
+        };
+        break;
+      case "put":
+        allRoutes.put[route] = async function () {
+          return (await import(r.path)).default(...arguments);
+        };
+        break;
+      case "delete":
+        allRoutes.delete[route] = async function () {
+          return (await import(r.path)).default(...arguments);
+        };
+        break;
+    }
+  });
+
+console.log(allRoutes);
 router.use(async (req, res, next) => {
   res.header("Access-Control-Allow-Credentials", true);
   res.header("Access-Control-Allow-Origin", "*");
@@ -134,6 +82,15 @@ router.use(async (req, res, next) => {
     if (auth.user)
       auth.user.local = (await Kowloon.isLocal(auth.user?.id)) || null;
     req.user = auth.user || null;
+    if (req.user) {
+      req.user.memberships = await Kowloon.getUserMemberships(req.user.id);
+      req.user.blockedUsers = (
+        await Kowloon.getCircle({ id: req.user.blocked })
+      ).members;
+      req.user.mutedUsers = (
+        await Kowloon.getCircle({ id: req.user.muted })
+      ).members;
+    }
   }
   logger.info(
     `${req.method} ${req.url} | ${req.ip}${req.user ? " | " + req.user.id : ""}`
@@ -144,23 +101,19 @@ router.use(async (req, res, next) => {
     res.status(200).send(staticPage);
   });
 
-  for (const [url, route] of Object.entries(routes.get)) {
+  for (const [url, route] of Object.entries(allRoutes.get)) {
     router.get(`/api${url}`, route);
   }
-  for (const [url, route] of Object.entries(routes.post)) {
+
+  for (const [url, route] of Object.entries(allRoutes.post)) {
     router.post(`/api${url}`, route);
   }
-  for (const [url, route] of Object.entries(adminRoutes.get)) {
-    router.get(`/api/admin${url}`, route);
+
+  for (const [url, route] of Object.entries(allRoutes.put)) {
+    router.put(`/api${url}`, route);
   }
-  for (const [url, route] of Object.entries(adminRoutes.post)) {
-    router.post(`/api/admin${url}`, route);
-  }
-  for (const [url, route] of Object.entries(adminRoutes.put)) {
-    router.put(`/api/admin${url}`, route);
-  }
-  for (const [url, route] of Object.entries(adminRoutes.delete)) {
-    router.delete(`/api/admin${url}`, route);
+  for (const [url, route] of Object.entries(allRoutes.delete)) {
+    router.delete(`/api${url}`, route);
   }
   next();
 });

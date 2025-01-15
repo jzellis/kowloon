@@ -8,8 +8,10 @@ import Post from "./Post.js";
 import Settings from "./Settings.js";
 import User from "./User.js";
 import Inbox from "./Inbox.js";
+import Invite from "./Invite.js";
 import Outbox from "./Outbox.js";
 import Feed from "./Feed.js";
+import FeedItem from "./FeedItem.js";
 import File from "./File.js";
 
 export {
@@ -23,7 +25,9 @@ export {
   Settings,
   User,
   Inbox,
+  Invite,
   Outbox,
   Feed,
+  FeedItem,
   File,
 };

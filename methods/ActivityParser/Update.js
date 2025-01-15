@@ -16,10 +16,10 @@ export default async function (activity) {
     id: activity.target,
   });
   Object.keys(activity.object).forEach((key) => {
-    console.log("Key: ", key, "Type: ", typeof item[key]);
     try {
       switch (true) {
-        case item[key] instanceof Object:
+        case typeof item[key] === "object" &&
+          item[key] instanceof Array === false:
           item[key] = { ...item[key], ...activity.object[key] };
           break;
         default:

@@ -38,6 +38,8 @@ BookmarkSchema.pre("save", async function (next) {
   if (this.isNew) {
     const domain = (await Settings.findOne({ name: "domain" })).value;
     this.id = this.id || `bookmark:${this._id}@${domain}`;
+    this.url = this.url || `//${domain}/bookmarks/${this.id}`;
+
     this.image = this.image || `//${domain}/images/bookmark.png`;
 
     if (!this.title) this.title = this.href;

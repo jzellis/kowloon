@@ -26,7 +26,7 @@ const PostSchema = new Schema(
     tags: { type: [String], default: [] },
     location: { type: Object, default: undefined }, // A geotag for the post in the ActivityStreams geolocation format
     target: { type: String, default: undefined }, // For replies
-    replyTo: { type: [String], default: [] }, // Who can reply. If this is set to "@_public@server.name", anyone can reply; if "@_recipients@server.name", only people in the recipients list can reply; if "@_server@server.name", only users belonging to the server can reply; if circles or groups are listed, only people in those Circles or Groups can reply. If it's empty, no one can reply.
+    replyTo: { type: [String], default: [] }, // Who can reply. If this is set to "@public@server.name", anyone can reply; if "@_recipients@server.name", only people in the recipients list can reply; if "@_server@server.name", only users belonging to the server can reply; if circles or groups are listed, only people in those Circles or Groups can reply. If it's empty, no one can reply.
     to: { type: [String], default: [] }, // If the post is public, this is set to "_public@server.name"; if it's server-only, it's set to "_server@server.name"; if it's a DM it's set to the recipient(s)
     cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
     bcc: { type: [String], default: [] }, // This is for posts to private Groups
@@ -70,7 +70,7 @@ PostSchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;
   this.title = this.title && this.title.trim();
   this.id = this.id || `post:${this._id}@${domain}`;
-  this.url = this.url || `//${domain}/posts/${this._id}`;
+  this.url = this.url || `//${domain}/posts/${this.id}`;
   this.source.mediaType = this.source.mediaType || "text/html";
   if (this.source.mediaType.includes("markdown"))
     this.source.content = `${marked(this.source.content)}`;

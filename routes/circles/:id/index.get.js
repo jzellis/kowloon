@@ -8,6 +8,6 @@ export default async function (req, res) {
   console.log(req.params.id);
 
   let status = 200;
-  let response = { activity: await Kowloon.getActivity(req.params.id) };
+  let response = { circle: await Kowloon.getCircle(req.params.id) };
   res.status(status).json(response);
 }

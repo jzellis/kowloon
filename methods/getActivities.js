@@ -2,7 +2,7 @@ import { Activity } from "../schema/index.js";
 import getSettings from "./getSettings.js";
 const settings = await getSettings();
 
-export default async function (query = { public: true }, options) {
+export default async function (query = { to: "@public" }, options) {
   let startTime = Date.now();
   options = {
     actor: false,
@@ -24,8 +24,8 @@ export default async function (query = { public: true }, options) {
     .select("-flagged -bcc -deletedAt -deletedBy -_id -__v")
     .limit(options.pageSize ? options.pageSize : 0)
     .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)
-    .sort({ createdAt: -1 })
-    .populate(populate);
+    .sort({ createdAt: -1 });
+  // .populate(populate);
 
   let totalItems = await Activity.countDocuments(query);
 

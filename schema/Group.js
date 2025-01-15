@@ -40,7 +40,7 @@ GroupSchema.pre("save", async function (next) {
     const domain = (await Settings.findOne({ name: "domain" })).value;
     this.title = this.title && this.title.trim();
     this.id = this.id || `group:${this._id}@${domain}`;
-    this.url = this.url || `//${domain}/groups/${this._id}`;
+    this.url = this.url || `//${domain}/groups/${this.id}`;
     this.icon = this.icon || `//${domain}/images/group.png`;
   }
   next();

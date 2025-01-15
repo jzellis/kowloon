@@ -32,7 +32,7 @@ FileSchema.pre("save", async function (next) {
   if (this.isNew) {
     const domain = (await Settings.findOne({ name: "domain" })).value;
     this.id = this.id || `file:${this._id}@${domain}`;
-    this.url = this.url || `//${domain}/files/${this._id}.${this.extension}`;
+    this.url = this.url || `//${domain}/files/${this.id}.${this.extension}`;
   }
   next();
 });

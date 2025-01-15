@@ -5,6 +5,8 @@ import {
   Group,
   Like,
   Post,
+  Feed,
+  FeedItem,
   User,
 } from "../schema/index.js";
 
@@ -16,5 +18,7 @@ export default async function () {
   await Like.deleteMany({});
   await Post.deleteMany({});
   await User.deleteMany({});
+  await Feed.deleteMany({});
+  await FeedItem.deleteMany({});
   return true;
 }

@@ -178,6 +178,45 @@ let groupPostActivity = {
   to: [],
 };
 
+let bookmarkActivity = {
+  type: "Create",
+  objectType: "Bookmark",
+  object: {
+    target: "",
+    href: "https://www.google.com",
+    title: "Google",
+    actorId: "@admin@kowloon.social",
+    summary: "This is a bookmark",
+    to: ["@public"],
+  },
+};
+
+let circlePostActivity = {
+  type: "Create",
+  objectType: "Post",
+  actorId: "@bob@kowloon.social",
+  object: {
+    type: "Note",
+    source: {
+      content: "This is a post to a Circle",
+    },
+    to: [],
+  },
+  to: [],
+};
+
+let followActivity = {
+  type: "Follow",
+  target: "https://kowloon.social/api/users/admin/posts",
+  actorId: "@admin@kowloon.social",
+};
+
+let followActivity2 = {
+  type: "Follow",
+  target: "https://theguardian.com/rss",
+  actorId: "@admin@kowloon.social",
+};
+
 /* Do the tests ------------------------------------------------------------ */
 
 let adminCreateResponse = await (
@@ -294,6 +333,40 @@ let groupPostActivityResponse = await (
     method: "POST",
     headers,
     body: JSON.stringify({ activity: groupPostActivity }),
+  })
+).json();
+
+let bookmarkActivityResponse = await (
+  await fetch(outboxUrl, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ activity: bookmarkActivity }),
+  })
+).json();
+
+circlePostActivity.object.bcc = [circleAddActivityResponse.activity.target];
+circlePostActivity.bcc = [circleAddActivityResponse.activity.target];
+let circlePostActivityResponse = await (
+  await fetch(outboxUrl, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ activity: circlePostActivity }),
+  })
+).json();
+
+let followActivityResponse = await (
+  await fetch(outboxUrl, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ activity: followActivity }),
+  })
+).json();
+
+let followActivityResponse2 = await (
+  await fetch(outboxUrl, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({ activity: followActivity2 }),
   })
 ).json();
 

@@ -5,6 +5,7 @@ const settings = await getSettings();
 export default async function (query = { public: true }, options) {
   let startTime = Date.now();
   options = {
+    title: null,
     actor: false,
     likes: false,
     replies: false,
@@ -27,7 +28,7 @@ export default async function (query = { public: true }, options) {
       .lean()
       .limit(options.pageSize ? options.pageSize : 0)
       .select(
-        "-flaggedAt -flaggedBy -flaggedReason -deletedAt -deletedBy -_id -__v"
+        "-bcc -flaggedAt -flaggedBy -flaggedReason -deletedAt -deletedBy -_id -__v"
       )
       .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)
       .sort({ createdAt: -1 })
@@ -36,7 +37,7 @@ export default async function (query = { public: true }, options) {
     return {
       "@context": "https://www.w3.org/ns/activitystreams",
       type: "OrderedCollection",
-      // id: `https//${settings.domain}${options.id ? "/" + options.id : ""}`,
+      title: options.title,
       summary: `${settings.title}${
         options.summary ? " | " + options.summary : ""
       } | Posts`,

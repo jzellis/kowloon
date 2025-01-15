@@ -266,7 +266,7 @@ const postEditor = (props) => {
                 }
                 <div className="audience flex max-w-fit">
                 <select className="select w-full" value={postAudience} onChange={(e) => setPostAudience(e.target.value)}>
-                        <option value="@_public">Public</option>
+                        <option value="@public">Public</option>
                         <option value="@_server">Server Only</option>
                         {user.circles.map((c) => <option key={c.id} value={`${c.id}`}>{c.name}</option>)}
 
@@ -276,7 +276,7 @@ const postEditor = (props) => {
 
                 <div className="replyAudience flex max-w-fit">
                 <select className="select w-full" value={postReplyAudience} onChange={(e) => setPostReplyAudience(e.target.value)}>
-                        <option value="@_public">Public</option>
+                        <option value="@public">Public</option>
                         <option value="@_server">Server Only</option>
                         {user.circles.map((c) => <option key={c.id} value={`${c.id}`}>{c.name}</option>)}
 

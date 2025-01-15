@@ -28,7 +28,7 @@ const UserSchema = new Schema(
       type: Object,
       default: {
         defaultPostType: "Note",
-        defaultPostAudience: "@_public",
+        defaultPostAudience: "@public",
         defaultPostReplyAudience: "",
         defaultPostView: "Note,Article,Media,Link",
         defaultCircleView: "",

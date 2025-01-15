@@ -84,6 +84,7 @@ export default async function (activity) {
           let bookmark = await Bookmark.create(activity.object);
           activity.objectId = bookmark.id;
         } catch (e) {
+          console.log(e);
           return new Error(e);
         }
         break;

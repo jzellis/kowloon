@@ -47,7 +47,7 @@ ActivitySchema.pre("save", async function (next) {
   // Create the activity id and url
   const domain = (await Settings.findOne({ name: "domain" })).value;
   this.id = this.id || `activity:${this._id}@${domain}`;
-  this.url = this.url || `//${domain}/activities/${this._id}`;
+  this.url = this.url || `//${domain}/activities/${this.id}`;
   next();
 });
 

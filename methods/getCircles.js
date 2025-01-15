@@ -2,7 +2,7 @@ import { Circle } from "../schema/index.js";
 import getSettings from "./getSettings.js";
 const settings = await getSettings();
 
-export default async function (query = { public: true }, options) {
+export default async function (query, options) {
   let startTime = Date.now();
   options = {
     actor: false,
@@ -15,6 +15,7 @@ export default async function (query = { public: true }, options) {
     ...options,
   };
   if (!query) return new Error("No query provided");
+  if (typeof query === "string") query = { id: query };
   if (options.deleted === false) query.deletedAt = { $eq: null };
   let populate = "";
   if (options.actor) populate += "actor";
@@ -22,7 +23,7 @@ export default async function (query = { public: true }, options) {
   try {
     let items = await Circle.find(query)
       .lean()
-      .select("-banned -flagged -deletedAt -deletedBy -_id -__v")
+      .select("-banned -flagged -deletedAt -deletedBy -_id -__v -bcc")
       .limit(options.pageSize ? options.pageSize : 0)
       .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)
       .sort({ createdAt: -1 })

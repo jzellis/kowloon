@@ -31,6 +31,8 @@ CircleSchema.pre("save", async function (next) {
     const domain = (await Settings.findOne({ name: "domain" })).value;
     this.title = this.title && this.title.trim();
     this.id = this.id || `circle:${this._id}@${domain}`;
+    this.url = this.url || `//${domain}/circles/${this.id}`;
+
     this.icon = this.icon || `//${domain}/images/circle.png`;
   }
   next();

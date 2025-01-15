@@ -8,6 +8,7 @@ import {
   Reply,
   Settings,
 } from "../../schema/index.js";
+import indefinite from "indefinite";
 export default async function (activity) {
   let domain = (await Settings.findOne({ name: "domain" })).value;
   if (!activity.object) return new Error("No object provided");
@@ -15,20 +16,26 @@ export default async function (activity) {
   try {
     let actor =
       activity.actor || (await User.findOne({ id: activity.actorId }));
-    activity.summary = `${actor?.profile?.name} (${actor?.id}) created a new ${activity.objectType}`;
+    activity.summary = `${actor?.profile?.name} (${
+      actor?.id
+    }) created ${indefinite(activity.objectType)}`;
 
     // This is the important part: depending on objectType we do different things.
 
     switch (activity.objectType) {
       case "Post":
-        activity.summary = `${actor.profile.name} (${actor.id}) created a new ${activity.object.type}`;
+        activity.summary = `${actor.profile.name} (${
+          actor.id
+        }) created ${indefinite(activity.object.type)}`;
 
         try {
           await Promise.all(
             activity.object.to.map(async (addr) => {
               if (addr.startsWith("group")) {
                 let group = await Group.findOne({ id: addr });
-                activity.summary = `${actor.profile.name} (${actor.id}) posted a new ${activity.object.type} in ${group.name}`;
+                activity.summary = `${actor.profile.name} (${
+                  actor.id
+                }) posted ${indefinite(activity.objectType)} in ${group.name}`;
                 activity.to = activity.to.concat(group.to);
                 activity.object.to = [...activity.object.to, ...group.to];
               }
@@ -107,6 +114,10 @@ export default async function (activity) {
 
       case "User":
         try {
+          activity.object.username = activity.object.username
+            .toLowerCase()
+            .trim();
+          activity.object.email = activity.object.email.toLowerCase().trim();
           let actor = await User.create(activity.object);
           activity.objectId = actor.id;
           activity.actorId = actor.id;
@@ -116,6 +127,7 @@ export default async function (activity) {
           activity.object.accessToken = undefined;
           activity.summary = `${actor.profile.name} (${actor.id}) joined the server`;
         } catch (e) {
+          console.log(e);
           return new Error(e);
         }
         break;

@@ -107,24 +107,28 @@ UserSchema.pre("save", async function (next) {
       name: `${this.id} - Following`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Following`,
+      to: [this.id],
     });
     this.following = followingCircle.id;
     let followersCircle = await Circle.create({
       name: `${this.id} - Followers`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Followers`,
+      to: [this.id],
     });
     this.followers = followersCircle.id;
     let blockedCircle = await Circle.create({
       name: `${this.id} - Blocked`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Blocked`,
+      to: [this.id],
     });
     this.blocked = blockedCircle.id;
     let mutedCircle = await Circle.create({
       name: `${this.id} - Muted`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Muted`,
+      to: [this.id],
     });
     this.muted = mutedCircle.id;
 

@@ -1,10 +1,12 @@
 import { Like, User, Post } from "../../schema/index.js";
 
+import indefinite from "indefinite";
+
 export default async function (activity) {
   let actor = activity.actor || (await User.findOne({ id: activity.actorId }));
   let target = await Post.findOne({ id: activity.target });
   activity.summary = `${actor.profile.name} (${actor.username}) liked ${
-    target.type ? "a " + target.type : ""
+    target.type ? indefinite(target.type) : ""
   }`;
 
   let like = await Like.create({

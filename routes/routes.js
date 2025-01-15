@@ -37,7 +37,6 @@ let controllers = klawSync(__dirname, { nodir: true });
 controllers
   .filter((file) => ~file.path.indexOf(".js"))
   .map((r) => {
-    let filename = console.log(r.path.replace(__dirname, ""));
     let [route, method, ext] = r.path.replace(__dirname, "").split(".");
     route = route.replace("index", "");
     switch (method) {
@@ -65,7 +64,6 @@ controllers
     }
   });
 
-console.log(allRoutes);
 router.use(async (req, res, next) => {
   res.header("Access-Control-Allow-Credentials", true);
   res.header("Access-Control-Allow-Origin", "*");

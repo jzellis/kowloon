@@ -33,7 +33,7 @@ CircleSchema.pre("save", async function (next) {
     this.id = this.id || `circle:${this._id}@${domain}`;
     this.url = this.url || `//${domain}/circles/${this.id}`;
 
-    this.icon = this.icon || `//${domain}/images/circle.png`;
+    this.icon = this.icon || `https://${domain}/images/circle.png`;
   }
   next();
 });

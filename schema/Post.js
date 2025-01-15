@@ -70,7 +70,7 @@ PostSchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;
   this.title = this.title && this.title.trim();
   this.id = this.id || `post:${this._id}@${domain}`;
-  this.url = this.url || `//${domain}/posts/${this.id}`;
+  this.url = this.url || `https://${domain}/posts/${this.id}`;
   this.source.mediaType = this.source.mediaType || "text/html";
   if (this.source.mediaType.includes("markdown"))
     this.source.content = `${marked(this.source.content)}`;

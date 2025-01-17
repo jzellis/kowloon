@@ -103,11 +103,6 @@ dbName =
     )})? `
   )) || slugify(title).toLowerCase();
 
-dbUrl =
-  (await rl.question(
-    `What is the full URL for your MongoDB database (${chalk.bold(dbUrl)})? `
-  )) || dbUrl;
-
 jwtKey =
   (await rl.question(
     `What is the key for your JSONWeb Tokens (${chalk.bold(jwtKey)})? `

@@ -88,8 +88,12 @@ export default async function (activity) {
         break;
       case "Bookmark":
         try {
+          let post = await Post.findOne({ id: activity.object.target });
           let bookmark = await Bookmark.create(activity.object);
           activity.objectId = bookmark.id;
+          activity.summary = `${actor.profile.name} (${
+            actor.id
+          }) bookmarked ${indefinite(post.type)}`;
         } catch (e) {
           console.log(e);
           return new Error(e);
@@ -97,7 +101,12 @@ export default async function (activity) {
         break;
       case "Reply":
         try {
+          let post = await Post.findOne({ id: activity.object.target });
+
           let reply = await Reply.create(activity.object);
+          activity.summary = `${actor.profile.name} (${
+            actor.id
+          }) replied to ${indefinite(post.type)}`;
           activity.objectId = reply.id;
         } catch (e) {
           return new Error(e);

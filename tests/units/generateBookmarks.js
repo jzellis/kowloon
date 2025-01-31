@@ -2,32 +2,24 @@ import { faker } from "@faker-js/faker";
 import { Settings, User, Post } from "../../schema/index.js";
 import Kowloon from "../../Kowloon.js";
 export default async function (numReacts) {
-  let activityTemplate = {
-    type: "React",
-    actorId: "",
-    target: "",
-    object: {},
-  };
-
   let baseUrl = `https://${
     (await Settings.findOne({ name: "domain" })).value
   }/api/inbox`;
 
-  let likeTypes = (await Settings.findOne({ name: "likeEmojis" })).value;
-  let likes = [];
+  let bookmarks = [];
   let posts = await Post.find().select("id").lean();
   let users = await User.find();
 
   for (let i = 0; i < numReacts; i++) {
     let actorId = users[Math.floor(Math.random() * users.length)].id;
     let target = posts[Math.floor(Math.random() * posts.length)].id;
-    let likeActivity = {
+    let bookmarkActivity = {
       to: ["@public"],
       actorId: actorId,
       target: target,
-      type: "React",
+      type: "Create",
+      objectType: "Bookmark",
       object: {
-        type: likeTypes[Math.floor(Math.random() * likeTypes.length)],
         to: ["@public"],
         actorId: actorId,
         target: target,
@@ -38,9 +30,9 @@ export default async function (numReacts) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ activity: likeActivity }),
+      body: JSON.stringify({ activity: bookmarkActivity }),
     });
-    likes.push(await reply.json());
+    bookmarks.push(await reply.json());
   }
-  return likes;
+  return bookmarks;
 }

@@ -3,14 +3,14 @@ import {
   Bookmark,
   Circle,
   Group,
-  Like,
+  React,
   File,
   User,
   Reply,
 } from "../../schema/index.js";
 
 export default async function (activity) {
-  const dbs = { Post, Bookmark, Circle, Group, Like, File, User, Reply };
+  const dbs = { Post, Bookmark, Circle, Group, React, File, User, Reply };
 
   let item = await dbs[activity.objectType].findOne({
     id: activity.target,

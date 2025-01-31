@@ -46,7 +46,7 @@ let envFile = ".env",
     blockedDomains: [],
     likeEmojis: [
       {
-        name: "Like",
+        name: "React",
         emoji: "👍",
       },
       {

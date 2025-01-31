@@ -3,7 +3,7 @@ import {
   Bookmark,
   Circle,
   Group,
-  Like,
+  React,
   Post,
   Feed,
   FeedItem,
@@ -15,7 +15,7 @@ export default async function () {
   await Bookmark.deleteMany({});
   await Circle.deleteMany({});
   await Group.deleteMany({});
-  await Like.deleteMany({});
+  await React.deleteMany({});
   await Post.deleteMany({});
   await User.deleteMany({});
   await Feed.deleteMany({});

@@ -2,7 +2,7 @@ import Activity from "./Activity.js";
 import Bookmark from "./Bookmark.js";
 import Circle from "./Circle.js";
 import Group from "./Group.js";
-import Like from "./Like.js";
+import React from "./React.js";
 import Reply from "./Reply.js";
 import Post from "./Post.js";
 import Settings from "./Settings.js";
@@ -19,7 +19,7 @@ export {
   Bookmark,
   Circle,
   Group,
-  Like,
+  React,
   Post,
   Reply,
   Settings,

@@ -14,7 +14,11 @@ const CircleSchema = new Schema(
     to: { type: [String], default: [] }, // If the post is public, this is set to "@public"; if it's server-only, it's set to "@server"; if it's a DM it's set to the recipient(s)
     cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
     bcc: { type: [String], default: [] }, // This is for posts to private Groups
+    rto: { type: [String], default: ["@server"] },
+    rcc: { type: [String], default: [] },
+    rbcc: { type: [String], default: [] },
     deletedAt: { type: Date, default: null },
+    url: { type: String, default: undefined },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );

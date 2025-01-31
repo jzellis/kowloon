@@ -22,6 +22,7 @@ const ReplySchema = new Schema(
     flagged: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
     deletedBy: { type: String, default: null },
+    url: { type: String, default: undefined },
     signature: Buffer,
   },
   {
@@ -34,7 +35,6 @@ const ReplySchema = new Schema(
 
 ReplySchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;
-  this.title = this.title && this.title.trim();
   this.id = this.id || `reply:${this._id}@${domain}`;
   this.url = this.url || `https://${domain}/posts/${this.id}`;
   this.source.mediaType = this.source.mediaType || "text/html";

@@ -4,7 +4,7 @@ import {
   Circle,
   Group,
   User,
-  Like,
+  React,
   Bookmark,
 } from "./schema/index.js";
 import { faker } from "@faker-js/faker";
@@ -38,7 +38,7 @@ let delPosts = await Post.deleteMany({});
 let delCircles = await Circle.deleteMany({});
 let delGroups = await Group.deleteMany({});
 let delBookmarks = await Bookmark.deleteMany({});
-let delLikes = await Like.deleteMany({});
+let delReacts = await React.deleteMany({});
 
 if (options.verbose === true) {
   console.log("Deleting Activities: ", delActivities);
@@ -47,7 +47,7 @@ if (options.verbose === true) {
   console.log("Deleting Circles: ", delCircles);
   console.log("Deleting Groups: ", delGroups);
   console.log("Deleting Bookmarks: ", delBookmarks);
-  console.log("Deleting Likes: ", delLikes);
+  console.log("Deleting Reacts: ", delReacts);
 }
 
 if (options.createUsers === true) {
@@ -233,7 +233,7 @@ for (let i = 0; i < options.likes; i++) {
   let user = faker.helpers.arrayElement(allUsers);
   let activity = {
     actorId: user.id,
-    type: "Like",
+    type: "React",
     public: faker.datatype.boolean(),
     object: {
       target: faker.helpers.arrayElement(likeableIds),

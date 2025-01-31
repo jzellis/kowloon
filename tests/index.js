@@ -1,7 +1,8 @@
 import Kowloon from "../Kowloon.js";
 import generateUsers from "./units/generateUsers.js";
 import generatePosts from "./units/generatePosts.js";
-import generateLikes from "./units/generateLikes.js";
+import generateReacts from "./units/generateReacts.js";
+import generateBookmarks from "./units/generateBookmarks.js";
 import util from "util";
 
 await Kowloon.__nukeDb();
@@ -31,6 +32,7 @@ await Kowloon.createActivity(adminUser);
 
 await generateUsers(10);
 await generatePosts(10);
-await generateLikes(10);
+await generateReacts(10);
+await generateBookmarks(10);
 
 process.exit(0);

@@ -10,7 +10,7 @@ All objects in Kowloon have an ID that is universally unique. All IDs end with *
 | Circle | circle: | circle:66913a1eadd6b95270795cfa@kowloon.social |
 | Bookmark | bookmark: | bookmark:66913a1eadd6b95270795cfa@kowloon.social |
 | Group | group: | group:66913a1eadd6b95270795cfa@kowloon.social |
-| Like | like: | like:66913a1eadd6b95270795cfa@kowloon.social |
+| React | like: | like:66913a1eadd6b95270795cfa@kowloon.social |
 | Feed | feed: | feed:66913a1eadd6b95270795cfa@kowloon.social |
 
 You can access each of these objects at their respective endpoints:
@@ -40,7 +40,7 @@ Example:
 ### Filtering ###
 You can paginate each of these endpoints using the `page` query parameter. Each page returns 20 results. For example, if you retrieved `https://kowloon.social/posts/?page=2` you would get posts 21-41, ordered from newest to oldest.
 
-**Activities** and **Posts** can be filtered by the `type` query parameter. For example, `https://kowloon.social/posts/?type=Note` will return only public posts of the **Note** type; `https://kowloon.social/posts/?type=Note&type=Link` will return only public posts of the **Note** and **Link** types (as well as server-only posts if the user is a logged in server member). `https://kowloon.social/activities/?type=Like` will return only Like activities.
+**Activities** and **Posts** can be filtered by the `type` query parameter. For example, `https://kowloon.social/posts/?type=Note` will return only public posts of the **Note** type; `https://kowloon.social/posts/?type=Note&type=Link` will return only public posts of the **Note** and **Link** types (as well as server-only posts if the user is a logged in server member). `https://kowloon.social/activities/?type=React` will return only React activities.
 
 
 ## Addressing

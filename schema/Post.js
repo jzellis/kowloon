@@ -18,18 +18,22 @@ const PostSchema = new Schema(
       content: { type: String, default: "" }, // The raw content of the post -- plain text, HTML or Markdown
       mediaType: { type: String, default: "text/html" },
     },
+    wordCount: { type: Number, default: 0 },
+    charCount: { type: Number, default: 0 },
     replyCount: { type: Number, default: 0 }, // The number of replies to this post
-    likeCount: { type: Number, default: 0 }, // The number of likes to this post
+    reactCount: { type: Number, default: 0 }, // The number of likes to this post
     shareCount: { type: Number, default: 0 }, // The number of shares of this post
     image: { type: String, default: undefined }, // The post's featured/preview image
     attachments: { type: [ObjectId], ref: "File", default: [] }, // Any post attachments. Each attachment is an object with a filetype, size, url where it's stored and optional title and description
     tags: { type: [String], default: [] },
     location: { type: Object, default: undefined }, // A geotag for the post in the ActivityStreams geolocation format
-    target: { type: String, default: undefined }, // For replies
-    replyTo: { type: [String], default: [] }, // Who can reply. If this is set to "@public@server.name", anyone can reply; if "@_recipients@server.name", only people in the recipients list can reply; if "@_server@server.name", only users belonging to the server can reply; if circles or groups are listed, only people in those Circles or Groups can reply. If it's empty, no one can reply.
+    target: { type: String, default: undefined }, // For Links
     to: { type: [String], default: [] }, // If the post is public, this is set to "_public@server.name"; if it's server-only, it's set to "_server@server.name"; if it's a DM it's set to the recipient(s)
     cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
     bcc: { type: [String], default: [] }, // This is for posts to private Groups
+    rto: { type: [String], default: ["@server"] },
+    rcc: { type: [String], default: [] },
+    rbcc: { type: [String], default: [] },
     flaggedAt: { type: Date, default: null },
     flaggedBy: { type: String, default: null },
     flaggedReason: { type: String, default: null },
@@ -39,25 +43,6 @@ const PostSchema = new Schema(
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
-
-PostSchema.virtual("likes", {
-  ref: "Like",
-  localField: "id",
-  foreignField: "target",
-});
-
-PostSchema.virtual("replies", {
-  ref: "Reply",
-  localField: "id",
-  foreignField: "target",
-});
-
-PostSchema.virtual("actor", {
-  ref: "User",
-  localField: "actorId",
-  foreignField: "id",
-  justOne: true,
-});
 
 PostSchema.index({
   title: "text",

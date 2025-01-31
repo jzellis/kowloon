@@ -1,4 +1,4 @@
-import { Like, User, Post } from "../../schema/index.js";
+import { React, User, Post } from "../../schema/index.js";
 
 import indefinite from "indefinite";
 
@@ -9,7 +9,7 @@ export default async function (activity) {
     target.type ? indefinite(target.type) : ""
   }`;
 
-  let like = await Like.create({
+  let like = await React.create({
     actorId: activity.actorId,
     target: activity.target,
     type: activity.object.type,
@@ -18,7 +18,7 @@ export default async function (activity) {
 
   await Post.findOneAndUpdate(
     { id: activity.target },
-    { $inc: { likeCount: 1 } }
+    { $inc: { reactCount: 1 } }
   );
 
   return activity;

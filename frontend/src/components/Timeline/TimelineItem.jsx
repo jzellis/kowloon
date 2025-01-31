@@ -27,7 +27,7 @@ const TimelineItem = (props) => {
         <div className='content' dangerouslySetInnerHTML={{ __html: post.source.content }}></div>
         <ul className="actions">
             <li><a>{post.replyCount > 1 ? "Replies" : "Reply"} <span className="text-xs">({post.replyCount})</span></a></li>
-        <li><a>Like <span className="text-xs">({post.likeCount})</span></a></li>
+        <li><a>React <span className="text-xs">({post.reactCount})</span></a></li>
         <li><a>Share <span className="text-xs">({post.shareCount})</span></a></li>
 
                 </ul>

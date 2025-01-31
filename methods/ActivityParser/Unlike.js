@@ -1,4 +1,4 @@
-import { Like, User, Post } from "../../schema/index.js";
+import { React, User, Post } from "../../schema/index.js";
 
 export default async function (activity) {
   let actor = activity.actor || (await User.findOne({ id: activity.actorId }));
@@ -7,7 +7,7 @@ export default async function (activity) {
     target.type ? "a " + target.type : ""
   }`;
 
-  let like = await Like.findOneAndDelete({
+  let like = await React.findOneAndDelete({
     actorId: activity.actorId,
     target: activity.target,
   });
@@ -15,7 +15,7 @@ export default async function (activity) {
 
   await Post.findOneAndUpdate(
     { id: activity.target },
-    { $inc: { likeCount: -1 } }
+    { $inc: { reactCount: -1 } }
   );
 
   return activity;

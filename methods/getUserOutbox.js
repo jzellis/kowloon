@@ -4,7 +4,7 @@ import {
   Circle,
   File,
   Group,
-  Like,
+  React,
   Post,
   Reply,
   User,
@@ -16,7 +16,7 @@ const dbs = {
   circle: Circle,
   file: File,
   group: Group,
-  like: Like,
+  like: React,
   post: Post,
   reply: Reply,
   user: User,
@@ -47,7 +47,7 @@ export default async function (actorId, query = { to: "@public" }) {
   let groups = await Group.find({ actorId: actorId, deletedAt: null, ...query })
     .select("-bcc -_id -__v -deletedAt -deletedBy -flagged")
     .lean();
-  let likes = await Like.find({ actorId: actorId, deletedAt: null, ...query })
+  let likes = await React.find({ actorId: actorId, deletedAt: null, ...query })
     .select("-bcc -_id -__v -deletedAt -deletedBy -flagged")
     .lean();
   let posts = await Post.find({ actorId: actorId, deletedAt: null, ...query })

@@ -72,7 +72,7 @@ let replyActivity = {
 };
 
 let likeActivity = {
-  type: "Like",
+  type: "React",
   target: "",
   actorId: "@admin@kowloon.social",
   object: {
@@ -97,9 +97,9 @@ let updatePostActivity = {
   to: ["@server"],
 };
 
-let updateLikeActivity = {
+let updateReactActivity = {
   type: "Update",
-  objectType: "Like",
+  objectType: "React",
   target: "",
   actorId: "@admin@kowloon.social",
   object: {
@@ -283,12 +283,12 @@ let updatePostActivityResponse = await (
   })
 ).json();
 
-updateLikeActivity.target = likeActivityResponse.activity.objectId;
-let updateLikeActivityResponse = await (
+updateReactActivity.target = likeActivityResponse.activity.objectId;
+let updateReactActivityResponse = await (
   await fetch(outboxUrl, {
     method: "POST",
     headers,
-    body: JSON.stringify({ activity: updateLikeActivity }),
+    body: JSON.stringify({ activity: updateReactActivity }),
   })
 ).json();
 

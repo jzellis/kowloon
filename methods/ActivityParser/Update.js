@@ -3,14 +3,14 @@ import {
   Bookmark,
   Circle,
   Group,
-  Like,
+  React,
   File,
   User,
   Reply,
 } from "../../schema/index.js";
-
+import indefinite from "indefinite";
 export default async function (activity) {
-  const dbs = { Post, Bookmark, Circle, Group, Like, File, User, Reply };
+  const dbs = { Post, Bookmark, Circle, Group, React, File, User, Reply };
   let actor = activity.actor || (await User.findOne({ id: activity.actorId }));
   let item = await dbs[activity.objectType].findOne({
     id: activity.target,
@@ -32,7 +32,9 @@ export default async function (activity) {
   });
   await item.save();
 
-  activity.summary = `${actor?.profile.name} (${actor?.id}) updated a ${activity.objectType}`;
+  activity.summary = `${actor?.profile.name} (${
+    actor?.id
+  }) updated ${indefinite(activity.objectType)}`;
 
   return activity;
 }

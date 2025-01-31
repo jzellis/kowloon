@@ -1,4 +1,4 @@
-import { Like } from "../schema/index.js";
+import { React } from "../schema/index.js";
 import getSettings from "./getSettings.js";
 const settings = await getSettings();
 
@@ -17,7 +17,7 @@ export default async function (query = { public: true }, options) {
   query.deletedAt = { $eq: null };
   let populate = "";
   if (options.actor) populate += "actor";
-  let items = await Like.find(query)
+  let items = await React.find(query)
     .lean()
     .select("-deletedAt -_id -__v")
     .limit(options.pageSize ? options.pageSize : 0)
@@ -26,14 +26,14 @@ export default async function (query = { public: true }, options) {
 
     .populate(populate);
 
-  let totalItems = await Like.count(query);
+  let totalItems = await React.count(query);
   return {
     "@context": "https://www.w3.org/ns/activitystreams",
     type: "OrderedCollection",
     id: `https//${settings.domain}${options.id ? "/" + options.id : ""}`,
     summary: `${settings.title}${
       options.summary ? " | " + options.summary : ""
-    } | Likes`,
+    } | Reacts`,
     totalItems,
     totalPages: Math.ceil(
       totalItems / (options.page * options.pageSize ? options.pageSize : 20)

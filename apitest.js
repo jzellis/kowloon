@@ -41,7 +41,7 @@ let auth = "";
 //   delete: { type: "Delete" },
 //   follow: { type: "Follow" },
 //   bookmark: { type: "Bookmark" },
-//   like: { activity: { type: "Like", target: "", object: {} } },
+//   like: { activity: { type: "React", target: "", object: {} } },
 //   unlike: { type: "Unlike" },
 // };
 
@@ -124,7 +124,7 @@ try {
   //       },
   //       body: JSON.stringify({
   //         activity: {
-  //           type: "Like",
+  //           type: "React",
   //           target: createdActivity.id,
   //           object: faker.helpers.arrayElement(Kowloon.settings.likeEmojis),
   //         },

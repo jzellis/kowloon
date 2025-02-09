@@ -1,4 +1,4 @@
-import { Circle } from "../schema/index.js";
+import { Reply } from "../schema/index.js";
 import getSettings from "./getSettings.js";
 const settings = await getSettings();
 
@@ -15,7 +15,7 @@ export default async function (query = { to: "@public" }, options) {
   if (options.deleted === false) query.deletedAt = { $eq: null };
   let populate = "";
   if (options.actor) populate += "actor";
-  let items = await Circle.find(query)
+  let items = await Reply.find(query)
     .select(
       "-flaggedAt -flaggedBy -flaggedReason -bcc -rbcc -object.bcc -object.rbcc -deletedAt -deletedBy -_id -__v"
     )
@@ -24,15 +24,15 @@ export default async function (query = { to: "@public" }, options) {
     .sort({ createdAt: -1 })
     .populate("actor", "-_id username id profile keys.public");
 
-  let totalItems = await Circle.countDocuments(query);
+  let totalItems = await Reply.countDocuments(query);
 
   return {
-    "@context": "https://www.w3.org/ns/circlestreams",
+    "@context": "https://www.w3.org/ns/replystreams",
     type: "OrderedCollection",
     // id: `https//${settings.domain}${options.id ? "/" + options.id : ""}`,
     summary: `${settings.title}${
       options.summary ? " | " + options.summary : ""
-    } | Circles`,
+    } | Replies`,
     totalItems,
     totalPages: Math.ceil(
       totalItems / (options.page * options.pageSize ? options.pageSize : 20)

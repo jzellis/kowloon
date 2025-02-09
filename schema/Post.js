@@ -51,6 +51,13 @@ PostSchema.index({
   "location.name": "text",
 });
 
+PostSchema.virtual("actor", {
+  ref: "User",
+  localField: "actorId",
+  foreignField: "id",
+  justOne: true,
+});
+
 PostSchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;
   this.title = this.title && this.title.trim();

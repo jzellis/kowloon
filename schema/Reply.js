@@ -12,7 +12,6 @@ const ReplySchema = new Schema(
     url: { type: String },
     link: { type: String },
     actorId: { type: String },
-    actor: Object,
     source: {
       content: { type: String, default: "" },
       mediaType: { type: String, default: "text/html" },
@@ -32,6 +31,13 @@ const ReplySchema = new Schema(
     collection: "replies",
   }
 );
+
+ReplySchema.virtual("actor", {
+  ref: "User",
+  localField: "actorId",
+  foreignField: "id",
+  justOne: true,
+});
 
 ReplySchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;

@@ -2,36 +2,34 @@ import { Bookmark } from "../schema/index.js";
 import getSettings from "./getSettings.js";
 const settings = await getSettings();
 
-export default async function (
-  query = { public: true },
+export default async function (query = { to: "@public" }, options) {
   options = {
     actor: false,
     page: 1,
     pageSize: 20,
-    summary: null,
+    deleted: false,
     id: null,
     ...options,
-  }
-) {
-  let startTime = Date.now();
-
+  };
   if (!query) return new Error("No query provided");
-  query.deletedAt = { $eq: null };
+  if (options.deleted === false) query.deletedAt = { $eq: null };
   let populate = "";
   if (options.actor) populate += "actor";
   let items = await Bookmark.find(query)
-    .lean()
-    .select("-deletedAt -_id -__v")
+    .select(
+      "-flaggedAt -flaggedBy -flaggedReason -bcc -rbcc -object.bcc -object.rbcc -deletedAt -deletedBy -_id -__v"
+    )
     .limit(options.pageSize ? options.pageSize : 0)
     .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)
     .sort({ createdAt: -1 })
+    .populate("actor", "-_id username id profile keys.public");
 
-    .populate(populate);
-  let totalItems = await Bookmark.count(query);
+  let totalItems = await Bookmark.countDocuments(query);
+
   return {
-    "@context": "https://www.w3.org/ns/activitystreams",
+    "@context": "https://www.w3.org/ns/bookmarkstreams",
     type: "OrderedCollection",
-    id: `https//${settings.domain}${options.id ? "/" + options.id : ""}`,
+    // id: `https//${settings.domain}${options.id ? "/" + options.id : ""}`,
     summary: `${settings.title}${
       options.summary ? " | " + options.summary : ""
     } | Bookmarks`,
@@ -41,9 +39,8 @@ export default async function (
     ),
     currentPage: parseInt(options.page) || 1,
     firstItem: options.pageSize * (options.page - 1) + 1,
-    lastItem: options.pageSize * (options.page - 1) + items.length + 1,
+    lastItem: options.pageSize * (options.page - 1) + items.length,
     count: items.length,
     items,
-    queryTime: Date.now() - startTime,
   };
 }

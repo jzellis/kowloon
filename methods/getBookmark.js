@@ -3,15 +3,17 @@ import { Bookmark } from "../schema/index.js";
 export default async function (
   query,
   options = {
-    actor: false,
+    actor: true,
     deleted: false,
   }
 ) {
+  let select =
+    "-flaggedAt -flaggedBy -flaggedReason -bcc -rbcc -object.bcc -object.rbcc -deletedAt -deletedBy -_id -__v";
   if (typeof query === "string") query = { id: query };
   if (options.deleted === false) query.deletedAt = { $eq: null };
   if (!query) return new Error("No query provided");
-  let bookmark = await Bookmark.findOne(query).lean();
-  if (bookmark && options.actor === true)
-    await bookmark.populate("actor", "-_id username id profile keys.public");
+  let bookmark = await Bookmark.findOne(query)
+    .select(select)
+    .populate("actor", "-_id username id profile keys.public");
   return bookmark;
 }

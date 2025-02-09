@@ -3,14 +3,11 @@ import getSettings from "./getSettings.js";
 const settings = await getSettings();
 
 export default async function (query = { to: "@public" }, options) {
-  let startTime = Date.now();
   options = {
     actor: false,
-    likes: false,
     page: 1,
     pageSize: 20,
     deleted: false,
-    summary: null,
     id: null,
     ...options,
   };
@@ -18,14 +15,14 @@ export default async function (query = { to: "@public" }, options) {
   if (options.deleted === false) query.deletedAt = { $eq: null };
   let populate = "";
   if (options.actor) populate += "actor";
-  if (options.likes) populate += " likes";
   let items = await Activity.find(query)
-    .lean()
-    .select("-flagged -bcc -deletedAt -deletedBy -_id -__v")
+    .select(
+      "-flaggedAt -flaggedBy -flaggedReason -bcc -rbcc -object.bcc -object.rbcc -deletedAt -deletedBy -_id -__v"
+    )
     .limit(options.pageSize ? options.pageSize : 0)
     .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)
-    .sort({ createdAt: -1 });
-  // .populate(populate);
+    .sort({ createdAt: -1 })
+    .populate("actor", "-_id username id profile keys.public");
 
   let totalItems = await Activity.countDocuments(query);
 
@@ -45,6 +42,5 @@ export default async function (query = { to: "@public" }, options) {
     lastItem: options.pageSize * (options.page - 1) + items.length,
     count: items.length,
     items,
-    queryTime: Date.now() - startTime,
   };
 }

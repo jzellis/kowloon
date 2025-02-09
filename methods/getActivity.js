@@ -3,19 +3,17 @@ import { Activity } from "../schema/index.js";
 export default async function (
   query,
   options = {
-    actor: false,
-    likes: false,
+    actor: true,
     deleted: false,
   }
 ) {
+  let select =
+    "-flaggedAt -flaggedBy -flaggedReason -bcc -rbcc -object.bcc -object.rbcc -deletedAt -deletedBy -_id -__v";
   if (typeof query === "string") query = { id: query };
   if (options.deleted === false) query.deletedAt = { $eq: null };
   if (!query) return new Error("No query provided");
-  let activity = await Activity.findOne(query).lean();
-  if (activity && options.actor === true)
-    await activity.populate("actor", "-_id username id profile keys.public");
-  if (activity && options.likes === true)
-    await activity.populate("likes", "-_id id actorId type");
-
+  let activity = await Activity.findOne(query)
+    .select(select)
+    .populate("actor", "-_id username id profile keys.public");
   return activity;
 }

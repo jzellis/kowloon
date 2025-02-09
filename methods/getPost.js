@@ -3,17 +3,17 @@ import { Post } from "../schema/index.js";
 export default async function (
   query,
   options = {
-    actor: false,
-    replies: false,
+    actor: true,
     deleted: false,
   }
 ) {
+  let select =
+    "-flaggedAt -flaggedBy -flaggedReason -bcc -rbcc -object.bcc -object.rbcc -deletedAt -deletedBy -_id -__v";
   if (typeof query === "string") query = { id: query };
   if (options.deleted === false) query.deletedAt = { $eq: null };
   if (!query) return new Error("No query provided");
-  let post = await Post.findOne(query).lean().populate("attachments");
-  if (post && options.actor === true)
-    await post.populate("actor", "-_id username id profile keys.public");
-  if (post && options.replies === true) await post.populate("replies", "-_id");
+  let post = await Post.findOne(query)
+    .select(select)
+    .populate("actor", "-_id username id profile keys.public");
   return post;
 }

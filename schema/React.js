@@ -25,6 +25,13 @@ const ReactSchema = new Schema(
   }
 );
 
+ReactSchema.virtual("actor", {
+  ref: "User",
+  localField: "actorId",
+  foreignField: "id",
+  justOne: true,
+});
+
 ReactSchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;
   this.id = this.id || `like:${this._id}@${domain}`;

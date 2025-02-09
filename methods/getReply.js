@@ -1,4 +1,4 @@
-import { Group } from "../schema/index.js";
+import { Reply } from "../schema/index.js";
 
 export default async function (
   query,
@@ -12,8 +12,8 @@ export default async function (
   if (typeof query === "string") query = { id: query };
   if (options.deleted === false) query.deletedAt = { $eq: null };
   if (!query) return new Error("No query provided");
-  let group = await Group.findOne(query)
+  let reply = await Reply.findOne(query)
     .select(select)
     .populate("actor", "-_id username id profile keys.public");
-  return group;
+  return reply;
 }

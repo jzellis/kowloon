@@ -2,6 +2,7 @@ import { dirname } from "path";
 import { fileURLToPath } from "url";
 import * as dotenv from "dotenv";
 import fs from "fs";
+import * as setup from "./setup.js";
 dotenv.config({ path: `${dirname(fileURLToPath(import.meta.url))}/.env` });
 import mongoose from "mongoose";
 import winston from "winston";

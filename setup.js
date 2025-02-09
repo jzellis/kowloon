@@ -98,15 +98,10 @@ dbUrl =
 
 dbName =
   (await rl.question(
-    `What is the full URL for your MongoDB database (${chalk.bold(
+    `What is the of your your MongoDB database (${chalk.bold(
       slugify(title).toLowerCase()
     )})? `
   )) || slugify(title).toLowerCase();
-
-dbUrl =
-  (await rl.question(
-    `What is the full URL for your MongoDB database (${chalk.bold(dbUrl)})? `
-  )) || dbUrl;
 
 jwtKey =
   (await rl.question(

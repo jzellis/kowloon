@@ -1,0 +1,19 @@
+## Manifesto
+   ...
+   
+## Running Locally
+* ### Developer Environment Dependencies
+  * [MongoDB](https://www.mongodb.com/docs/manual/installation/)
+  * Node
+   ...
+* ### Installation & Setup
+   ...
+  
+## Pull Request convention
+   ...
+
+## Architecture 
+   ...
+   
+## Roadmap
+   ...

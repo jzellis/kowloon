@@ -1,4 +1,3 @@
-import { query } from "express";
 import Kowloon from "../Kowloon.js";
 export default async function (req, res, next) {
   let status = 200;

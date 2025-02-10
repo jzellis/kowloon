@@ -20,6 +20,17 @@ import groups from "./groups/index.js";
 import groupById from "./groups/id.js";
 import posts from "./posts/index.js";
 import postById from "./posts/id.js";
+import users from "./users/index.js";
+import userById from "./users/id.js";
+import userActivities from "./users/activities.js";
+import userBookmarks from "./users/bookmarks.js";
+import userCircles from "./users/circles.js";
+import userGroups from "./users/groups.js";
+import userPosts from "./users/posts.js";
+import userReacts from "./users/reacts.js";
+import userReplies from "./users/replies.js";
+// Post Routes
+import login from "./login/index.js";
 
 const routes = {
   get: {
@@ -35,20 +46,20 @@ const routes = {
     "/posts/:id": postById,
     "/posts/:id/replies": function () {},
     "/posts/:id/reacts": function () {},
-    "/users": function () {},
-    "/users/:id": function () {},
-    "/users/:id/activities": function () {},
-    "/users/:id/circles": function () {},
-    "/users/:id/bookmarks": function () {},
-    "/users/:id/groups": function () {},
-    "/users/:id/posts": function () {},
-    "/users/:id/replies": function () {},
-    "/users/:id/reacts": function () {},
+    "/users": users,
+    "/users/:id": userById,
+    "/users/:id/activities": userActivities,
+    "/users/:id/circles": userCircles,
+    "/users/:id/bookmarks": userBookmarks,
+    "/users/:id/groups": userGroups,
+    "/users/:id/posts": userPosts,
+    "/users/:id/replies": userReplies,
+    "/users/:id/reacts": userReacts,
     "/inbox": function () {},
     "/outbox": function () {},
   },
   post: {
-    "/login": function () {},
+    "/login": login,
     "/logout": function () {},
     "/auth": function () {},
     "/outbox": function () {},
@@ -86,22 +97,34 @@ router.use(async (req, res, next) => {
     `${req.method} ${req.url} | ${req.ip}${req.user ? " | " + req.user.id : ""}`
   );
 
-  if (req.headers.accept != "application/json") {
-    express.static("./frontend/dist/")(req, res, next); //this is a
-  } else {
-    next();
+  if (req.headers["kowloon-id"] && req.headers.authorization) {
+    let auth = await Kowloon.auth(
+      req.headers["kowloon-id"],
+      req.headers.authorization
+    );
+
+    if (auth.user) {
+      req.user = auth.user;
+      req.user.local = req.user.id.split("@").pop() === Kowloon.settings.domain;
+      req.user.memberships = await Kowloon.getUserMemberships(req.user.id);
+    }
   }
+  // if (req.headers.accept != "application/json") {
+  //   express.static("./frontend/dist/")(req, res, next); //this is a
+  // } else {
+  //   next();
+  // }
 
   for (const [url, route] of Object.entries(routes.get)) {
     router.get(`${url}`, route);
   }
-  // if (req.originalUrl.startsWith("/api"))
 
-  // if (req.headers["kowloon-id"] && req.headers.authorization) {
-  //   let auth = await Kowloon.auth(
-  //     req.headers["kowloon-id"],
-  //     req.headers.authorization
-  //   );
+  for (const [url, route] of Object.entries(routes.post)) {
+    router.post(`${url}`, route);
+  }
+
+  next();
+
   //   if (auth.user)
   //     auth.user.local = (await Kowloon.isLocal(auth.user?.id)) || null;
   //   req.user = auth.user || null;

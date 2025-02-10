@@ -7,7 +7,7 @@ export default async function (id, token) {
   if (!token) return { error: "No token provided" };
   let server = (await getSettings()).domain;
   token = token.split("Basic ")[1];
-  if (await isLocal(id)) {
+  if (id.split("@").pop() === server) {
     let user = await User.findOne({ id });
     let decrypted;
 
@@ -20,19 +20,13 @@ export default async function (id, token) {
         if (decrypted === user.accessToken)
           return {
             user: {
-              ...user._doc,
-              password: undefined,
-              accessToken: undefined,
-              _id: undefined,
-              __v: undefined,
-
+              username: user.username,
+              id: user.id,
+              profile: user.profile,
+              prefs: user.prefs,
               keys: {
-                public: user._doc.keys.public,
+                public: user.keys.public,
               },
-              circles: await Circle.find({ actorId: user.id, deletedAt: null })
-                .lean()
-                .sort({ createdAt: -1 })
-                .select("-_id -__v -deletedAt"),
             },
           };
       } catch (e) {

@@ -135,6 +135,12 @@ export default async function (activity) {
           activity.object.keys.private = undefined;
           activity.object.accessToken = undefined;
           activity.summary = `${actor.profile.name} (${actor.id}) joined the server`;
+          activity.to = activity.object.to;
+          activity.cc = activity.object.cc;
+          activity.bcc = activity.object.bcc;
+          activity.rbcc = activity.object.rbcc;
+          activity.rto = activity.object.rto;
+          activity.rcc = activity.object.rcc;
         } catch (e) {
           console.log(e);
           return new Error(e);

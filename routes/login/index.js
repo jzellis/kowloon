@@ -1,0 +1,18 @@
+import Kowloon from "../../Kowloon.js";
+export default async function (req, res, next) {
+  let status = 200;
+  let qStart = Date.now();
+  let user = await Kowloon.login(req.body.username, req.body.password);
+  let response = {
+    queryTime: Date.now() - qStart,
+  };
+
+  if (user) {
+    response = user;
+    response.queryTime = Date.now() - qStart;
+  } else {
+    response.error = "User not found";
+  }
+
+  res.status(status).json(response);
+}

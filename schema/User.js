@@ -43,11 +43,19 @@ const UserSchema = new Schema(
       public: String,
       private: String,
     },
+    to: { type: [String], default: ["@public"] }, // If the post is public, this is set to "_public@server.name"; if it's server-only, it's set to "_server@server.name"; if it's a DM it's set to the recipient(s)
+    cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
+    bcc: { type: [String], default: [] }, // This is for posts to private Groups
+    rto: { type: [String], default: ["@server"] },
+    rcc: { type: [String], default: [] },
+    rbcc: { type: [String], default: [] },
     url: { type: String, default: undefined },
     isAdmin: { type: Boolean, default: false },
     accessToken: String,
     active: { type: Boolean, default: true },
-    flagged: { type: Boolean, default: false },
+    flaggedAt: { type: Date, default: null },
+    flaggedBy: { type: String, default: null },
+    flaggedReason: { type: String, default: null },
     deletedAt: { type: Date, default: undefined },
     lastLogin: Date,
   },

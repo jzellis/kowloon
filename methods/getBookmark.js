@@ -14,6 +14,6 @@ export default async function (
   if (!query) return new Error("No query provided");
   let bookmark = await Bookmark.findOne(query)
     .select(select)
-    .populate("actor", "-_id username id profile keys.public");
+    .populate("actor", "-_id username id profile publicKey");
   return bookmark;
 }

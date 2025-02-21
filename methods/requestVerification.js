@@ -21,7 +21,7 @@ export default async function (id, publicKey) {
   //     body,
   //   });
   //   return response == original
-  //     ? await User.findOne({ id }, "username profile keys.public")
+  //     ? await User.findOne({ id }, "username profile publicKey")
   //     : false;
   // } catch (e) {
   //   return { error: e };

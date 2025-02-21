@@ -16,6 +16,21 @@ export default async function () {
           await Settings.create({ name: s, value: defaultSettings[s] })
       )
     );
+    const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
+      modulusLength: 2048, // Adjust the key length as per your requirements
+      publicKeyEncoding: { type: "spki", format: "pem" },
+      privateKeyEncoding: { type: "pkcs8", format: "pem" },
+    });
+    await Settings.create([
+      {
+        name: "publicKey",
+        value: publicKey,
+      },
+      {
+        name: "privateKey",
+        value: privateKey,
+      },
+    ]);
     settings = await Settings.find();
     console.log("Default settings created");
     // location = (await Settings.findOne({ name: "location" })).value;

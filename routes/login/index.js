@@ -7,11 +7,11 @@ export default async function (req, res, next) {
     queryTime: Date.now() - qStart,
   };
 
-  if (user) {
+  if (!user.error) {
     response = user;
     response.queryTime = Date.now() - qStart;
   } else {
-    response.error = "User not found";
+    response.error = user.error;
   }
 
   res.status(status).json(response);

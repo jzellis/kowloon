@@ -4,11 +4,17 @@ export default async function (req, res, next) {
   let qStart = Date.now();
   let response = {
     server: {
-      name: Kowloon.settings.title,
-      description: Kowloon.settings.description,
+      id: `@${Kowloon.settings.domain}`,
+      profile: {
+        name: Kowloon.settings.title,
+        description: Kowloon.settings.description,
+        icon: Kowloon.settings.icon,
+        location: Kowloon.settings.location || undefined,
+      },
       url: `https://${Kowloon.settings.domain}`,
-      icon: Kowloon.settings.icon,
-      location: Kowloon.settings.location || undefined,
+      inbox: `https://${Kowloon.settings.domain}/inbox`,
+      outbox: `https://${Kowloon.settings.domain}/outbox`,
+      publicKey: Kowloon.settings.publicKey,
     },
     queryTime: Date.now() - qStart,
   };

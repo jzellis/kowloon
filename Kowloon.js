@@ -2,10 +2,10 @@ import { dirname } from "path";
 import { fileURLToPath } from "url";
 import * as dotenv from "dotenv";
 import fs from "fs";
-// import * as setup from "./setup.js";
 dotenv.config({ path: `${dirname(fileURLToPath(import.meta.url))}/.env` });
 import mongoose from "mongoose";
 import winston from "winston";
+import setup from "./methods/setup.js";
 
 import { Settings } from "./schema/index.js";
 
@@ -24,7 +24,7 @@ const Kowloon = {
       process.exit(0);
     }
     let settings = await Settings.find();
-    // if (settings.length === 0) await setup(); //
+    if (settings.length === 0) await setup(); //
     settings = await Settings.find();
     settings.forEach(async (setting) => {
       this.settings[setting.name] = setting.value;

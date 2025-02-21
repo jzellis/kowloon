@@ -13,7 +13,7 @@ export default async function (query = { to: "@public" }, options) {
     };
     if (!query) return new Error("No query provided");
     let items = await User.find(query)
-      .select("username id profile keys.public -_id")
+      .select("username id profile publicKey -_id")
       .limit(options.pageSize ? options.pageSize : 0)
       .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)
       .sort({ createdAt: -1 });
@@ -60,7 +60,7 @@ export default async function (query = { to: "@public" }, options) {
 //   // query.active = true;
 //   let items = await User.find(query)
 //     .lean()
-//     .select("username profile id keys.public -_id")
+//     .select("username profile id publicKey -_id")
 //     .limit(options.pageSize ? options.pageSize : 0)
 //     .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)
 //     .sort({ createdAt: -1 });

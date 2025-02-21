@@ -22,7 +22,7 @@ export default async function (query = { to: "@public" }, options) {
     .limit(options.pageSize ? options.pageSize : 0)
     .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)
     .sort({ createdAt: -1 })
-    .populate("actor", "-_id username id profile keys.public");
+    .populate("actor", "-_id username id profile publicKey");
 
   let totalItems = await Bookmark.countDocuments(query);
 

@@ -29,11 +29,21 @@ import userGroups from "./users/groups.js";
 import userPosts from "./users/posts.js";
 import userReacts from "./users/reacts.js";
 import userReplies from "./users/replies.js";
+import userInbox from "./users/inbox.js";
+import userOutbox from "./users/outbox.js";
+import outboxGet from "./outbox/get.js";
+import inboxGet from "./inbox/get.js";
+import test from "./test.js";
 // Post Routes
 import login from "./login/index.js";
+import auth from "./auth/get.js";
+import inboxPost from "./inbox/post.js";
+import User from "../schema/User.js";
 
 const routes = {
   get: {
+    "/auth": auth,
+
     "/": home,
     "/activities": activities,
     "/activities/:id": activityById,
@@ -55,13 +65,17 @@ const routes = {
     "/users/:id/posts": userPosts,
     "/users/:id/replies": userReplies,
     "/users/:id/reacts": userReacts,
+    "/users/:id/inbox": userInbox,
+    "/users/:id/outbox": userOutbox,
     "/inbox": function () {},
-    "/outbox": function () {},
+    "/outbox": outboxGet,
+    "/inbox": inboxGet,
+    "/test": test,
   },
   post: {
     "/login": login,
     "/logout": function () {},
-    "/auth": function () {},
+    "/inbox": inboxPost,
     "/outbox": function () {},
   },
 };
@@ -93,27 +107,68 @@ router.use(async (req, res, next) => {
   res.header("Access-Control-Allow-Methods", "GET,HEAD,POST,OPTIONS");
   res.header("Access-Control-Allow-Headers", "*");
 
-  logger.info(
-    `${req.method} ${req.url} | ${req.ip}${req.user ? " | " + req.user.id : ""}`
-  );
-
-  if (req.headers["kowloon-id"] && req.headers.authorization) {
-    let auth = await Kowloon.auth(
-      req.headers["kowloon-id"],
-      req.headers.authorization
+  if (
+    req.headers["kowloon-id"] &&
+    req.headers["kowloon-signature"] &&
+    req.headers["kowloon-timestamp"]
+  ) {
+    let id = req.headers["kowloon-id"];
+    let signature = req.headers["kowloon-signature"];
+    let timestamp = req.headers["kowloon-timestamp"];
+    let serverId = req.headers["kowloon-server-id"] || null;
+    let serverTimestamp = req.headers["kowloon-server-timestamp"] || null;
+    let serverSignature = req.headers["kowloon-server-signature"] || null;
+    let result = await Kowloon.authenticateRequest(
+      id,
+      timestamp,
+      signature,
+      serverId,
+      serverTimestamp,
+      serverSignature
     );
-
-    if (auth.user) {
-      req.user = auth.user;
-      req.user.local = req.user.id.split("@").pop() === Kowloon.settings.domain;
+    if (result.user) {
+      req.user = result.user;
       req.user.memberships = await Kowloon.getUserMemberships(req.user.id);
     }
+    if (result.server) {
+      req.server = result.server;
+      req.server.memberships = await Kowloon.getUserMemberships(req.server.id);
+    }
+
+    // if (req.headers["kowloon-type"] === "user") {
+    //   let auth = await Kowloon.verifyUserSignature(
+    //     req.headers["kowloon-id"],
+    //     req.headers["kowloon-timestamp"],
+    //     req.headers["kowloon-signature"]
+    //   );
+    //   if (auth) {
+    //     req.user = await User.findOne({ id: req.headers["kowloon-id"] });
+    //     req.user.memberships = await Kowloon.getUserMemberships(req.user.id);
+    //   }
+    // } else {
+    //   let auth = await Kowloon.verifyServerSignature(
+    //     req.headers["kowloon-id"],
+    //     req.headers["kowloon-timestamp"],
+    //     req.headers["kowloon-signature"]
+    //   );
+    //   if (auth) {
+    //     req.server = await Kowloon.getServer(req.headers["kowloon-id"]);
+    //   }
+    // }
+  } else {
+    req.user = null;
   }
   // if (req.headers.accept != "application/json") {
   //   express.static("./frontend/dist/")(req, res, next); //this is a
   // } else {
   //   next();
   // }
+
+  let logline = `${req.method} ${req.url}`;
+  if (req.user) logline += ` | User: ${req.user.id}`;
+  if (req.server) logline += ` | Server: ${req.server.id}`;
+
+  logger.info(logline);
 
   for (const [url, route] of Object.entries(routes.get)) {
     router.get(`${url}`, route);

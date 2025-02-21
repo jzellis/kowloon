@@ -4,6 +4,7 @@ import Kowloon from "../../Kowloon.js";
 export default async function (numReacts) {
   let activityTemplate = {
     type: "React",
+    objectType: "React",
     actorId: "",
     target: "",
     object: {},
@@ -11,7 +12,7 @@ export default async function (numReacts) {
 
   let baseUrl = `https://${
     (await Settings.findOne({ name: "domain" })).value
-  }/api/inbox`;
+  }/inbox`;
 
   let likeTypes = (await Settings.findOne({ name: "likeEmojis" })).value;
   let likes = [];
@@ -21,13 +22,15 @@ export default async function (numReacts) {
   for (let i = 0; i < numReacts; i++) {
     let actorId = users[Math.floor(Math.random() * users.length)].id;
     let target = posts[Math.floor(Math.random() * posts.length)].id;
+    let emojiType = likeTypes[Math.floor(Math.random() * likeTypes.length)];
     let likeActivity = {
       to: ["@public"],
       actorId: actorId,
       target: target,
       type: "React",
       object: {
-        type: likeTypes[Math.floor(Math.random() * likeTypes.length)],
+        emoji: emojiType.emoji,
+        name: emojiType.name,
         to: ["@public"],
         actorId: actorId,
         target: target,

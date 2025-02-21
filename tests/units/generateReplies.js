@@ -1,25 +1,27 @@
 import { faker } from "@faker-js/faker";
-import { Settings, User } from "../../schema/index.js";
+import { Settings, User, Post } from "../../schema/index.js";
 import Kowloon from "../../Kowloon.js";
 export default async function (numPosts) {
   let activityTemplate = {
     type: "Create",
     actorId: "",
-    objectType: "Post",
+    objectType: "Reply",
     to: ["@public"],
     object: {},
   };
 
   let baseUrl = `https://${
     (await Settings.findOne({ name: "domain" })).value
-  }/api/inbox`;
+  }/inbox`;
 
-  let posts = await Post.find().select("id").lean();
+  let posts = await Post.find().select("id");
   let users = await User.find();
+  let replies = [];
 
   for (let i = 0; i < numPosts; i++) {
+    let tpost = posts[Math.floor(Math.random() * posts.length)];
     let actorId = users[Math.floor(Math.random() * users.length)].id;
-    let target = posts[Math.floor(Math.random() * posts.length)].id;
+    let target = tpost.id;
     let replyActivity = {
       to: ["@public"],
       actorId,
@@ -43,9 +45,9 @@ export default async function (numPosts) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ activity: postActivity }),
+      body: JSON.stringify({ activity: replyActivity }),
     });
-    posts.push(await reply.json());
+    replies.push(await reply.json());
   }
-  return posts;
+  return replies;
 }

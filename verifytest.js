@@ -4,7 +4,7 @@ import { User } from "./schema/index.js";
 
 let actorId = "@admin@kowloon.social";
 let user = await User.findOne({ id: actorId });
-let hash = crypto.createHash("sha256").update(user.keys.public).digest("hex");
+let hash = crypto.createHash("sha256").update(user.publicKey).digest("hex");
 let publicKey = `-----BEGIN PUBLIC KEY-----
 MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqEdM7WHHNY4AgPPVij8g
 5tblWS88NTSZZVkFgz4ft3G04lCjJe9Uq8WB9SD28ZgyKrk/FWRldzXWLOk9xG1R

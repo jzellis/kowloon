@@ -17,12 +17,12 @@ export default async function (query = { to: "@public" }, options) {
   if (options.actor) populate += "actor";
   let items = await Post.find(query)
     .select(
-      "-flaggedAt -flaggedBy -flaggedReason -bcc -rbcc -object.bcc -object.rbcc -deletedAt -deletedBy -_id -__v"
+      "-flaggedAt -flaggedBy -flaggedReason -bcc -rbcc -object.bcc -object.rbcc -deletedAt -deletedBy -_id -__v -signature"
     )
     .limit(options.pageSize ? options.pageSize : 0)
     .skip(options.pageSize ? options.pageSize * (options.page - 1) : 0)
     .sort({ createdAt: -1 })
-    .populate("actor", "-_id username id profile keys.public");
+    .populate("actor", "-_id username id profile publicKey");
 
   let totalItems = await Post.countDocuments(query);
 

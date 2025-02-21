@@ -3,6 +3,13 @@ import generateUsers from "./units/generateUsers.js";
 import generatePosts from "./units/generatePosts.js";
 import generateReacts from "./units/generateReacts.js";
 import generateBookmarks from "./units/generateBookmarks.js";
+import generateReplies from "./units/generateReplies.js";
+import generateGroups from "./units/generateGroups.js";
+import generateCircles from "./units/generateCircles.js";
+import addUsersToCircles from "./units/addUsersToCircles.js";
+import getAllCircleMembers from "./units/getAllCircleMembers.js";
+import generateGroupPosts from "./units/generateGroupPosts.js";
+import { faker } from "@faker-js/faker";
 
 await Kowloon.__nukeDb();
 
@@ -19,6 +26,7 @@ let adminUser = {
       name: "Admin",
       bio: "I'm the admin",
       urls: ["http://kowloon.social"],
+      icon: faker.image.avatar(),
 
       location: {
         type: "Point",
@@ -32,9 +40,18 @@ let adminUser = {
 
 await Kowloon.createActivity(adminUser);
 
-await generateUsers(10);
-await generatePosts(10);
-await generateReacts(10);
-await generateBookmarks(10);
+try {
+  await generateUsers(10);
+  await generatePosts(10);
+  await generateReacts(10);
+  await generateBookmarks(10);
+  await generateReplies(10);
+  await generateGroups(10);
+  await generateGroupPosts(10);
+  await generateCircles(10);
+  await addUsersToCircles();
+} catch (e) {
+  console.log(e);
+}
 
 process.exit(0);

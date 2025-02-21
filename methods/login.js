@@ -1,24 +1,28 @@
-import { access } from "fs";
 import { Circle, User } from "../schema/index.js";
-import crypto from "crypto";
+import createUserSignature from "./createUserSignature.js";
 export default async function (username, password = "") {
   let user = await User.findOne({ username }).select(
-    "username password profile prefs keys.public accessToken"
+    "id username password profile prefs keys"
   );
 
-  if (!user) return false;
-  if (!(await user.verifyPassword(password))) return false;
-  // user.keys.private = undefined;
+  if (!user) return { error: "User not found" };
+  if (!(await user.verifyPassword(password)))
+    return { error: "Incorrect password" };
   user.lastLogin = new Date();
   await user.save();
 
-  let tokenValue = user.accessToken + ":" + Date.now();
-
-  const token = crypto
-    .publicEncrypt(user.keys.public, tokenValue)
-    .toString("base64");
-
-  user.password = undefined;
-  user._id = undefined;
-  return { user, token };
+  let { id, timestamp, signature } = await createUserSignature(
+    user.id,
+    user.lastLogin.toString()
+  );
+  return {
+    user: {
+      ...user._doc,
+      _id: undefined,
+      password: undefined,
+      keys: undefined,
+    },
+    timestamp: user.lastLogin.toString(),
+    signature,
+  };
 }

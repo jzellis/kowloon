@@ -10,7 +10,7 @@ export default async function (numUsers) {
 
   let baseUrl = `https://${
     (await Settings.findOne({ name: "domain" })).value
-  }/api/inbox`;
+  }/inbox`;
   let users = [];
 
   for (let i = 0; i < numUsers; i++) {
@@ -25,6 +25,7 @@ export default async function (numUsers) {
         name: fullName,
         bio: faker.lorem.sentence(),
         urls: [faker.internet.url()],
+        icon: faker.image.avatar(),
         location: {
           type: "Point",
           name: faker.location.city(),

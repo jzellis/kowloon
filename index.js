@@ -28,7 +28,6 @@ app.use(cookieParser());
 
 app.use(nocache());
 app.use(routes);
-console.log(expressListEndpoints(app));
 
 app.use("/", express.static(path.join(__dirname + "/frontend/dist")));
 app.use(

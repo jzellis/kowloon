@@ -1,13 +1,14 @@
 import mongoose from "mongoose";
 import { marked } from "marked";
 import crypto from "crypto";
-import { Settings, User } from "./index.js";
+import { Feed, Settings, User } from "./index.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
 const PostSchema = new Schema(
   {
     id: { type: String, key: true },
+    objectType: { type: String, default: "Post" },
     type: { type: String, default: "Note" }, // The type of post this is
     url: { type: String }, // The URL of the post
     href: { type: String, default: undefined }, // If the post is a link, this is what it links to
@@ -18,13 +19,14 @@ const PostSchema = new Schema(
       content: { type: String, default: "" }, // The raw content of the post -- plain text, HTML or Markdown
       mediaType: { type: String, default: "text/html" },
     },
+    body: { type: String, default: "" },
     wordCount: { type: Number, default: 0 },
     charCount: { type: Number, default: 0 },
     replyCount: { type: Number, default: 0 }, // The number of replies to this post
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     shareCount: { type: Number, default: 0 }, // The number of shares of this post
     image: { type: String, default: undefined }, // The post's featured/preview image
-    attachments: { type: [ObjectId], ref: "File", default: [] }, // Any post attachments. Each attachment is an object with a filetype, size, url where it's stored and optional title and description
+    attachments: { type: [String], ref: "File", default: [] }, // Any post attachments. Each attachment is an object with a filetype, size, url where it's stored and optional title and description
     tags: { type: [String], default: [] },
     location: { type: Object, default: undefined }, // A geotag for the post in the ActivityStreams geolocation format
     target: { type: String, default: undefined }, // For Links
@@ -59,28 +61,59 @@ PostSchema.virtual("actor", {
 });
 
 PostSchema.pre("save", async function (next) {
-  const domain = (await Settings.findOne({ name: "domain" })).value;
-  this.title = this.title && this.title.trim();
-  this.id = this.id || `post:${this._id}@${domain}`;
-  this.url = this.url || `https://${domain}/posts/${this.id}`;
-  this.source.mediaType = this.source.mediaType || "text/html";
-  if (this.source.mediaType.includes("markdown"))
-    this.source.content = `${marked(this.source.content)}`;
+  try {
+    const domain = (await Settings.findOne({ name: "domain" })).value;
+    this.title = this.title && this.title.trim();
+    this.id = this.id || `post:${this._id}@${domain}`;
+    this.url = this.url || `https://${domain}/posts/${this.id}`;
+    this.source.mediaType = this.source.mediaType || "text/html";
 
-  let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
+    switch (this.source.mediaType) {
+      case "text/markdown":
+        this.body = `<p>${marked(this.source.content)}</p>`;
+        break;
+      case "text/html":
+        this.body = this.source.content;
+        break;
+      default:
+        this.body = `<p>${this.source.content.replace(
+          /(?:\r\n|\r|\n)/g,
+          "</p><p>"
+        )}</p>`;
+        break;
+    }
 
-  // Sign this post using the user's private key if it's not signed
-  let stringject = Buffer.from(this.id);
-  const sign = crypto.createSign("RSA-SHA256");
-  sign.update(stringject);
-  this.signature = sign.sign(actor.keys.private, "base64");
-  next();
+    let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
+    // Sign this post using the user's private key if it's not signed
+    let stringject = Buffer.from(`${this.id} | ${this.createdAt}`);
+    const sign = crypto.createSign("RSA-SHA256");
+    sign.update(stringject);
+    this.signature = sign.sign(actor.privateKey, "base64");
+    next();
+  } catch (e) {
+    console.log(e);
+  }
 });
 
 PostSchema.pre("updateOne", async function (next) {
   this.source.mediaType = this.source.mediaType || "text/html";
-  if (this.source.mediaType.includes("markdown"))
-    this.source.content = `${marked(this.source.content)}`;
+  switch (this.source.mediaType) {
+    case "text/markdown":
+      this.body = `${marked(this.source.content)}`;
+      break;
+    case "text/html":
+      this.body = this.source.content;
+      break;
+    default:
+      this.body = `<p>${this.source.content.replace(
+        /(?:\r\n|\r|\n)/g,
+        "</p><p>"
+      )}</p>`;
+      break;
+  }
+
+  let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
+
   next();
 });
 
@@ -90,9 +123,10 @@ PostSchema.methods.verifySignature = async function () {
   return crypto.verify(
     "RSA-SHA256",
     stringject,
-    actor.keys.public,
+    actor.publicKey,
     this.signature
   );
 };
 
-export default mongoose.model("Post", PostSchema);
+const Post = mongoose.model("Post", PostSchema);
+export { Post, PostSchema };

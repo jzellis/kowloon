@@ -10,6 +10,7 @@ import jwt from "jsonwebtoken";
 const UserSchema = new Schema(
   {
     id: { type: String, key: true },
+    objectType: { type: String, default: "User" },
     username: { type: String, default: undefined, unique: true },
     password: { type: String, default: undefined },
     email: { type: String, default: undefined },
@@ -34,15 +35,15 @@ const UserSchema = new Schema(
         defaultCircleView: "",
       },
     },
+    inbox: { type: String },
+    outbox: { type: String },
     following: { type: String, default: "" },
     followers: { type: String, default: "" },
     blocked: { type: String, default: "" },
     muted: { type: String, default: "" },
     lastLogin: Date,
-    keys: {
-      public: String,
-      private: String,
-    },
+    publicKey: String,
+    privateKey: String,
     to: { type: [String], default: ["@public"] }, // If the post is public, this is set to "_public@server.name"; if it's server-only, it's set to "_server@server.name"; if it's a DM it's set to the recipient(s)
     cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
     bcc: { type: [String], default: [] }, // This is for posts to private Groups
@@ -93,7 +94,7 @@ UserSchema.pre("save", async function (next) {
   if (this.isNew) {
     this.id = this.id || `@${this.username}@${domain}`;
     this.profile.icon = this.profile.icon || `//${domain}/images/user.png`;
-    this.url = this.url || `https://${domain}/users/${this.username}`;
+    this.url = this.url || `https://${domain}/users/${this.id}`;
 
     this.accessToken = jwt.sign(
       {
@@ -108,8 +109,8 @@ UserSchema.pre("save", async function (next) {
       privateKeyEncoding: { type: "pkcs8", format: "pem" },
     });
 
-    this.keys.public = publicKey;
-    this.keys.private = privateKey;
+    this.publicKey = publicKey;
+    this.privateKey = privateKey;
 
     let followingCircle = await Circle.create({
       name: `${this.id} - Following`,
@@ -148,6 +149,9 @@ UserSchema.pre("save", async function (next) {
       ).value;
     }
   }
+  if (!this.inbox) this.inbox = `https://${domain}/users/${this.id}/inbox`;
+  if (!this.outbox) this.outbox = `https://${domain}/users/${this.id}/outbox`;
+
   next();
 });
 

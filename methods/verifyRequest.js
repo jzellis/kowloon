@@ -6,7 +6,7 @@ export default async function (id, token) {
   if (user) {
     try {
       let decrypted = crypto
-        .privateDecrypt(user.keys.private, token)
+        .privateDecrypt(user.privateKey, token)
         .toString("utf-8");
       return decrypted;
     } catch (e) {

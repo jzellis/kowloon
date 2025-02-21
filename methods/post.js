@@ -19,7 +19,7 @@ export default async function (url, options = { actorId: "", body: {} }) {
   if (options.actorId) {
     user = await User.findOne({ id: actorId });
     if (user) {
-      headers["Authorization"] = `Basic ${user.keys.public.replaceAll(
+      headers["Authorization"] = `Basic ${user.publicKey.replaceAll(
         "\n",
         "\\r\\n"
       )}`;

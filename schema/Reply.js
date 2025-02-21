@@ -8,6 +8,7 @@ const ObjectId = mongoose.Types.ObjectId;
 const ReplySchema = new Schema(
   {
     id: { type: String, key: true },
+    objectType: { type: String, default: "Reply" },
     target: { type: String, required: true },
     url: { type: String },
     link: { type: String },
@@ -18,6 +19,9 @@ const ReplySchema = new Schema(
     },
     image: { type: String, default: undefined },
     attachments: { type: [Object], default: [] },
+    replyCount: { type: Number, default: 0 }, // The number of replies to this post
+    reactCount: { type: Number, default: 0 }, // The number of likes to this post
+    shareCount: { type: Number, default: 0 }, // The number of shares of this post
     flagged: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
     deletedBy: { type: String, default: null },
@@ -51,7 +55,7 @@ ReplySchema.pre("save", async function (next) {
   let stringject = Buffer.from(this.id);
   const sign = crypto.createSign("RSA-SHA256");
   sign.update(stringject);
-  this.signature = sign.sign(actor.keys.private, "base64");
+  this.signature = sign.sign(actor.privateKey, "base64");
 
   next();
 });
@@ -62,7 +66,7 @@ ReplySchema.methods.verifySignature = async function () {
   return crypto.verify(
     "RSA-SHA256",
     stringject,
-    actor.keys.public,
+    actor.publicKey,
     this.signature
   );
 };

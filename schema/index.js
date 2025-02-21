@@ -12,7 +12,6 @@ import Inbox from "./Inbox.js";
 import Invite from "./Invite.js";
 import Outbox from "./Outbox.js";
 import File from "./File.js";
-import FedServer from "./FedServer.js";
 import Feed from "./Feed.js";
 
 export {
@@ -29,6 +28,5 @@ export {
   Invite,
   Outbox,
   File,
-  FedServer,
   Feed,
 };

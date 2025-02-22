@@ -13,7 +13,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://example.com/@johnny_doe12@example.com/inbox",
       outbox: "https://example.com/@johnny_doe12@example.com/outbox",
-      url: "https://other-sandwich.com/",
+      serverId: "@example.com",
+      url: "https://any-scraper.biz/",
     },
     {
       id: "@amanda_kelly34@mail.com",
@@ -21,7 +22,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://mail.com/@amanda_kelly34@mail.com/inbox",
       outbox: "https://mail.com/@amanda_kelly34@mail.com/outbox",
-      url: "https://alarmed-mastoid.net",
+      serverId: "@mail.com",
+      url: "https://nocturnal-clinic.name/",
     },
     {
       id: "@kevin_smith567@outlook.com",
@@ -29,7 +31,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://outlook.com/@kevin_smith567@outlook.com/inbox",
       outbox: "https://outlook.com/@kevin_smith567@outlook.com/outbox",
-      url: "https://lovely-railway.biz",
+      serverId: "@outlook.com",
+      url: "https://odd-pup.name",
     },
     {
       id: "@sarah_jameson88@gmail.com",
@@ -37,7 +40,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://gmail.com/@sarah_jameson88@gmail.com/inbox",
       outbox: "https://gmail.com/@sarah_jameson88@gmail.com/outbox",
-      url: "https://annual-eyestrain.info",
+      serverId: "@gmail.com",
+      url: "https://jumbo-quotation.com/",
     },
     {
       id: "@lisa_carter321@yahoo.com",
@@ -45,7 +49,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://yahoo.com/@lisa_carter321@yahoo.com/inbox",
       outbox: "https://yahoo.com/@lisa_carter321@yahoo.com/outbox",
-      url: "https://jaunty-burrow.net",
+      serverId: "@yahoo.com",
+      url: "https://dead-hint.info",
     },
     {
       id: "@mark_wilson45@hotmail.com",
@@ -53,7 +58,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://hotmail.com/@mark_wilson45@hotmail.com/inbox",
       outbox: "https://hotmail.com/@mark_wilson45@hotmail.com/outbox",
-      url: "https://mortified-sunshine.org/",
+      serverId: "@hotmail.com",
+      url: "https://identical-salon.com/",
     },
     {
       id: "@ellen_walker987@aol.com",
@@ -61,7 +67,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://aol.com/@ellen_walker987@aol.com/inbox",
       outbox: "https://aol.com/@ellen_walker987@aol.com/outbox",
-      url: "https://bewitched-negligee.info/",
+      serverId: "@aol.com",
+      url: "https://optimistic-kick-off.info",
     },
     {
       id: "@samuel_peters46@protonmail.com",
@@ -69,7 +76,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://protonmail.com/@samuel_peters46@protonmail.com/inbox",
       outbox: "https://protonmail.com/@samuel_peters46@protonmail.com/outbox",
-      url: "https://short-boudoir.org/",
+      serverId: "@protonmail.com",
+      url: "https://partial-refuge.org/",
     },
     {
       id: "@jessica_hughes72@mail.com",
@@ -77,7 +85,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://mail.com/@jessica_hughes72@mail.com/inbox",
       outbox: "https://mail.com/@jessica_hughes72@mail.com/outbox",
-      url: "https://hard-blend.com",
+      serverId: "@mail.com",
+      url: "https://jealous-bait.biz",
     },
     {
       id: "@david_smith202@icloud.com",
@@ -85,7 +94,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://icloud.com/@david_smith202@icloud.com/inbox",
       outbox: "https://icloud.com/@david_smith202@icloud.com/outbox",
-      url: "https://twin-duplexer.biz/",
+      serverId: "@icloud.com",
+      url: "https://terrific-dig.com/",
     },
     {
       id: "@michael_reed66@yahoo.com",
@@ -93,7 +103,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://yahoo.com/@michael_reed66@yahoo.com/inbox",
       outbox: "https://yahoo.com/@michael_reed66@yahoo.com/outbox",
-      url: "https://dry-yesterday.biz",
+      serverId: "@yahoo.com",
+      url: "https://familiar-youth.name/",
     },
     {
       id: "@lucy_hamilton19@outlook.com",
@@ -101,7 +112,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://outlook.com/@lucy_hamilton19@outlook.com/inbox",
       outbox: "https://outlook.com/@lucy_hamilton19@outlook.com/outbox",
-      url: "https://jaunty-espalier.org/",
+      serverId: "@outlook.com",
+      url: "https://rural-cabana.biz/",
     },
     {
       id: "@olivia_morris23@gmail.com",
@@ -109,7 +121,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://gmail.com/@olivia_morris23@gmail.com/inbox",
       outbox: "https://gmail.com/@olivia_morris23@gmail.com/outbox",
-      url: "https://esteemed-reasoning.com",
+      serverId: "@gmail.com",
+      url: "https://creepy-recorder.name/",
     },
     {
       id: "@benjamin_cook49@aol.com",
@@ -117,7 +130,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://aol.com/@benjamin_cook49@aol.com/inbox",
       outbox: "https://aol.com/@benjamin_cook49@aol.com/outbox",
-      url: "https://discrete-shoehorn.net",
+      serverId: "@aol.com",
+      url: "https://dangerous-allocation.com/",
     },
     {
       id: "@hannah_clark92@icloud.com",
@@ -125,7 +139,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://icloud.com/@hannah_clark92@icloud.com/inbox",
       outbox: "https://icloud.com/@hannah_clark92@icloud.com/outbox",
-      url: "https://frugal-story.org",
+      serverId: "@icloud.com",
+      url: "https://serene-commerce.net",
     },
     {
       id: "@jake_davis101@gmail.com",
@@ -133,7 +148,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://gmail.com/@jake_davis101@gmail.com/inbox",
       outbox: "https://gmail.com/@jake_davis101@gmail.com/outbox",
-      url: "https://sleepy-armchair.biz/",
+      serverId: "@gmail.com",
+      url: "https://peppery-pearl.info",
     },
     {
       id: "@rebecca_white34@hotmail.com",
@@ -141,7 +157,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://hotmail.com/@rebecca_white34@hotmail.com/inbox",
       outbox: "https://hotmail.com/@rebecca_white34@hotmail.com/outbox",
-      url: "https://austere-ambulance.org/",
+      serverId: "@hotmail.com",
+      url: "https://colorful-theory.org/",
     },
     {
       id: "@andrew_sanchez11@mail.com",
@@ -149,7 +166,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://mail.com/@andrew_sanchez11@mail.com/inbox",
       outbox: "https://mail.com/@andrew_sanchez11@mail.com/outbox",
-      url: "https://silly-downfall.info/",
+      serverId: "@mail.com",
+      url: "https://blushing-headquarters.info/",
     },
     {
       id: "@chloe_baker55@protonmail.com",
@@ -157,7 +175,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://protonmail.com/@chloe_baker55@protonmail.com/inbox",
       outbox: "https://protonmail.com/@chloe_baker55@protonmail.com/outbox",
-      url: "https://agitated-yak.biz/",
+      serverId: "@protonmail.com",
+      url: "https://tedious-smell.info",
     },
     {
       id: "@charles_johnson82@outlook.com",
@@ -165,7 +184,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://outlook.com/@charles_johnson82@outlook.com/inbox",
       outbox: "https://outlook.com/@charles_johnson82@outlook.com/outbox",
-      url: "https://unlucky-flicker.biz",
+      serverId: "@outlook.com",
+      url: "https://annual-raven.name",
     },
     {
       id: "@paul_lee23@aol.com",
@@ -173,7 +193,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://aol.com/@paul_lee23@aol.com/inbox",
       outbox: "https://aol.com/@paul_lee23@aol.com/outbox",
-      url: "https://insubstantial-pronunciation.org",
+      serverId: "@aol.com",
+      url: "https://jagged-handover.name",
     },
     {
       id: "@kimberly_turner44@gmail.com",
@@ -181,7 +202,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://gmail.com/@kimberly_turner44@gmail.com/inbox",
       outbox: "https://gmail.com/@kimberly_turner44@gmail.com/outbox",
-      url: "https://indolent-crewmate.info/",
+      serverId: "@gmail.com",
+      url: "https://acrobatic-bricklaying.net/",
     },
     {
       id: "@noah_wright65@icloud.com",
@@ -189,7 +211,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://icloud.com/@noah_wright65@icloud.com/inbox",
       outbox: "https://icloud.com/@noah_wright65@icloud.com/outbox",
-      url: "https://obvious-parade.org/",
+      serverId: "@icloud.com",
+      url: "https://hoarse-shaker.com",
     },
     {
       id: "@sofia_miller98@yahoo.com",
@@ -197,7 +220,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://yahoo.com/@sofia_miller98@yahoo.com/inbox",
       outbox: "https://yahoo.com/@sofia_miller98@yahoo.com/outbox",
-      url: "https://grand-anticodon.name/",
+      serverId: "@yahoo.com",
+      url: "https://excellent-dish.info/",
     },
     {
       id: "@tommy_jenkins56@aol.com",
@@ -205,7 +229,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://aol.com/@tommy_jenkins56@aol.com/inbox",
       outbox: "https://aol.com/@tommy_jenkins56@aol.com/outbox",
-      url: "https://brown-baseline.net/",
+      serverId: "@aol.com",
+      url: "https://rotten-dresser.biz",
     },
     {
       id: "@aiden_scott29@mail.com",
@@ -213,7 +238,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://mail.com/@aiden_scott29@mail.com/inbox",
       outbox: "https://mail.com/@aiden_scott29@mail.com/outbox",
-      url: "https://snappy-firewall.org/",
+      serverId: "@mail.com",
+      url: "https://periodic-grain.net",
     },
     {
       id: "@bella_thomas32@outlook.com",
@@ -221,7 +247,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://outlook.com/@bella_thomas32@outlook.com/inbox",
       outbox: "https://outlook.com/@bella_thomas32@outlook.com/outbox",
-      url: "https://hurtful-puppet.com/",
+      serverId: "@outlook.com",
+      url: "https://likable-pagoda.biz",
     },
     {
       id: "@zachary_evans71@gmail.com",
@@ -229,7 +256,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://gmail.com/@zachary_evans71@gmail.com/inbox",
       outbox: "https://gmail.com/@zachary_evans71@gmail.com/outbox",
-      url: "https://sturdy-revolution.net",
+      serverId: "@gmail.com",
+      url: "https://unwilling-instrumentation.org/",
     },
     {
       id: "@grace_king13@yahoo.com",
@@ -237,7 +265,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://yahoo.com/@grace_king13@yahoo.com/inbox",
       outbox: "https://yahoo.com/@grace_king13@yahoo.com/outbox",
-      url: "https://separate-metabolite.org",
+      serverId: "@yahoo.com",
+      url: "https://average-tracksuit.biz",
     },
     {
       id: "@alexandra_lee40@icloud.com",
@@ -245,7 +274,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://icloud.com/@alexandra_lee40@icloud.com/inbox",
       outbox: "https://icloud.com/@alexandra_lee40@icloud.com/outbox",
-      url: "https://bubbly-paint.info/",
+      serverId: "@icloud.com",
+      url: "https://scarce-donor.org",
     },
     {
       id: "@thomas_campbell81@protonmail.com",
@@ -253,7 +283,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://protonmail.com/@thomas_campbell81@protonmail.com/inbox",
       outbox: "https://protonmail.com/@thomas_campbell81@protonmail.com/outbox",
-      url: "https://electric-stability.com/",
+      serverId: "@protonmail.com",
+      url: "https://soupy-employ.org/",
     },
     {
       id: "@victor_adams69@aol.com",
@@ -261,7 +292,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://aol.com/@victor_adams69@aol.com/inbox",
       outbox: "https://aol.com/@victor_adams69@aol.com/outbox",
-      url: "https://exalted-cod.org/",
+      serverId: "@aol.com",
+      url: "https://responsible-carry.name",
     },
     {
       id: "@amelia_bennett64@mail.com",
@@ -269,7 +301,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://mail.com/@amelia_bennett64@mail.com/inbox",
       outbox: "https://mail.com/@amelia_bennett64@mail.com/outbox",
-      url: "https://quintessential-fingernail.name/",
+      serverId: "@mail.com",
+      url: "https://cheerful-soundness.info",
     },
     {
       id: "@james_bradley53@gmail.com",
@@ -277,7 +310,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://gmail.com/@james_bradley53@gmail.com/inbox",
       outbox: "https://gmail.com/@james_bradley53@gmail.com/outbox",
-      url: "https://judicious-university.com/",
+      serverId: "@gmail.com",
+      url: "https://active-image.name/",
     },
     {
       id: "@lily_harper50@icloud.com",
@@ -285,7 +319,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://icloud.com/@lily_harper50@icloud.com/inbox",
       outbox: "https://icloud.com/@lily_harper50@icloud.com/outbox",
-      url: "https://great-main.info/",
+      serverId: "@icloud.com",
+      url: "https://real-manufacturer.info",
     },
     {
       id: "@jordan_russell28@hotmail.com",
@@ -293,7 +328,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://hotmail.com/@jordan_russell28@hotmail.com/inbox",
       outbox: "https://hotmail.com/@jordan_russell28@hotmail.com/outbox",
-      url: "https://keen-notepad.org",
+      serverId: "@hotmail.com",
+      url: "https://eminent-square.biz",
     },
     {
       id: "@madeline_green77@mail.com",
@@ -301,7 +337,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://mail.com/@madeline_green77@mail.com/inbox",
       outbox: "https://mail.com/@madeline_green77@mail.com/outbox",
-      url: "https://disastrous-bakeware.name/",
+      serverId: "@mail.com",
+      url: "https://hefty-partner.net/",
     },
     {
       id: "@nathaniel_gray22@aol.com",
@@ -309,7 +346,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://aol.com/@nathaniel_gray22@aol.com/inbox",
       outbox: "https://aol.com/@nathaniel_gray22@aol.com/outbox",
-      url: "https://expensive-tentacle.com",
+      serverId: "@aol.com",
+      url: "https://muddy-corporatism.biz",
     },
     {
       id: "@ella_williams12@outlook.com",
@@ -317,7 +355,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://outlook.com/@ella_williams12@outlook.com/inbox",
       outbox: "https://outlook.com/@ella_williams12@outlook.com/outbox",
-      url: "https://careful-vitality.org/",
+      serverId: "@outlook.com",
+      url: "https://sizzling-word.com",
     },
     {
       id: "@william_king57@gmail.com",
@@ -325,7 +364,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://gmail.com/@william_king57@gmail.com/inbox",
       outbox: "https://gmail.com/@william_king57@gmail.com/outbox",
-      url: "https://double-appendix.org/",
+      serverId: "@gmail.com",
+      url: "https://luminous-granny.com/",
     },
     {
       id: "@zara_stewart65@yahoo.com",
@@ -333,7 +373,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://yahoo.com/@zara_stewart65@yahoo.com/inbox",
       outbox: "https://yahoo.com/@zara_stewart65@yahoo.com/outbox",
-      url: "https://advanced-paragraph.org",
+      serverId: "@yahoo.com",
+      url: "https://memorable-polyester.info",
     },
     {
       id: "@ethan_thompson19@icloud.com",
@@ -341,7 +382,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://icloud.com/@ethan_thompson19@icloud.com/inbox",
       outbox: "https://icloud.com/@ethan_thompson19@icloud.com/outbox",
-      url: "https://speedy-truck.info/",
+      serverId: "@icloud.com",
+      url: "https://colorless-belfry.org",
     },
     {
       id: "@lauren_martinez77@mail.com",
@@ -349,7 +391,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://mail.com/@lauren_martinez77@mail.com/inbox",
       outbox: "https://mail.com/@lauren_martinez77@mail.com/outbox",
-      url: "https://guilty-coordination.org",
+      serverId: "@mail.com",
+      url: "https://colorless-wild.com/",
     },
     {
       id: "@jared_evans22@protonmail.com",
@@ -357,7 +400,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://protonmail.com/@jared_evans22@protonmail.com/inbox",
       outbox: "https://protonmail.com/@jared_evans22@protonmail.com/outbox",
-      url: "https://alienated-snake.org/",
+      serverId: "@protonmail.com",
+      url: "https://immense-flood.org/",
     },
     {
       id: "@emily_scott14@aol.com",
@@ -365,7 +409,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://aol.com/@emily_scott14@aol.com/inbox",
       outbox: "https://aol.com/@emily_scott14@aol.com/outbox",
-      url: "https://ruddy-marshland.com",
+      serverId: "@aol.com",
+      url: "https://staid-viability.net/",
     },
     {
       id: "@ryan_brown61@outlook.com",
@@ -373,7 +418,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://outlook.com/@ryan_brown61@outlook.com/inbox",
       outbox: "https://outlook.com/@ryan_brown61@outlook.com/outbox",
-      url: "https://prudent-cymbal.biz/",
+      serverId: "@outlook.com",
+      url: "https://spicy-body.net/",
     },
     {
       id: "@victoria_fisher32@gmail.com",
@@ -381,7 +427,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://gmail.com/@victoria_fisher32@gmail.com/inbox",
       outbox: "https://gmail.com/@victoria_fisher32@gmail.com/outbox",
-      url: "https://vivid-flanker.biz",
+      serverId: "@gmail.com",
+      url: "https://belated-pentagon.com",
     },
     {
       id: "@ian_williams83@mail.com",
@@ -389,7 +436,8 @@ export default async function () {
       type: "kowloon",
       inbox: "https://mail.com/@ian_williams83@mail.com/inbox",
       outbox: "https://mail.com/@ian_williams83@mail.com/outbox",
-      url: "https://rash-truck.net/",
+      serverId: "@mail.com",
+      url: "https://striped-rugby.org",
     },
     {
       id: "@katherine_garcia49@icloud.com",
@@ -397,14 +445,16 @@ export default async function () {
       type: "kowloon",
       inbox: "https://icloud.com/@katherine_garcia49@icloud.com/inbox",
       outbox: "https://icloud.com/@katherine_garcia49@icloud.com/outbox",
-      url: "https://past-creativity.biz",
+      serverId: "@icloud.com",
+      url: "https://average-hackwork.info",
     },
     {
       id: "@max_hughes31@aol.com",
       name: "Max Hughes",
       inbox: "https://aol.com/@max_hughes31@aol.com/inbox",
       outbox: "https://aol.com/@max_hughes31@aol.com/outbox",
-      url: "https://strange-prey.info/",
+      serverId: "@aol.com",
+      url: "https://oily-consonant.com/",
     },
   ];
 

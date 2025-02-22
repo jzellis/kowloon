@@ -6,7 +6,6 @@ export default async function (req, res, next) {
 
   let page = req.query.page || 1;
   let query = {
-    type: req.query.type || ["Note", "Article", "Media", "Link", "Bookmark"],
     to: {
       $in: ["@public", req.user?.id, req.server?.id].concat(
         req.user?.memberships,
@@ -14,6 +13,7 @@ export default async function (req, res, next) {
       ),
     },
   };
+  if (req.query.type) query.type = req.query.type;
   if (req.user) query.from = { $nin: req.user.blocked.concat(req.user.muted) };
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };

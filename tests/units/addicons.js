@@ -354,6 +354,7 @@ let users = [
 ];
 
 users.forEach((u) => {
+  u.serverId = `@${u.id.split("@")[2]}`;
   u.url = faker.internet.url();
 });
 

@@ -21,6 +21,7 @@ const GroupSchema = new Schema(
           outbox: { type: String, default: undefined },
           icon: { type: String, default: undefined },
           url: { type: String, default: undefined },
+          serverId: { type: String },
           createdAt: { type: Date, default: Date.now },
           updatedAt: { type: Date },
         },
@@ -70,6 +71,7 @@ GroupSchema.pre("save", async function (next) {
         icon: actor.profile.icon,
         inbox: `https://${domain}/users/${actor.id}/inbox`,
         outbox: `https://${domain}/users/${actor.id}/outbox`,
+        serverId: `@${domain}`,
         url: actor.url,
         updatedAt: Date.now(),
       });

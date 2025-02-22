@@ -5,7 +5,7 @@ import { Settings, User } from "./index.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
-const ReplySchema = new Schema(
+const replieschema = new Schema(
   {
     id: { type: String, key: true },
     objectType: { type: String, default: "Reply" },
@@ -36,14 +36,14 @@ const ReplySchema = new Schema(
   }
 );
 
-ReplySchema.virtual("actor", {
+replieschema.virtual("actor", {
   ref: "User",
   localField: "actorId",
   foreignField: "id",
   justOne: true,
 });
 
-ReplySchema.pre("save", async function (next) {
+replieschema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;
   this.id = this.id || `reply:${this._id}@${domain}`;
   this.url = this.url || `https://${domain}/posts/${this.id}`;
@@ -60,7 +60,7 @@ ReplySchema.pre("save", async function (next) {
   next();
 });
 
-ReplySchema.methods.verifySignature = async function () {
+replieschema.methods.verifySignature = async function () {
   let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
   let stringject = Buffer.from(JSON.stringify(this.id));
   return crypto.verify(
@@ -71,4 +71,4 @@ ReplySchema.methods.verifySignature = async function () {
   );
 };
 
-export default mongoose.model("Reply", ReplySchema);
+export default mongoose.model("Reply", replieschema);

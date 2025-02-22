@@ -15,6 +15,7 @@ const CircleSchema = new Schema(
       type: [
         {
           id: { type: String, required: true },
+          serverId: { type: String },
           type: { type: String, default: "kowloon" },
           name: { type: String, default: undefined },
           inbox: { type: String, default: undefined },

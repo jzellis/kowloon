@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import Settings from "./Settings.js";
-
+import { marked } from "marked";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -20,6 +20,7 @@ const BookmarkSchema = new Schema(
       content: { type: String, default: "" }, // The raw content of the post -- plain text, HTML or Markdown
       mediaType: { type: String, default: "text/html" },
     },
+    body: { type: String, default: "" },
     image: { type: String, default: undefined },
     to: { type: [String], default: [] }, // If the post is public, this is set to "@public"; if it's server-only, it's set to "@server"; if it's a DM it's set to the recipient(s)
     cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
@@ -57,6 +58,22 @@ BookmarkSchema.pre("save", async function (next) {
     this.image = this.image || `https://${domain}/images/bookmark.png`;
 
     if (!this.title) this.title = this.href;
+    this.source.mediaType = this.source.mediaType || "text/html";
+
+    switch (this.source.mediaType) {
+      case "text/markdown":
+        this.body = `<p>${marked(this.source.content)}</p>`;
+        break;
+      case "text/html":
+        this.body = this.source.content;
+        break;
+      default:
+        this.body = `<p>${this.source.content.replace(
+          /(?:\r\n|\r|\n)/g,
+          "</p><p>"
+        )}</p>`;
+        break;
+    }
   }
   next();
 });

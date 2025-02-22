@@ -1,58 +1,58 @@
 import Kowloon from "../../Kowloon.js";
-import Circle from "../../schema/Circle.js";
-import util from "util";
+import { Feed } from "../../schema/index.js";
 export default async function (req, res, next) {
   let status = 200;
   let qStart = Date.now();
   let response = {};
-
-  let from = req.params.id; // Filters by authors
-  let type = req.query.type || []; // Filters by authors
-  let query = req.user
-    ? {
-        $or: [
-          { to: { $in: [...req.user.memberships, req.user.id, "@public"] } },
-          { cc: { $in: [...req.user.memberships, req.user.id, "@public"] } },
-          { bcc: { $in: [...req.user.memberships, req.user.id, "@public"] } },
-
-          // { to: "@public" },
-        ],
-        actorId: from,
-      }
-    : { to: "@public" };
-  if (from.length > 0) query.actorId = { $in: from };
-  if (type.length > 0) query.type = { $in: type };
-  if (req.user && req.query.circle) {
-    let circle = await Circle.findOne({ id: req.query.circle });
-    query.actorId = {
-      $in: [...circle.members, circle.id],
-      $nin: [...req.user.blocked, req.user.muted],
-    };
+  let page = req.query.page || 1;
+  let pageSize = req.query.num || 20;
+  let sort = {};
+  if (req.query.sort) {
+    sort[req.query.sort] = -1;
+  } else {
+    sort.createdAt = -1;
   }
-
-  console.log(util.inspect(query, false, null, true));
-  let posts = (
-    await Kowloon.getPosts(query, {
-      page: req.query.page || 1,
-    })
-  ).items;
-  let activities = (
-    await Kowloon.getActivities(query, {
-      page: req.query.page || 1,
-    })
-  ).items;
-  let bookmarks = (
-    await Kowloon.getBookmarks(query, {
-      page: req.query.page || 1,
-    })
-  ).items;
-  let nozzle = posts
-    .concat(activities, bookmarks)
-    .sort((a, b) => a.createdAt < b.createdAt);
-  response = {
-    items: nozzle,
-    queryTime: Date.now() - qStart,
+  let query = {
+    "actor.id": req.params.id,
+    to: {
+      $in: ["@public", req.user?.id, req.server?.id].concat(
+        req.user?.memberships,
+        req.server?.memberships
+      ),
+    },
   };
+  if (req.user?.id && req.user.id.split("@").pop() === Kowloon.settings.domain)
+    query.to.$in.push("@server");
+  if (req.query.type) query.type = req.query.type;
+
+  if (req.query.since)
+    query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
+  let items = await Feed.find(query)
+    .select(
+      "-flaggedAt -flaggedBy -flaggedReason -bcc -rbcc -object.bcc -object.rbcc -deletedAt -deletedBy -_id -__v -source"
+    )
+    .limit(pageSize ? pageSize : 0)
+    .skip(pageSize ? pageSize * (page - 1) : 0)
+    .sort({ sort: -1 })
+    .populate("actor", "-_id username id profile publicKey");
+  let totalItems = await Feed.countDocuments(query);
+
+  response = {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    type: "OrderedCollection",
+    // id: `https//${settings.domain}${id ? "/" + id : ""}`,
+    summary: `${Kowloon.settings.title} | Feeds`,
+    totalItems,
+    totalPages: Math.ceil(totalItems / (page * pageSize ? pageSize : 20)),
+    currentPage: parseInt(page) || 1,
+    firstItem: pageSize * (page - 1) + 1,
+    lastItem: pageSize * (page - 1) + items.length,
+    count: items.length,
+    items,
+  };
+  // response.activities = await Feed.find(query);
+  response.query = query;
+  response.queryTime = Date.now() - qStart;
 
   res.status(status).json(response);
 }

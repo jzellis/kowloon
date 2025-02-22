@@ -19,8 +19,8 @@ export default async function (numUsers) {
     let username = fullName.replace(" ", "").toLowerCase();
     userActivity.object = {
       username: username,
-      password: faker.internet.password(),
-      email: faker.internet.email(),
+      password: "12345678",
+      email: `${username}@gmail.com`,
       profile: {
         name: fullName,
         bio: faker.lorem.sentence(),

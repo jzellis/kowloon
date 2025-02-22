@@ -6,7 +6,6 @@ import verifyUserSignature from "./verifyUserSignature.js";
 import verifyServerSignature from "./verifyServerSignature.js";
 import crypto from "crypto";
 import parseId from "./parseId.js";
-import getUser from "./getUser.js";
 export default async function (
   id,
   timestamp,

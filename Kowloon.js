@@ -19,13 +19,13 @@ const Kowloon = {
       const db = await mongoose.connect(process.env.MONGODB_URI);
       this.connection.isConnected = db.connections[0].readyState === 1;
       console.log("Kowloon database connection established");
+      console.log(await Settings.countDocuments());
     } catch (e) {
       console.error(e);
       process.exit(0);
     }
+    if ((await Settings.countDocuments()) === 0) await setup(); //
     let settings = await Settings.find();
-    if (settings.length === 0) await setup(); //
-    settings = await Settings.find();
     settings.forEach(async (setting) => {
       this.settings[setting.name] = setting.value;
     });

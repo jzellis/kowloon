@@ -13,7 +13,7 @@ import {
 import setup from "./setup.js";
 
 export default async function () {
-  // await Settings.deleteMany({});
+  await Settings.deleteMany({});
   // await setup();
   await Activity.deleteMany({});
   await Bookmark.deleteMany({});

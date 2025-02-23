@@ -230,7 +230,6 @@ export default async function (activity) {
           activity.object = actor;
           activity.object.password = undefined;
           activity.object.privateKey = undefined;
-          activity.object.accessToken = undefined;
           activity.summary = `${actor.profile.name} (${actor.id}) joined the server`;
           activity.to = activity.object.to;
           activity.cc = activity.object.cc;

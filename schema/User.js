@@ -52,7 +52,6 @@ const UserSchema = new Schema(
     rbcc: { type: [String], default: [] },
     url: { type: String, default: undefined },
     isAdmin: { type: Boolean, default: false },
-    accessToken: String,
     active: { type: Boolean, default: true },
     flaggedAt: { type: Date, default: null },
     flaggedBy: { type: String, default: null },
@@ -96,13 +95,6 @@ UserSchema.pre("save", async function (next) {
     this.profile.icon = this.profile.icon || `//${domain}/images/user.png`;
     this.url = this.url || `https://${domain}/users/${this.id}`;
 
-    this.accessToken = jwt.sign(
-      {
-        username: this.username,
-        _id: this._id,
-      },
-      process.env.JWT_KEY
-    );
     const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
       modulusLength: 2048, // Adjust the key length as per your requirements
       publicKeyEncoding: { type: "spki", format: "pem" },
@@ -119,13 +111,6 @@ UserSchema.pre("save", async function (next) {
       to: [this.id],
     });
     this.following = followingCircle.id;
-    let followersCircle = await Circle.create({
-      name: `${this.id} - Followers`,
-      actorId: this.id,
-      description: `${this.profile.name} (@${this.username}) | Followers`,
-      to: [this.id],
-    });
-    this.followers = followersCircle.id;
     let blockedCircle = await Circle.create({
       name: `${this.id} - Blocked`,
       actorId: this.id,

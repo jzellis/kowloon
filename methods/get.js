@@ -1,13 +1,4 @@
 import { User } from "../schema/index.js";
-import { Agent, setGlobalDispatcher } from "undici";
-
-const agent = new Agent({
-  connect: {
-    rejectUnauthorized: false,
-  },
-});
-
-setGlobalDispatcher(agent);
 
 export default async function (url, actorId) {
   let user;

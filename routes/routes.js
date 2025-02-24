@@ -88,7 +88,7 @@ const routes = {
 
 const router = express.Router();
 
-const staticPage = await fs.readFile("./frontend/dist/index.html", "utf-8");
+// const staticPage = await fs.readFile("./frontend/dist/index.html", "utf-8");
 
 const logger = winston.createLogger({
   // Log only if level is less than (meaning more severe) or equal to this

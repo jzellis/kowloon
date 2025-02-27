@@ -41,6 +41,9 @@ import test from "./test.js";
 import login from "./login/index.js";
 import auth from "./auth/get.js";
 import inboxPost from "./inbox/post.js";
+import fileGet from "./files/get.js";
+import filePost from "./files/post.js";
+import preview from "./utils/preview.js";
 import User from "../schema/User.js";
 
 const routes = {
@@ -77,12 +80,15 @@ const routes = {
     "/outbox": outboxGet,
     "/inbox": inboxGet,
     "/test": test,
+    "/files": fileGet,
+    "/utils/preview": preview,
   },
   post: {
     "/login": login,
     "/logout": function () {},
     "/inbox": inboxPost,
     "/outbox": function () {},
+    "/files": filePost,
   },
 };
 

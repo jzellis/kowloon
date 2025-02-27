@@ -11,14 +11,14 @@ import {
 } from "../../schema/index.js";
 import indefinite from "indefinite";
 export default async function (activity) {
+  let error;
   let domain = (await Settings.findOne({ name: "domain" })).value;
-  if (!activity.object) return new Error("No object provided");
-  if (!activity.objectType) return new Error("No object type provided");
-  // if (activity.objectType)
-  //   activity.object.objectType = activity.object.objectType
-  //     ? activity.object.objectType
-  //     : activity.objectType;
-  try {
+  if (!activity.object) error = "No object provided";
+  if (!activity.objectType) error = "No object type provided";
+  if (error) {
+    console.log(error);
+    return { error };
+  } else {
     let actor =
       activity.actor || (await User.findOne({ id: activity.actorId }));
     activity.summary = `${actor?.profile?.name} (${
@@ -244,8 +244,5 @@ export default async function (activity) {
         break;
     }
     return activity;
-  } catch (e) {
-    console.log(e);
-    return new Error(e);
   }
 }

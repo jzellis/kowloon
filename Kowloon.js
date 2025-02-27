@@ -62,6 +62,5 @@ const Kowloon = {
   }),
   reservedUsernames: ["admin", "kowloon", "_public", "_server", "_recipients"],
 };
-
 await Kowloon.init();
 export default Kowloon;

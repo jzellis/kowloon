@@ -33,7 +33,7 @@ export default async function (req, res, next) {
     )
     .limit(pageSize ? pageSize : 0)
     .skip(pageSize ? pageSize * (page - 1) : 0)
-    .sort({ sort: -1 })
+    .sort(sort)
     .populate("actor", "-_id username id profile publicKey");
   let totalItems = await Feed.countDocuments(query);
 

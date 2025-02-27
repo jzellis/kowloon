@@ -14,7 +14,8 @@ export default async function (req, res, next) {
   //     ? "No activity specified"
   //     : "Undetermined error";
   // }
-  response.activity = await Kowloon.createActivity(req.body.activity);
+  let activity = await Kowloon.createActivity(req.body.activity);
+  response = activity.error ? activity : { activity };
 
   res.status(status).json(response);
 }

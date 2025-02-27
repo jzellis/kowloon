@@ -29,11 +29,11 @@ export default async function (req, res, next) {
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
   let items = await Post.find(query)
     .select(
-      "-flaggedAt -flaggedBy -flaggedReason -bcc -rbcc -object.bcc -object.rbcc -deletedAt -deletedBy -_id -__v -source"
+      "-flaggedAt -flaggedBy -flaggedReason -bcc -rbcc -object.bcc -object.rbcc -deletedAt -deletedBy -_id -__v -source -signature"
     )
     .limit(pageSize ? pageSize : 0)
     .skip(pageSize ? pageSize * (page - 1) : 0)
-    .sort({ sort: -1 })
+    .sort(sort)
     .populate("actor", "-_id username id profile publicKey");
   let totalItems = await Post.countDocuments(query);
 

@@ -26,7 +26,7 @@ const PostSchema = new Schema(
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     shareCount: { type: Number, default: 0 }, // The number of shares of this post
     image: { type: String, default: undefined }, // The post's featured/preview image
-    attachments: { type: [String], ref: "File", default: [] }, // Any post attachments. Each attachment is an object with a filetype, size, url where it's stored and optional title and description
+    attachments: { type: [Object], default: [] }, // Any post attachments. Each attachment is an object with a filetype, size, url where it's stored and optional title and description
     tags: { type: [String], default: [] },
     location: { type: Object, default: undefined }, // A geotag for the post in the ActivityStreams geolocation format
     target: { type: String, default: undefined }, // For Links

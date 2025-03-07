@@ -6,22 +6,18 @@ export default async function (req, res, next) {
   let response = {};
   let page = req.query.page || 1;
   let pageSize = req.query.num || 20;
-  let sort = {};
-  if (req.query.sort) {
-    sort[req.query.sort] = -1;
-  } else {
-    sort.createdAt = -1;
-  }
+  let sort = req.query.sort ? `-£{req.query.sort}` : "-createdAt";
   let query = {
-    to: {
-      $in: ["@public", req.user?.id, req.server?.id].concat(
-        req.user?.memberships,
-        req.server?.memberships
-      ),
-    },
+    // to: {
+    //   $in: ["@public", req.user?.id, req.server?.id].concat(
+    //     req.user?.memberships,
+    //     req.server?.memberships
+    //   ),
+    // },
+    to: "@public",
   };
-  if (req.user?.id && req.user.id.split("@").pop() === Kowloon.settings.domain)
-    query.to.$in.push("@server");
+  // if (req.user?.id && req.user.id.split("@").pop() === Kowloon.settings.domain)
+  //   query.to.$in.push("@server");
   if (req.user) query.from = { $nin: req.user.blocked.concat(req.user.muted) };
   if (req.query.type) query.type = req.query.type;
 
@@ -33,7 +29,7 @@ export default async function (req, res, next) {
     )
     .limit(pageSize ? pageSize : 0)
     .skip(pageSize ? pageSize * (page - 1) : 0)
-    .sort({ sort: -1 })
+    .sort(sort)
     .populate("actor", "-_id username id profile publicKey");
   let totalItems = await Feed.countDocuments(query);
 

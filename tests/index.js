@@ -47,7 +47,7 @@ try {
   await generateUsers(10);
   await generatePosts(10);
   await generateReacts(10);
-  await generateBookmarks(50);
+  // await generateBookmarks(50);
   await generateReplies(10);
   await generateGroups(10);
   await generateGroupPosts(10);

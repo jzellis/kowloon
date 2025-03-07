@@ -103,11 +103,8 @@ export default async function (activity) {
             retrievedAt: post.createdAt,
           };
 
-          await Feed.findOneAndUpdate(
-            { id: post.id },
-            { $set: feedItem },
-            { upsert: true }
-          );
+          let item = await Feed.create(feedItem);
+          console.log(item);
           activity.objectId = post.id;
         } catch (e) {
           console.log(e);

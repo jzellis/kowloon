@@ -149,4 +149,7 @@ node_modules
 ./frontend/node_modules
 ./uploads
 ./ssl
+
 minio-s3-credentials.json
+uploads
+ssl

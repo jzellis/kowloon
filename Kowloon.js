@@ -6,7 +6,11 @@ dotenv.config({ path: `${dirname(fileURLToPath(import.meta.url))}/.env` });
 import mongoose from "mongoose";
 import winston from "winston";
 import setup from "./methods/setup.js";
-
+import {
+  S3Client,
+  CreateBucketCommand,
+  HeadBucketCommand,
+} from "@aws-sdk/client-s3";
 import { Settings } from "./schema/index.js";
 
 const Kowloon = {
@@ -59,7 +63,27 @@ const Kowloon = {
       new winston.transports.File({ filename: "combined.log" }),
     ],
   }),
-  reservedUsernames: ["admin", "kowloon", "_public", "_server", "_recipients"],
+  reservedUsernames: ["admin", "kowloon", "public", "server", "recipients"],
 };
+
+// This checks for the S3 bucket and creates it if it doesn't exist.
+console.log("Checking for S3 bucket...");
+const s3 = new S3Client({
+  endpoint: process.env.S3_ENDPOINT,
+  region: process.env.S3_REGION || "us-east-1",
+  credentials: {
+    accessKeyId: process.env.S3_ACCESS_KEY,
+    secretAccessKey: process.env.S3_ACCESS_SECRET_KEY,
+  },
+  forcePathStyle: true, // S3 compatibility
+});
+
+try {
+  await s3.send(new HeadBucketCommand({ Bucket: process.env.S3_BUCKET }));
+} catch (error) {
+  if (error.name === "NotFound")
+    await s3.send(new CreateBucketCommand({ Bucket: process.env.S3_BUCKET }));
+}
+
 await Kowloon.init();
 export default Kowloon;

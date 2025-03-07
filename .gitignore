@@ -149,4 +149,3 @@ node_modules
 ./frontend/node_modules
 ./uploads
 minio-s3-credentials.json
-./uploads

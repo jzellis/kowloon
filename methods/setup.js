@@ -103,6 +103,7 @@ export default async function () {
           name: "Admin User",
           bio: "I am the admin of this server.",
           urls: [`https://${settings.domain}`],
+          icon: "https://avatar.iran.liara.run/public",
           // location,
         },
         isAdmin: true,

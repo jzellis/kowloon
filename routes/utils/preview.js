@@ -5,7 +5,9 @@ export default async function (req, res, next) {
   let qStart = Date.now();
   let response = {};
 
-  let preview = await getLinkPreview(req.query.url, { followRedirects: true });
+  let preview = await getLinkPreview(req.query.url, {
+    followRedirects: "follow",
+  });
   response = {
     url: preview.url,
     title: preview.title,

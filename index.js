@@ -6,9 +6,7 @@ import cors from "cors";
 import http from "http";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
-import expressListEndpoints from "express-list-endpoints";
 import bodyParser from "body-parser";
-
 import routes from "./routes/routes.js";
 import fs from "fs";
 
@@ -29,19 +27,19 @@ app.use(cookieParser());
 app.use(nocache());
 app.use(routes);
 
-app.use("/", express.static(path.join(__dirname + "/frontend/dist")));
-app.use(
-  "/static",
-  express.static(path.join(__dirname + "/frontend/build/assets"))
-);
+// app.use("/", express.static(path.join(__dirname + "/frontend/dist")));
+// app.use(
+//   "/static",
+//   express.static(path.join(__dirname + "/frontend/build/assets"))
+// );
 
 var port = normalizePort(process.env.PORT || "3000");
 app.set("port", port);
 
 var server = http.createServer(
   {
-    key: fs.readFileSync("./ssl/kowloon.social.key"),
-    cert: fs.readFileSync("./ssl/kowloon.social.crt"),
+    key: fs.readFileSync("./ssl/server.key"),
+    cert: fs.readFileSync("./ssl/server.crt"),
   },
   app
 );

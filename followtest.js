@@ -6,7 +6,6 @@ let testUrls = [
   "https://kowloon.social/api/posts",
 ];
 
-for (let url of testUrls) {
-  console.log(await Kowloon.follow(url));
-}
+await Kowloon.follow(url);
+
 process.exit();

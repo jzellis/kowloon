@@ -16,7 +16,7 @@ export default async function (numUsers) {
   for (let i = 0; i < numUsers; i++) {
     let userActivity = activityTemplate;
     let fullName = faker.person.fullName();
-    let username = fullName.replace(" ", "").toLowerCase();
+    let username = fullName.replace(" ", "").toLowerCase().substring(0, 32);
     userActivity.object = {
       username: username,
       password: "12345678",
@@ -25,7 +25,9 @@ export default async function (numUsers) {
         name: fullName,
         bio: faker.lorem.sentence(),
         urls: [faker.internet.url()],
-        icon: faker.image.avatar(),
+        icon:
+          "https://avatar.iran.liara.run/public?a=" +
+          Math.floor(Math.random() * 100),
         location: {
           type: "Point",
           name: faker.location.city(),
@@ -33,6 +35,7 @@ export default async function (numUsers) {
           longitude: faker.location.longitude(),
         },
       },
+      to: ["@public"],
     };
 
     let reply = await fetch(baseUrl, {

@@ -105,21 +105,21 @@ UserSchema.pre("save", async function (next) {
     this.privateKey = privateKey;
 
     let followingCircle = await Circle.create({
-      name: `${this.id} - Following`,
+      name: `Following`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Following`,
       to: [this.id],
     });
     this.following = followingCircle.id;
     let blockedCircle = await Circle.create({
-      name: `${this.id} - Blocked`,
+      name: `Blocked`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Blocked`,
       to: [this.id],
     });
     this.blocked = blockedCircle.id;
     let mutedCircle = await Circle.create({
-      name: `${this.id} - Muted`,
+      name: `Muted`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Muted`,
       to: [this.id],

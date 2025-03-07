@@ -10,7 +10,9 @@ export default async function (username, password = "") {
     return { error: "Incorrect password" };
   user.lastLogin = new Date();
   await user.save();
-
+  let circles = await Circle.find({ actorId: user.id }).select(
+    "-_id id name icon summary"
+  );
   let { id, timestamp, signature } = await createUserSignature(
     user.id,
     user.lastLogin.toString()
@@ -22,6 +24,7 @@ export default async function (username, password = "") {
       password: undefined,
       keys: undefined,
     },
+    circles,
     timestamp: user.lastLogin.toString(),
     signature,
   };

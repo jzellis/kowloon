@@ -1,13 +1,11 @@
 import Kowloon from "../Kowloon.js";
 import express from "express";
-import fs from "fs/promises";
 import winston from "winston";
 
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 const __dirname = dirname(fileURLToPath(import.meta.url));
-import klawSync from "klaw-sync";
-import expressListEndpoints from "express-list-endpoints";
+
 // Routes
 import home from "./index.js";
 import activities from "./activities/index.js";
@@ -80,7 +78,7 @@ const routes = {
     "/outbox": outboxGet,
     "/inbox": inboxGet,
     "/test": test,
-    "/files": fileGet,
+    "/files/:id": fileGet,
     "/utils/preview": preview,
   },
   post: {
@@ -96,22 +94,22 @@ const router = express.Router();
 
 // const staticPage = await fs.readFile("./frontend/dist/index.html", "utf-8");
 
-const logger = winston.createLogger({
-  // Log only if level is less than (meaning more severe) or equal to this
-  level: "info",
-  // Use timestamp and printf to create a standard log format
-  format: winston.format.combine(
-    winston.format.timestamp(),
-    winston.format.printf(
-      (info) => `${info.timestamp} ${info.level}: ${info.message}`
-    )
-  ),
-  // Log to the console and a file
-  transports: [
-    new winston.transports.Console(),
-    new winston.transports.File({ filename: "logs/server.log" }),
-  ],
-});
+// const logger = winston.createLogger({
+//   // Log only if level is less than (meaning more severe) or equal to this
+//   level: "info",
+//   // Use timestamp and printf to create a standard log format
+//   format: winston.format.combine(
+//     winston.format.timestamp(),
+//     winston.format.printf(
+//       (info) => `${info.timestamp} ${info.level}: ${info.message}`
+//     )
+//   ),
+//   // Log to the console and a file
+//   transports: [
+//     new winston.transports.Console(),
+//     new winston.transports.File({ filename: "logs/server.log" }),
+//   ],
+// });
 
 router.use(async (req, res, next) => {
   res.header("Access-Control-Allow-Credentials", true);
@@ -146,27 +144,6 @@ router.use(async (req, res, next) => {
       req.server = result.server;
       req.server.memberships = await Kowloon.getUserMemberships(req.server.id);
     }
-
-    // if (req.headers["kowloon-type"] === "user") {
-    //   let auth = await Kowloon.verifyUserSignature(
-    //     req.headers["kowloon-id"],
-    //     req.headers["kowloon-timestamp"],
-    //     req.headers["kowloon-signature"]
-    //   );
-    //   if (auth) {
-    //     req.user = await User.findOne({ id: req.headers["kowloon-id"] });
-    //     req.user.memberships = await Kowloon.getUserMemberships(req.user.id);
-    //   }
-    // } else {
-    //   let auth = await Kowloon.verifyServerSignature(
-    //     req.headers["kowloon-id"],
-    //     req.headers["kowloon-timestamp"],
-    //     req.headers["kowloon-signature"]
-    //   );
-    //   if (auth) {
-    //     req.server = await Kowloon.getServer(req.headers["kowloon-id"]);
-    //   }
-    // }
   } else {
     req.user = null;
   }
@@ -180,7 +157,7 @@ router.use(async (req, res, next) => {
   if (req.user) logline += ` | User: ${req.user.id}`;
   if (req.server) logline += ` | Server: ${req.server.id}`;
 
-  logger.info(logline);
+  // logger.info(logline);
 
   for (const [url, route] of Object.entries(routes.get)) {
     router.get(`${url}`, route);
@@ -191,41 +168,6 @@ router.use(async (req, res, next) => {
   }
 
   next();
-
-  //   if (auth.user)
-  //     auth.user.local = (await Kowloon.isLocal(auth.user?.id)) || null;
-  //   req.user = auth.user || null;
-  //   if (req.user) {
-  //     req.user.memberships = await Kowloon.getUserMemberships(req.user.id);
-  //     req.user.blockedUsers = (
-  //       await Kowloon.getCircle({ id: req.user.blocked })
-  //     ).members;
-  //     req.user.mutedUsers = (
-  //       await Kowloon.getCircle({ id: req.user.muted })
-  //     ).members;
-  //   }
-  // }
-
-  // //If they go to the home page, just send the React frontend
-  // router.get("/", async (req, res) => {
-  //   res.status(200).send(staticPage);
-  // });
-
-  // for (const [url, route] of Object.entries(allRoutes.get)) {
-  //   router.get(`/api${url}`, route);
-  // }
-
-  // for (const [url, route] of Object.entries(allRoutes.post)) {
-  //   router.post(`/api${url}`, route);
-  // }
-
-  // for (const [url, route] of Object.entries(allRoutes.put)) {
-  //   router.put(`/api${url}`, route);
-  // }
-  // for (const [url, route] of Object.entries(allRoutes.delete)) {
-  //   router.delete(`/api${url}`, route);
-  // }
-  // res.send("OK");
 });
 
 export default router;

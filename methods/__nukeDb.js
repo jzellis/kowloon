@@ -5,6 +5,7 @@ import {
   Group,
   React,
   Reply,
+  File,
   Post,
   User,
   Feed,
@@ -13,7 +14,7 @@ import {
 import setup from "./setup.js";
 
 export default async function () {
-  await Settings.deleteMany({});
+  // await Settings.deleteMany({});
   // await setup();
   await Activity.deleteMany({});
   await Bookmark.deleteMany({});
@@ -24,5 +25,6 @@ export default async function () {
   await Reply.deleteMany({});
   await Post.deleteMany({});
   await User.deleteMany({});
+  await File.deleteMany({});
   return true;
 }

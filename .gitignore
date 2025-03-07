@@ -148,3 +148,4 @@ node_modules
 ./frontend/dist
 ./frontend/node_modules
 ./uploads
+minio-s3-credentials.json

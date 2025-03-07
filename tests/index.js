@@ -10,6 +10,7 @@ import addUsersToCircles from "./units/addUsersToCircles.js";
 import getAllCircleMembers from "./units/getAllCircleMembers.js";
 import generateGroupPosts from "./units/generateGroupPosts.js";
 import { faker } from "@faker-js/faker";
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = "0";
 
 await Kowloon.__nukeDb();
 
@@ -26,7 +27,9 @@ let adminUser = {
       name: "Admin",
       bio: "I'm the admin",
       urls: ["http://kowloon.social"],
-      icon: faker.image.avatar(),
+      icon:
+        "https://avatar.iran.liara.run/public?a=" +
+        Math.floor(Math.random() * 100),
 
       location: {
         type: "Point",

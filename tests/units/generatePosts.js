@@ -15,13 +15,13 @@ export default async function (numPosts) {
   }/inbox`;
 
   let posts = [];
-  let postTypes = ["Note", "Article", "Link", "Image"];
+  let postTypes = ["Note", "Article", "Link", "Media"];
   let users = await User.find({});
 
   for (let i = 0; i < numPosts; i++) {
     let postActivity = activityTemplate;
-    // let actorId = users[Math.floor(Math.random() * users.length)].id;
-    let actorId = "@admin@kowloon.social";
+    let actorId = users[Math.floor(Math.random() * users.length)].id;
+    // let actorId = "@admin@kowloon.social";
     postActivity.actorId = actorId;
     let postType = postTypes[Math.floor(Math.random() * postTypes.length)];
     postActivity.object = {

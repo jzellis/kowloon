@@ -19,7 +19,6 @@ const Kowloon = {
       const db = await mongoose.connect(process.env.MONGODB_URI);
       this.connection.isConnected = db.connections[0].readyState === 1;
       console.log("Kowloon database connection established");
-      console.log(await Settings.countDocuments());
     } catch (e) {
       console.error(e);
       process.exit(0);

@@ -42,6 +42,7 @@ export default async function (activity) {
         ...activity.object.bcc,
       ])
     );
+    console.log("Recipients", recipients);
     let group;
     let groupId = recipients.filter((id) => id.startsWith("group"))[0];
     if (recipients.some((id) => id.startsWith("group"))) {
@@ -61,10 +62,6 @@ export default async function (activity) {
           activity.summary = `${actor.profile.name} (${
             actor.id
           }) posted ${indefinite(activity.object.type)} in ${group.name}`;
-          activity.to = Array.from(new Set([...activity.to, ...group.to]));
-          activity.object.to = Array.from(
-            new Set([...activity.object.to, ...group.to])
-          );
         }
         try {
           let post = await Post.create(activity.object);

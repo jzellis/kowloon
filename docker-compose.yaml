@@ -1,0 +1,117 @@
+services:
+  mongoCont:
+    image: mongo
+    restart: always
+    ports:
+      - 27017:27017
+    networks: 
+      - kowloon-app
+    volumes:
+      - mongo-data:/data/db
+
+  minio:
+    image: minio/minio
+    container_name: minio
+    environment:
+      MINIO_ACCESS_KEY: o1zqzIYpJGhbJjH9bXPy
+      MINIO_SECRET_KEY: GkqvvPOQ6NUzjZqW9Jm4tNuFnZtNcYuGqI8UXTTL
+    ports:
+      - "9000:9000"  # MinIO web interface (default port)
+    networks:
+      - kowloon-app
+    volumes:
+      - minio-data:/data
+    command: server /Users/jzellis/Projects/kowloon-storage  # Run MinIO with the specified directory
+
+  server1:
+    build:
+      context: .
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongoCont:27017/kowloon1
+      KOWLOON_DOMAIN: kowloon1.local
+      KOWLOON_ADMIN_USERNAME: admin1
+      KOWLOON_ADMIN_PASSWORD: admin1
+      KOWLOON_ADMIN_EMAIL: admin1@kowloon.local
+      KOWLOON_UPLOAD_DIR: ./uploads
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: kowloon1
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: o1zqzIYpJGhbJjH9bXPy
+      S3_ACCESS_SECRET_KEY: GkqvvPOQ6NUzjZqW9Jm4tNuFnZtNcYuGqI8UXTTL
+      PORT: 3001
+    ports:
+      - 3001:3000
+    networks:
+      - kowloon-app
+    depends_on:
+      - mongoCont
+      - minio
+
+  server2:
+    build:
+      context: .
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongoCont:27017/kowloon2
+      KOWLOON_DOMAIN: kowloon2.local
+      KOWLOON_ADMIN_USERNAME: admin2
+      KOWLOON_ADMIN_PASSWORD: admin2
+      KOWLOON_ADMIN_EMAIL: admin2@kowloon.local
+      KOWLOON_UPLOAD_DIR: ./uploads
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: kowloon2
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: o1zqzIYpJGhbJjH9bXPy
+      S3_ACCESS_SECRET_KEY: GkqvvPOQ6NUzjZqW9Jm4tNuFnZtNcYuGqI8UXTTL
+      PORT: 3002
+    ports:
+      - 3002:3000
+    networks:
+      - kowloon-app
+    depends_on:
+      - mongoCont
+      - minio
+
+  server3:
+    build:
+      context: .
+    environment:
+      NODE_ENV: production
+      MONGODB_URI: mongodb://mongoCont:27017/kowloon3
+      KOWLOON_DOMAIN: kowloon3.local
+      KOWLOON_ADMIN_USERNAME: admin3
+      KOWLOON_ADMIN_PASSWORD: admin3
+      KOWLOON_ADMIN_EMAIL: admin3@kowloon.local
+      KOWLOON_UPLOAD_DIR: ./uploads
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: kowloon
+      S3_REGION: us-east-1
+      S3_ACCESS_KEY: o1zqzIYpJGhbJjH9bXPy
+      S3_ACCESS_SECRET_KEY: GkqvvPOQ6NUzjZqW9Jm4tNuFnZtNcYuGqI8UXTTL
+      PORT: 3003
+    ports:
+      - 3003:3000
+    networks:
+      - kowloon-app
+    depends_on:
+      - mongoCont
+      - minio
+
+  nginx:
+    image: nginx
+    container_name: nginx
+    restart: always
+    ports:
+      - 80:80
+
+networks:
+  kowloon-app:
+    driver: bridge
+
+volumes:
+  mongo-data:
+    driver: local
+
+  minio-data:
+    driver: local

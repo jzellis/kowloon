@@ -23,6 +23,7 @@ export default async function (req, res, next) {
   let uploadedFiles = [];
 
   const upload = multer({
+    limits: { fileSize: 50 * 1024 * 1024 },
     storage: multerS3({
       s3: s3,
       bucket: process.env.S3_BUCKET,

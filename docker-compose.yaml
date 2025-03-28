@@ -21,9 +21,9 @@ services:
       - kowloon-app
     volumes:
       - minio-data:/data
-    command: server /Users/jzellis/Projects/kowloon-storage  # Run MinIO with the specified directory
+    command: server /data  # Run MinIO with the specified directory
 
-  server1:
+  kowloon1:
     build:
       context: .
     environment:
@@ -41,14 +41,15 @@ services:
       S3_ACCESS_SECRET_KEY: GkqvvPOQ6NUzjZqW9Jm4tNuFnZtNcYuGqI8UXTTL
       PORT: 3001
     ports:
-      - 3001:3000
+      - 3001:3001
     networks:
       - kowloon-app
     depends_on:
       - mongoCont
       - minio
-
-  server2:
+    expose:
+      - "3001"
+  kowloon2:
     build:
       context: .
     environment:
@@ -64,16 +65,18 @@ services:
       S3_REGION: us-east-1
       S3_ACCESS_KEY: o1zqzIYpJGhbJjH9bXPy
       S3_ACCESS_SECRET_KEY: GkqvvPOQ6NUzjZqW9Jm4tNuFnZtNcYuGqI8UXTTL
-      PORT: 3002
+      PORT: "3002"
     ports:
-      - 3002:3000
+      - 3002:3002
     networks:
       - kowloon-app
     depends_on:
       - mongoCont
       - minio
+    expose:
+      - 3002
 
-  server3:
+  kowloon3:
     build:
       context: .
     environment:
@@ -85,25 +88,37 @@ services:
       KOWLOON_ADMIN_EMAIL: admin3@kowloon.local
       KOWLOON_UPLOAD_DIR: ./uploads
       S3_ENDPOINT: http://minio:9000
-      S3_BUCKET: kowloon
+      S3_BUCKET: kowloon3
       S3_REGION: us-east-1
       S3_ACCESS_KEY: o1zqzIYpJGhbJjH9bXPy
       S3_ACCESS_SECRET_KEY: GkqvvPOQ6NUzjZqW9Jm4tNuFnZtNcYuGqI8UXTTL
       PORT: 3003
     ports:
-      - 3003:3000
+      - 3003:3003
     networks:
       - kowloon-app
     depends_on:
       - mongoCont
       - minio
-
-  nginx:
-    image: nginx
-    container_name: nginx
-    restart: always
-    ports:
-      - 80:80
+    expose:
+      - "3003"
+  # nginx:
+  #   build:
+  #     context: .
+  #     dockerfile: Dockerfile.nginx
+  #   restart: always
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./certbot/www:/var/www/certbot
+  #     - ./certbot/conf:/etc/letsencrypt
+  #   depends_on:
+  #     - kowloon1
+  #     - kowloon2
+  #     - kowloon3
+  #   networks:
+  #     - kowloon-app
+  #   ports:
+  #     - 80:80
 
 networks:
   kowloon-app:

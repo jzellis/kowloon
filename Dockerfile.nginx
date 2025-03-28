@@ -1,0 +1,12 @@
+FROM nginx:latest
+
+# Install Certbot and its Nginx plugin
+RUN apt-get update && apt-get install -y certbot python3-certbot-nginx && rm -rf /var/lib/apt/lists/*
+
+# Copy default config
+COPY nginx.conf /etc/nginx/nginx.conf
+
+# Expose HTTP (80) and HTTPS (443)
+EXPOSE 80 443
+
+CMD ["nginx", "-g", "daemon off;"]

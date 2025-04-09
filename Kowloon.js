@@ -21,10 +21,7 @@ const Kowloon = {
   init: async function () {
     console.log("Establishing Kowloon database connection...");
     try {
-      const db = await mongoose.connect(process.env.MONGODB_URI);
-      this.connection.isConnected = db.connections[0].readyState === 1;
-      console.log("Kowloon database connection established");
-    } catch (e) {
+   l } catch (e) {
       console.error(e);
       process.exit(0);
     }
@@ -69,6 +66,8 @@ const Kowloon = {
 
 // This checks for the S3 bucket and creates it if it doesn't exist.
 console.log("Checking for S3 bucket...");
+
+try{
 const s3 = new S3Client({
   endpoint: process.env.S3_ENDPOINT,
   region: process.env.S3_REGION || "us-east-1",
@@ -103,6 +102,6 @@ try {
     })
   );
 }
-
+}catch(e){}
 await Kowloon.init();
 export default Kowloon;

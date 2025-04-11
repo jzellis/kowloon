@@ -10,7 +10,6 @@ import {
   S3Client,
   CreateBucketCommand,
   HeadBucketCommand,
-  PutBucketPolicyCommand,
 } from "@aws-sdk/client-s3";
 import { Settings } from "./schema/index.js";
 
@@ -21,7 +20,10 @@ const Kowloon = {
   init: async function () {
     console.log("Establishing Kowloon database connection...");
     try {
-   l } catch (e) {
+      const db = await mongoose.connect(process.env.MONGODB_URI);
+      this.connection.isConnected = db.connections[0].readyState === 1;
+      console.log("Kowloon database connection established");
+    } catch (e) {
       console.error(e);
       process.exit(0);
     }
@@ -66,8 +68,6 @@ const Kowloon = {
 
 // This checks for the S3 bucket and creates it if it doesn't exist.
 console.log("Checking for S3 bucket...");
-
-try{
 const s3 = new S3Client({
   endpoint: process.env.S3_ENDPOINT,
   region: process.env.S3_REGION || "us-east-1",
@@ -78,30 +78,12 @@ const s3 = new S3Client({
   forcePathStyle: true, // S3 compatibility
 });
 
-const policy = {
-  Version: "2012-10-17",
-  Statement: [
-    {
-      Effect: "Allow",
-      Principal: "*", // Public access
-      Action: ["s3:GetObject"],
-      Resource: [`arn:aws:s3:::${process.env.S3_BUCKET}/*`], // Allow access to all objects in the bucket
-    },
-  ],
-};
-
 try {
   await s3.send(new HeadBucketCommand({ Bucket: process.env.S3_BUCKET }));
 } catch (error) {
   if (error.name === "NotFound")
     await s3.send(new CreateBucketCommand({ Bucket: process.env.S3_BUCKET }));
-  await s3.send(
-    new PutBucketPolicyCommand({
-      Bucket: process.env.S3_BUCKET,
-      Policy: JSON.stringify(policy),
-    })
-  );
 }
-}catch(e){}
+
 await Kowloon.init();
 export default Kowloon;

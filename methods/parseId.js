@@ -1,15 +1,52 @@
-// This returns an object with the ID's object type, uid (username or uuid) and its server
+// This parses any Kowloon ID and returns an object with the ID's object type, uid (username or uuid) and its server
+
+const capitalizeFirstLetter = function (val) {
+  return String(val).charAt(0).toUpperCase() + String(val).slice(1);
+};
 
 export default function (id) {
-  let returned = {};
-  let splitId = id.split("@");
+  let returned;
 
-  returned =
-    splitId.length < 2
-      ? { id, type: "rss", user: "", server: new URL(id).hostname }
-      : splitId.length === 3
-      ? { id, type: "user", user: splitId[1], server: splitId[2] }
-      : { id, type: "server", user: "", server: splitId[1] };
+  let isUrl = id.startsWith("http");
 
+  switch (true) {
+    case isUrl === true:
+      returned = {
+        id,
+        type: "Url",
+        server: new URL(id).hostname,
+      };
+      break;
+    case !isUrl && id.split("@")[0].indexOf(":") != -1:
+      returned = {
+        id,
+        type:
+          String(id.split("@")[0].split(":")[0]).charAt(0).toUpperCase() +
+          String(id.split("@")[0].split(":")[0]).slice(1),
+
+        server: id.split("@").pop(),
+      };
+      break;
+    case !isUrl &&
+      id.split("@")[0].indexOf(":") == -1 &&
+      id.split("@").length === 3:
+      returned = {
+        id,
+        type: "User",
+        server: id.split("@").slice(2),
+      };
+      break;
+    case !id.startsWith("http") &&
+      id.split("@")[0].indexOf(":") == -1 &&
+      id.split("@").length === 2:
+      returned = {
+        id,
+        type: "Server",
+        server: id.split("@").slice(1),
+      };
+      break;
+    default:
+      return false;
+  }
   return returned;
 }

@@ -1,14 +1,9 @@
-export default async function (serverId) {
-  const domain = serverId.indexOf("@") > 0 ? serverId.split("@")[1] : serverId;
+// This method retrieves a user whether local or remote.
 
-  let response,
-    request = await fetch(`https://${domain}`, {
-      headers: {
-        "Content-Type": "application/json",
-        Accept: "application/json",
-      },
-    });
-
-  if (request.ok) response = await request.json();
-  return response.server;
+import get from "./get.js";
+import { User } from "../schema/index.js";
+export default async function (id) {
+  let domain = id.split("@")[1];
+  let req = await get(`https://${domain}`);
+  return req.server || null;
 }

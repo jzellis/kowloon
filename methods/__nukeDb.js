@@ -1,3 +1,5 @@
+// This method nukes the database and will probably be removed before release, it's just for testing purposes.
+
 import {
   Activity,
   Bookmark,
@@ -14,8 +16,7 @@ import {
 import setup from "./setup.js";
 
 export default async function () {
-  // await Settings.deleteMany({});
-  // await setup();
+  await Settings.deleteMany({});
   await Activity.deleteMany({});
   await Bookmark.deleteMany({});
   await Circle.deleteMany({});
@@ -26,5 +27,6 @@ export default async function () {
   await Post.deleteMany({});
   await User.deleteMany({});
   await File.deleteMany({});
+  await setup();
   return true;
 }

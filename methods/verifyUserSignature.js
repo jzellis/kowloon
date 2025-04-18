@@ -1,3 +1,5 @@
+// This verifies that a user's incoming request signature is valid
+
 import crypto from "crypto";
 import { User } from "../schema/index.js";
 

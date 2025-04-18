@@ -3,9 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
-import Settings from "./Settings.js";
-import Circle from "./Circle.js";
-import jwt from "jsonwebtoken";
+import { Settings, Circle, Group } from "./index.js";
 
 const UserSchema = new Schema(
   {
@@ -44,12 +42,9 @@ const UserSchema = new Schema(
     lastLogin: Date,
     publicKey: String,
     privateKey: String,
-    to: { type: [String], default: ["@public"] }, // If the post is public, this is set to "_public@server.name"; if it's server-only, it's set to "_server@server.name"; if it's a DM it's set to the recipient(s)
-    cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
-    bcc: { type: [String], default: [] }, // This is for posts to private Groups
-    rto: { type: [String], default: ["@server"] },
-    rcc: { type: [String], default: [] },
-    rbcc: { type: [String], default: [] },
+    to: { type: [String], default: [] },
+    replyTo: { type: [String], default: [] },
+    reactTo: { type: [String], default: [] },
     url: { type: String, default: undefined },
     isAdmin: { type: Boolean, default: false },
     active: { type: Boolean, default: true },
@@ -148,6 +143,57 @@ UserSchema.pre("update", async function (next) {
 
 UserSchema.methods.verifyPassword = async function (plaintext) {
   return await bcrypt.compare(plaintext, this.password);
+};
+
+UserSchema.methods.getMemberships = async function () {
+  let circles = (
+    await Circle.find({ $or: [{ "members.id": id }, { actorId: id }] }).lean()
+  ).map((c) => c.id);
+  let groups = (
+    await Group.find({
+      $or: [{ "members.id": id }, { actorId: id }, { admins: id }],
+    }).lean()
+  ).map((g) => g.id);
+  let memberships = [...circles, ...groups];
+  return memberships;
+};
+UserSchema.methods.createUserSignature = function (timestamp) {
+  const token = this.id + ":" + timestamp.toString();
+  const hash = crypto.createHash("sha256").update(token).digest();
+  const signature = crypto
+    .sign("sha256", hash, this.privateKey)
+    .toString("base64");
+  return { id: this.id, timestamp, signature };
+};
+UserSchema.methods.verifyUserSignature = function (timestamp, signature) {
+  const token = this.id + ":" + timestamp;
+  const hash = crypto.createHash("sha256").update(token).digest();
+  const isValid = crypto.verify(
+    "sha256",
+    hash,
+    this.publicKey,
+    Buffer.from(signature, "base64")
+  );
+  return isValid ? isValid : new Error("User cannot be authenticated");
+};
+
+UserSchema.methods.getMemberships = async function () {
+  let circles = (
+    await Circle.find({
+      $or: [{ "members.id": this.id }, { actorId: this.id }],
+    }).lean()
+  ).map((c) => c.id);
+  let groups = (
+    await Group.find({
+      $or: [
+        { "members.id": this.id },
+        { actorId: this.id },
+        { admins: this.id },
+      ],
+    }).lean()
+  ).map((g) => g.id);
+  let memberships = [...circles, ...groups];
+  return memberships;
 };
 
 const User = mongoose.model("User", UserSchema);

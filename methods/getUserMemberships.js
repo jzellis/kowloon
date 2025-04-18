@@ -1,3 +1,5 @@
+// This returns all circles and groups the user is in
+
 import { Activity, Circle, Group } from "../schema/index.js";
 
 export default async function (id) {

@@ -23,7 +23,7 @@ const GroupSchema = new Schema(
           url: { type: String, default: undefined },
           serverId: { type: String },
           createdAt: { type: Date, default: Date.now },
-          updatedAt: { type: Date },
+          updatedAt: { type: Date, default: Date.now },
         },
       ],
       default: [],
@@ -31,17 +31,17 @@ const GroupSchema = new Schema(
     pending: { type: [String], default: [] }, // Pending members
     banned: { type: [String], default: [] }, // Banned users who cannot join
     admins: { type: [String], default: [] },
-    to: { type: [String], default: ["@public"] }, // If the post is public, this is set to "@public"; if it's server-only, it's set to "@server"; if it's a DM it's set to the recipient(s)
-    cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
-    bcc: { type: [String], default: [] }, // This is for posts to private Groups
-    rto: { type: [String], default: ["@server"] },
-    approval: { type: Boolean, default: false }, // If members must be approved to join
+    to: { type: [String], default: [] }, // Who can see this group
+    replyTo: { type: [String], default: [] }, // Who can reply to this group (unused but here for consistency)
+    reactTo: { type: [String], default: [] }, // Who can react to this group
+    replyCount: { type: Number, default: 0 }, // The number of replies to this post (unused but here for consistency)
+    reactCount: { type: Number, default: 0 }, // The number of likes to this post
+    shareCount: { type: Number, default: 0 }, // The number of shares of this post
+    private: { type: Boolean, default: false }, // If members must be approved to join
     flaggedAt: { type: Date, default: null },
     flaggedBy: { type: String, default: null },
     flaggedReason: { type: String, default: null },
-    replyCount: { type: Number, default: 0 }, // The number of replies to this post
-    reactCount: { type: Number, default: 0 }, // The number of likes to this post
-    shareCount: { type: Number, default: 0 }, // The number of shares of this post
+
     deletedAt: { type: Date, default: null }, // If the group is deleted, when it was deleted
     deletedBy: { type: String, default: null }, // If the group is deleted, who deleted it (usually the user unless an admin does it),
     url: { type: String, default: undefined },
@@ -54,6 +54,12 @@ GroupSchema.virtual("actor", {
   localField: "actorId",
   foreignField: "id",
   justOne: true,
+});
+
+GroupSchema.virtual("reacts", {
+  ref: "React",
+  localField: "id",
+  foreignField: "target",
 });
 
 GroupSchema.pre("save", async function (next) {

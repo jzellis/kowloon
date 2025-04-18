@@ -30,12 +30,9 @@ const PostSchema = new Schema(
     tags: { type: [String], default: [] },
     location: { type: Object, default: undefined }, // A geotag for the post in the ActivityStreams geolocation format
     target: { type: String, default: undefined }, // For Links
-    to: { type: [String], default: [] }, // If the post is public, this is set to "_public@server.name"; if it's server-only, it's set to "_server@server.name"; if it's a DM it's set to the recipient(s)
-    cc: { type: [String], default: [] }, // This is for posts to publicGroups or tagging people in
-    bcc: { type: [String], default: [] }, // This is for posts to private Groups
-    rto: { type: [String], default: ["@server"] },
-    rcc: { type: [String], default: [] },
-    rbcc: { type: [String], default: [] },
+    to: { type: [String], default: [] },
+    replyTo: { type: [String], default: [] },
+    reactTo: { type: [String], default: [] },
     flaggedAt: { type: Date, default: null },
     flaggedBy: { type: String, default: null },
     flaggedReason: { type: String, default: null },
@@ -58,6 +55,18 @@ PostSchema.virtual("actor", {
   localField: "actorId",
   foreignField: "id",
   justOne: true,
+});
+
+PostSchema.virtual("reacts", {
+  ref: "React",
+  localField: "id",
+  foreignField: "target",
+});
+
+PostSchema.virtual("replies", {
+  ref: "Reply",
+  localField: "id",
+  foreignField: "target",
 });
 
 PostSchema.pre("save", async function (next) {

@@ -8,17 +8,15 @@ const ObjectId = mongoose.Types.ObjectId;
 const replieschema = new Schema(
   {
     id: { type: String, key: true },
-    objectType: { type: String, default: "Reply" },
-    target: { type: String, required: true },
-    url: { type: String },
-    link: { type: String },
     actorId: { type: String },
+    target: { type: String, required: true },
+    href: { type: String },
     source: {
       content: { type: String, default: "" },
       mediaType: { type: String, default: "text/html" },
     },
+    body: { type: String, default: "" },
     image: { type: String, default: undefined },
-    attachments: { type: [Object], default: [] },
     replyCount: { type: Number, default: 0 }, // The number of replies to this post
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     shareCount: { type: Number, default: 0 }, // The number of shares of this post

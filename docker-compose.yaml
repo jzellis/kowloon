@@ -22,6 +22,9 @@ services:
     volumes:
       - minio-data:/data
     command: server /data  # Run MinIO with the specified directory
+    expose:
+      - "9000"
+      - "9001"
 
   kowloon1:
     build:

@@ -1,3 +1,5 @@
+// Builds a tree structure from a list of bookmarks, organizing them into folders and bookmarks. Generated with ChatGPT because I was too lazy to bother writing my own.
+
 export default function (bookmarks) {
   const map = new Map();
   const tree = [];

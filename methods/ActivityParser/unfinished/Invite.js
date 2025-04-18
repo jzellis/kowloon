@@ -1,4 +1,4 @@
-import { Group, User } from "../../schema/index.js";
+import { Group, User } from "../../../schema/index.js";
 export default async function (activity) {
   let user = await User.findOne({ id: activity.actorId });
   let targetUser = await User.findOne({ id: activity.object });

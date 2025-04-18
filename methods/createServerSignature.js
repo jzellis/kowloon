@@ -1,3 +1,5 @@
+// This creates a verifable signature for server requests to remote servers, so those servers can do a handshake and verify that the requesting server is the correct one.
+
 import crypto from "crypto";
 import { User } from "../schema/index.js";
 import getSettings from "./getSettings.js";

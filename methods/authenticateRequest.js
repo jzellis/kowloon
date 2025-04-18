@@ -26,7 +26,7 @@ export default async function (
   };
   let parsed = parseId(id);
 
-  if (parsed.type === "user") {
+  if (parsed.type === "User") {
     if (parsed.server === settings.domain) {
       let isValid = await verifyUserSignature(id, timestamp, signature);
       if (isValid)
@@ -72,51 +72,5 @@ export default async function (
     if (isValid) result.server = response.server;
   }
 
-  // if (type === "user") {
-  //   console.log(
-  //     "User is verified:",
-  //     await verifyUserSignature(id, timestamp, signature)
-  //   );
-  //   let user = (await verifyUserSignature(id, timestamp, signature))
-  //     ? await getUser(id)
-  //     : null;
-  //   if (!user) {
-  //     let parsed = parseId(id);
-  //     let url = `https://${parsed.server}/users/${parsed.id}`;
-  //     let response,
-  //       request = await fetch(url, { headers });
-  //     if (request.ok) response = await request.json();
-  //     let remoteUser = response.user;
-
-  //     const token = id + ":" + timestamp;
-  //     const hash = crypto.createHash("sha256").update(token).digest();
-  // const isValid = crypto.verify(
-  //   "sha256",
-  //   hash,
-  //   remoteUser.publicKey,
-  //   Buffer.from(signature, "base64")
-  // );
-  //     if (isValid) result.user = remoteUser;
-  //   }
-  // } else {
-  //   let parsed = parseId(id);
-  //   let url = `https://${parsed.server}/`;
-  //   let response,
-  //     request = await fetch(url, { headers });
-  //   if (request.ok) response = await request.json();
-  //   let remoteServer = response.server;
-
-  //   const token = id + ":" + timestamp;
-  //   const hash = crypto.createHash("sha256").update(token).digest();
-  //   const isValid = crypto.verify(
-  //     "sha256",
-  //     hash,
-  //     remoteServer.publicKey,
-  //     Buffer.from(signature, "base64")
-  //   );
-  //   if (isValid) result.server = remoteServer;
-  // }
-
-  // return result;
   return result;
 }

@@ -1,3 +1,5 @@
+// This creates a verifable signature for user requests to use, so that the local server or a remote one can verify it in a handshake to verify the identity of the requesting user.
+
 import crypto from "crypto";
 import { User } from "../schema/index.js";
 

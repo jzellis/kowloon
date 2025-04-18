@@ -146,5 +146,5 @@ node_modules
 ./frontend/dist
 ./frontend/node_modules
 ./ssl/*
-
+*.nnb
 minio-s3-credentials.json

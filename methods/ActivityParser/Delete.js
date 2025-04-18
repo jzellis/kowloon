@@ -21,21 +21,5 @@ export default async function (activity) {
   item.deletedBy = activity.actorId;
   await item.save();
 
-  if (activity.objectType === "File") {
-    let url = item.url;
-    let s3 = new S3Client({
-      region: process.env.AWS_REGION,
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      },
-    });
-    let command = new DeleteObjectCommand({
-      Bucket: process.env.AWS_BUCKET,
-      Key: url,
-    });
-    await s3.send(command);
-  }
-
   return activity;
 }

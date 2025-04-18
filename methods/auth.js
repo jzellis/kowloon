@@ -1,3 +1,5 @@
+// This authorizes a user's request to the server. Arguments are the user's ID, their login timestamp, and their signature.
+
 import { Circle, User } from "../schema/index.js";
 import crypto from "crypto";
 import getSettings from "./getSettings.js";

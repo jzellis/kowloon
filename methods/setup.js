@@ -1,7 +1,8 @@
+// This initiates and sets up a server if it's not already set up
+
 import Settings from "../schema/Settings.js";
 import { User, Activity, Post } from "../schema/index.js";
 import crypto from "crypto";
-import fs from "fs/promises";
 import getSettings from "./getSettings.js";
 
 export default async function () {
@@ -112,7 +113,7 @@ export default async function () {
       await Activity.create({
         type: "Create",
         actorId: `@https://${settings.domain}`,
-        to: ["@server"],
+        to: [`@${settings.domain}`],
         objectType: "Post",
         object: {
           type: "Article",
@@ -121,7 +122,7 @@ export default async function () {
             mediaType: "text/html",
             content: `<p>Welcome to ${settings.title}! This is a social network for people who want to connect with others in a secure and private way. Join us today and experience the power of Kowloon!</p>`,
           },
-          to: ["@server"],
+          to: [`@${settings.domain}`],
         },
       });
 
@@ -132,7 +133,7 @@ export default async function () {
           mediaType: "text/html",
           content: `<p>Welcome to ${settings.title}! This is a social network for people who want to connect with others in a secure and private way. Join us today and experience the power of Kowloon!</p>`,
         },
-        to: ["@server"],
+        to: [`@${settings.domain}`],
       });
 
       console.log(

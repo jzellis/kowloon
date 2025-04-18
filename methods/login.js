@@ -1,9 +1,11 @@
+// Login function, just takes a username or ID and password
+
 import { Circle, User } from "../schema/index.js";
 import createUserSignature from "./createUserSignature.js";
 export default async function (username, password = "") {
-  let user = await User.findOne({ username }).select(
-    "id username password profile prefs keys"
-  );
+  let user = await User.findOne({
+    $or: [{ username: username }, { id: username }],
+  }).select("id username password profile prefs keys");
 
   if (!user) return { error: "User not found" };
   if (!(await user.verifyPassword(password)))
@@ -13,8 +15,7 @@ export default async function (username, password = "") {
   let circles = await Circle.find({ actorId: user.id }).select(
     "-_id id name icon summary"
   );
-  let { id, timestamp, signature } = await createUserSignature(
-    user.id,
+  let { id, timestamp, signature } = user.createUserSignature(
     user.lastLogin.toString()
   );
   return {

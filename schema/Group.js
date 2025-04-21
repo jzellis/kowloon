@@ -31,9 +31,9 @@ const GroupSchema = new Schema(
     pending: { type: [String], default: [] }, // Pending members
     banned: { type: [String], default: [] }, // Banned users who cannot join
     admins: { type: [String], default: [] },
-    to: { type: [String], default: [] }, // Who can see this group
-    replyTo: { type: [String], default: [] }, // Who can reply to this group (unused but here for consistency)
-    reactTo: { type: [String], default: [] }, // Who can react to this group
+    to: { type: String, default: "" }, // Who can see this group
+    replyTo: { type: String, default: "" }, // Who can reply to this group (unused but here for consistency)
+    reactTo: { type: String, default: "" }, // Who can react to this group
     replyCount: { type: Number, default: 0 }, // The number of replies to this post (unused but here for consistency)
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     shareCount: { type: Number, default: 0 }, // The number of shares of this post

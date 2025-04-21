@@ -37,7 +37,7 @@ export default async function (query = { to: "@public" }, options) {
     "@context": "https://www.w3.org/ns/feedstreams",
     type: "OrderedCollection",
     // id: `https//${settings.domain}${options.id ? "/" + options.id : ""}`,
-    summary: `${settings.title}${
+    summary: `${settings.profile.name}${
       options.summary ? " | " + options.summary : ""
     } | Feeds`,
     totalItems,

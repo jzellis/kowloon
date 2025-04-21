@@ -2,17 +2,56 @@
 
 import { Activity, Outbox, User } from "../schema/index.js";
 import ActivityParser from "./ActivityParser/index.js";
-import validateActivity from "./validateActivity.js";
 import getSettings from "./getSettings.js";
 import parseId from "./parseId.js";
-import { set } from "mongoose";
+
+const validateActivity = function (activity) {
+  switch (true) {
+    case !activity.to:
+      return new Error("No recipients provided");
+      break;
+    case !activity.replyTo:
+      return new Error("No replyTo provided");
+      break;
+    case !activity.reactTo:
+      return new Error("No reactTo provided");
+      break;
+    case !activity.type:
+      return new Error("No activity type provided");
+      break;
+    case !activity.actorId && !activity.actor:
+      return new Error("No actor or actor ID provided");
+      break;
+    case !ActivityParser[activity.type]:
+      return new Error(
+        "Invalid activity type. Valid activity types are: " +
+          Object.keys(ActivityParser).join(", ")
+      );
+      break;
+    default:
+      return activity;
+      break;
+  }
+};
 
 export default async function (activity) {
   let settings = await getSettings();
   try {
     activity = validateActivity(activity);
-    activity.actor = await User.findOne({ id: activity.actorId });
+    let parsedId = parseId(activity.actorId);
+    switch (parsedId.type) {
+      case "User":
+        activity.actor = await User.findOne({ id: activity.actorId });
+        break;
+      case "Server":
+        activity.actor = {
+          id: settings.actorId,
+          profile: settings.profile,
+        };
+        break;
+    }
     activity = await ActivityParser[activity.type](activity); // This is the crucial part -- it parses the activity based on its type by calling the method of the ActivityParser object with the same name as the type.
+    console.log(activity);
     activity = await Activity.create(activity);
 
     // Now to deal with delivery if necessary.
@@ -25,17 +64,14 @@ export default async function (activity) {
       });
     }
 
-    let externalAddressees = activity.to
-      .filter((id) => !id.endsWith(settings.domain))
-      .map(async (id) => {
-        return {
-          to: [id],
-          server: parseId(id).server,
-          actorId: activity.actorId,
-          object: activity.object,
-        };
+    if (!activity.to.endsWith(settings.domain)) {
+      await Outbox.create({
+        to: activity.to,
+        server: parseId(activity.to).server,
+        actorId: activity.actorId,
+        object: activity.object,
       });
-    if (externalAddressees.length > 0) await Outbox.create(externalAddressees);
+    }
   } catch (e) {
     console.log(e);
     return new Error(e);

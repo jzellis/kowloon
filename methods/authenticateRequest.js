@@ -6,70 +6,39 @@ import verifyUserSignature from "./verifyUserSignature.js";
 import verifyServerSignature from "./verifyServerSignature.js";
 import crypto from "crypto";
 import parseId from "./parseId.js";
-export default async function (
-  id,
-  timestamp,
-  signature,
-  serverId,
-  serverTimestamp,
-  serverSignature
-) {
-  const settings = await getSettings();
-  if (!id) return { error: "No ID provided" };
-  if (!timestamp) return { error: "No timestamp provided" };
-  if (!signature) return { error: "No signature provided" };
+
+export default async function (userCreds, serverCreds) {
   let result = {};
-  let url, request, response, token, hash;
-  let headers = {
-    "Content-Type": "application/json",
-    Accept: "application/json",
-  };
-  let parsed = parseId(id);
+  const settings = await getSettings();
+  let parsedId = parseId(userCreds.id);
 
-  if (parsed.type === "User") {
-    if (parsed.server === settings.domain) {
-      let isValid = await verifyUserSignature(id, timestamp, signature);
-      if (isValid)
-        result.user = await User.findOne({ id })
-          .lean()
-          .select("-_id id url username profile publicKey blocked muted");
-      result.user.blocked = (
-        await Circle.findOne({ id: result.user.blocked }).select("members")
-      ).members.map((m) => m.id);
-      result.user.muted = (
-        await Circle.findOne({ id: result.user.muted }).select("members")
-      ).members.map((m) => m.id);
-    } else {
-      url = `https://${parsed.server}/users/${parsed.id}`;
-      request = await fetch(url, { headers });
-      if (request.ok) response = await request.json();
-      let remoteUser = response.user;
-      token = id + ":" + timestamp;
-      hash = crypto.createHash("sha256").update(token).digest();
-      let isValid = crypto.verify(
-        "sha256",
-        hash,
-        remoteUser.publicKey,
-        Buffer.from(signature, "base64")
-      );
-      if (isValid) result.user = response;
-    }
-  }
+  if (parsedId.server === settings.domain) {
+    // If user is local
+    let isValidUser = await verifyUserSignature(
+      userCreds.id,
+      userCreds.timestamp,
+      userCreds.signature
+    );
 
-  if (serverId && serverTimestamp && serverSignature) {
-    url = `https://${parsed.server}/`;
-    request = await fetch(url, { headers });
+    if (!isValidUser) return false;
+    result.user = await User.findOne({ id: userCreds.id }).select(
+      "_id id username profile prefs publicKey"
+    );
+  } else {
+    // If user is remote
+    url = `https://${parsed.server}/users/${userCreds.id}`;
+    let request = await fetch(url, { headers });
     if (request.ok) response = await request.json();
-    let remoteServer = response.server;
-    token = serverId + ":" + serverTimestamp;
-    hash = crypto.createHash("sha256").update(token).digest();
+    let remoteUser = response.user;
+    let token = userCreds.id + ":" + userCreds.timestamp;
+    let hash = crypto.createHash("sha256").update(token).digest();
     let isValid = crypto.verify(
       "sha256",
       hash,
-      remoteServer.publicKey,
-      Buffer.from(serverSignature, "base64")
+      remoteUser.publicKey,
+      Buffer.from(signature, "base64")
     );
-    if (isValid) result.server = response.server;
+    if (isValid) result.user = remoteUser;
   }
 
   return result;

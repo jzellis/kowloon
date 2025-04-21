@@ -81,7 +81,7 @@ export default async function (actorId, circleId) {
                       profile: {
                         name: rss.title,
                         icon: rss.image.link,
-                        bio: rss.description,
+                        description: rss.description,
                       },
                     },
                   };

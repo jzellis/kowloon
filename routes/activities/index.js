@@ -12,7 +12,7 @@ export default async function (req, res, next) {
   } else {
     sort.createdAt = -1;
   }
-  let query = {};
+  let query = await Kowloon.generateQuery(req.user?.id);
   if (req.query.type) query.type = req.query.type;
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
@@ -30,7 +30,7 @@ export default async function (req, res, next) {
     "@context": "https://www.w3.org/ns/activitystreams",
     type: "OrderedCollection",
     // id: `https//${settings.domain}${id ? "/" + id : ""}`,
-    summary: `${Kowloon.settings.title} | Activities`,
+    summary: `${Kowloon.settings.profile.name} | Activities`,
     totalItems,
     totalPages: Math.ceil(totalItems / (page * pageSize ? pageSize : 20)),
     currentPage: parseInt(page) || 1,

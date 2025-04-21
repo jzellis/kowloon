@@ -10,5 +10,6 @@ export default async function (id, timestamp) {
   const signature = crypto
     .sign("sha256", hash, user.privateKey)
     .toString("base64");
+
   return { id, timestamp, signature };
 }

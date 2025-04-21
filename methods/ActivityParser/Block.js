@@ -1,11 +1,13 @@
+import { parse } from "dotenv";
 import { User, Circle } from "../../schema/index.js";
 import getUser from "../getUser.js";
+import parseId from "../parseId.js";
 
 export default async function (activity) {
   activity.public = false;
   let user = await User.findOne({ id: activity.actorId });
   let blockedUser = await getUser(activity.object);
-  blockedUser.serverId = activity.object.split("@").slice(1)[1];
+  let blockedUserServer = parseId(activity.object).server;
   activity.summary = `@${user.profile.name} blocked ${activity.object}`;
   await Circle.findOneAndUpdate(
     { id: user.blocked },
@@ -13,7 +15,7 @@ export default async function (activity) {
       $push: {
         members: {
           id: blockedUser.id,
-          serverId: `@${blockedUser.serverId}`,
+          serverId: `@${blockedUserServer}`,
           type: "kowloon",
           name: blockedUser.profile.name,
           inbox: `https://${blockedUserServer}/users/${blockedUser.id}/inbox`,

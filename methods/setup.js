@@ -4,6 +4,7 @@ import Settings from "../schema/Settings.js";
 import { User, Activity, Post } from "../schema/index.js";
 import crypto from "crypto";
 import getSettings from "./getSettings.js";
+import createActivity from "./createActivity.js";
 
 export default async function () {
   console.log("Commencing setup....");
@@ -11,13 +12,18 @@ export default async function () {
     // Load the default Kowloon server settings from the config text file...
     console.log("Creating default settings...");
     let defaultSettings = {
-      title: "My Kowloon Server",
-      description: "My brand new Kowloon server",
-      location: {
-        name: "Kowloon Walled City, Hong Kong",
-        type: "Place",
-        latitude: "22.332222",
-        longitude: "114.190278",
+      actorId: `@${process.env.KOWLOON_DOMAIN}`,
+      profile: {
+        name: "My Kowloon Server",
+        description: "My brand new Kowloon server",
+        location: {
+          name: "Kowloon Walled City, Hong Kong",
+          type: "Place",
+          latitude: "22.332222",
+          longitude: "114.190278",
+        },
+        icon: "/images/icons/server.png",
+        urls: [`https://${process.env.KOWLOON_DOMAIN}`],
       },
       domain: process.env.KOWLOON_DOMAIN,
       uploadDir: process.env.KOWLOON_UPLOAD_DIR,
@@ -30,7 +36,7 @@ export default async function () {
         possPro: "theirs",
         reflexive: "themselves",
       },
-      blockedDomains: [],
+      blocked: [],
       likeEmojis: [
         {
           name: "React",
@@ -64,7 +70,7 @@ export default async function () {
         username: "test",
         password: "test",
       },
-      icon: "/images/icons/server.png",
+      icon: `https://${process.env.KOWLOON_DOMAIN}/images/icons/server.png`,
     };
 
     // ... and turn them into Settings in the database
@@ -102,7 +108,7 @@ export default async function () {
         email: process.env.KOWLOON_ADMIN_EMAIL,
         profile: {
           name: "Admin User",
-          bio: "I am the admin of this server.",
+          description: "I am the admin of this server.",
           urls: [`https://${settings.domain}`],
           icon: "https://avatar.iran.liara.run/public",
           // location,
@@ -110,30 +116,25 @@ export default async function () {
         isAdmin: true,
       });
 
-      await Activity.create({
+      await createActivity({
         type: "Create",
-        actorId: `@https://${settings.domain}`,
-        to: [`@${settings.domain}`],
+        actorId: settings.actorId,
+        to: settings.actorId,
+        replyTo: settings.actorId,
+        reactTo: settings.actorId,
         objectType: "Post",
         object: {
+          actorId: settings.actorId,
           type: "Article",
-          title: `Welcome to ${settings.title}!`,
+          title: `Welcome to ${settings.profile.name}!`,
           source: {
             mediaType: "text/html",
-            content: `<p>Welcome to ${settings.title}! This is a social network for people who want to connect with others in a secure and private way. Join us today and experience the power of Kowloon!</p>`,
+            content: `<p>Welcome to ${settings.profile.name}! This is a social network for people who want to connect with others in a secure and private way. Join us today and experience the power of Kowloon!</p>`,
           },
-          to: [`@${settings.domain}`],
+          to: settings.actorId,
+          replyTo: settings.actorId,
+          reactTo: settings.actorId,
         },
-      });
-
-      await Post.create({
-        type: "Article",
-        title: `Welcome to ${settings.title}!`,
-        source: {
-          mediaType: "text/html",
-          content: `<p>Welcome to ${settings.title}! This is a social network for people who want to connect with others in a secure and private way. Join us today and experience the power of Kowloon!</p>`,
-        },
-        to: [`@${settings.domain}`],
       });
 
       console.log(

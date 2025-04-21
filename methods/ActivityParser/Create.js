@@ -13,28 +13,27 @@ import indefinite from "indefinite";
 export default async function (activity) {
   if (!activity.object) return new Error("No object provided");
   if (!activity.objectType) return new Error("No object type provided");
-  activity.summary = `${actor?.profile?.name} (${
-    actor.id
+  activity.summary = `${activity.actor?.profile?.name} (${
+    activity.actor?.id
   }) created ${indefinite(activity.objectType)}`;
 
-  let groupId = recipients.filter((id) => id.startsWith("group"))[0];
   let group;
-  if (groupId)
-    group = await Group.findOne({ id: groupId }).select(
+  if (activity.to.startsWith("group"))
+    group = await Group.findOne({ id: activity.to }).select(
       "-flaggedAt -flaggedBy -flaggedReason -approval  -deletedAt -deletedBy -_id -__v -members -admins -pending -banned"
     );
 
   switch (activity.objectType) {
     //Create a Post
     case "Post":
-      activity.summary = `${actor.profile.name} (${
-        actor.id
+      activity.summary = `${activity.actor?.profile?.name} (${
+        activity.actor?.id
       }) created ${indefinite(activity.object.type)}${
         activity.object.title ? ': "' + activity.object.title + '"' : ""
       }`;
       if (group?.name) {
-        activity.summary = `${actor.profile.name} (${
-          actor.id
+        activity.summary = `${activity.actor?.profile?.name} (${
+          activity.actorId
         }) posted ${indefinite(activity.object.type)} in ${group.name}`;
       }
 
@@ -48,10 +47,10 @@ export default async function (activity) {
           type: post.type,
           url: post.url,
           actor: {
-            id: actor.id,
-            username: actor.username,
-            profile: actor.profile,
-            url: actor.url,
+            id: activity.actor.id,
+            username: activity.actor.username,
+            profile: activity.actor.profile,
+            url: activity.actor.url,
           },
           group: group
             ? {
@@ -74,8 +73,9 @@ export default async function (activity) {
           reactCount: post.reactCount,
           shareCount: post.shareCount,
           attachments: post.attachments,
-          to: recipients,
-          reactTo: post.rto,
+          to: post.to,
+          replyTo: post.replyTo,
+          reactTo: post.reactTo,
           retrievedAt: post.createdAt,
         });
       } catch (e) {
@@ -142,7 +142,7 @@ export default async function (activity) {
         activity.object.email = activity.object.email.toLowerCase().trim();
         let actor = await User.create(activity.object);
         activity.objectId = actor.id;
-        activity.actorId = actor.id;
+        activity.actorId = settings.actorId;
         activity.object = actor;
         activity.object.password = undefined;
         activity.summary = `${actor.profile.name} (${actor.id}) joined the server`;

@@ -15,9 +15,11 @@ export default async function (username, password = "") {
   let circles = await Circle.find({ actorId: user.id }).select(
     "-_id id name icon summary"
   );
-  let { id, timestamp, signature } = user.createUserSignature(
+  let { id, timestamp, signature } = await createUserSignature(
+    user.id,
     user.lastLogin.toString()
   );
+
   return {
     user: {
       ...user._doc,
@@ -27,6 +29,6 @@ export default async function (username, password = "") {
     },
     circles,
     timestamp: user.lastLogin.toString(),
-    signature,
+    signature: signature,
   };
 }

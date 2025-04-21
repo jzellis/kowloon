@@ -32,6 +32,7 @@ import userReacts from "./users/reacts.js";
 import userReplies from "./users/replies.js";
 import userInbox from "./users/inbox.js";
 import userOutbox from "./users/outbox.js";
+import idGet from "./id/index.js";
 import outboxGet from "./outbox/get.js";
 import inboxGet from "./inbox/get.js";
 import test from "./test.js";
@@ -42,7 +43,9 @@ import inboxPost from "./inbox/post.js";
 import fileGet from "./files/get.js";
 import filePost from "./files/post.js";
 import preview from "./utils/preview.js";
+import setup from "./setup/index.js";
 import User from "../schema/User.js";
+import id from "./id/index.js";
 
 const routes = {
   get: {
@@ -74,12 +77,14 @@ const routes = {
     "/users/:id/reacts": userReacts,
     "/users/:id/inbox": userInbox,
     "/users/:id/outbox": userOutbox,
+    "/id/:id": idGet,
     "/inbox": function () {},
     "/outbox": outboxGet,
     "/inbox": inboxGet,
     "/test": test,
     "/files/:id": fileGet,
     "/utils/preview": preview,
+    "/setup": setup,
   },
   post: {
     "/login": login,
@@ -107,7 +112,7 @@ const logger = winston.createLogger({
   // Log to the console and a file
   transports: [
     new winston.transports.Console(),
-    new winston.transports.File({ filename: "logs/server.log" }),
+    // new winston.transports.File({ filename: "logs/server.log" }),
   ],
 });
 
@@ -122,19 +127,20 @@ router.use(async (req, res, next) => {
     req.headers["kowloon-signature"] &&
     req.headers["kowloon-timestamp"]
   ) {
-    let id = req.headers["kowloon-id"];
-    let signature = req.headers["kowloon-signature"];
-    let timestamp = req.headers["kowloon-timestamp"];
     let serverId = req.headers["kowloon-server-id"] || null;
     let serverTimestamp = req.headers["kowloon-server-timestamp"] || null;
     let serverSignature = req.headers["kowloon-server-signature"] || null;
     let result = await Kowloon.authenticateRequest(
-      id,
-      timestamp,
-      signature,
-      serverId,
-      serverTimestamp,
-      serverSignature
+      {
+        id: req.headers["kowloon-id"],
+        timestamp: req.headers["kowloon-timestamp"],
+        signature: req.headers["kowloon-signature"],
+      },
+      {
+        serverId,
+        serverTimestamp,
+        serverSignature,
+      }
     );
     if (result.user) {
       req.user = result.user;

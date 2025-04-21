@@ -29,7 +29,7 @@ export default async function (req, res, next) {
     "@context": "https://www.w3.org/ns/activitystreams",
     type: "OrderedCollection",
     // id: `https//${settings.domain}${id ? "/" + id : ""}`,
-    summary: `${Kowloon.settings.title} | Bookmarks`,
+    summary: `${Kowloon.settings.profile.name} | Bookmarks`,
     totalItems,
     totalPages: Math.ceil(totalItems / (page * pageSize ? pageSize : 20)),
     currentPage: parseInt(page) || 1,

@@ -6,6 +6,12 @@ const capitalizeFirstLetter = function (val) {
 
 export default function (id) {
   let returned;
+  if (id === "@public")
+    return {
+      id,
+      type: "Public",
+      server: "",
+    };
 
   let isUrl = id.startsWith("http");
 
@@ -33,7 +39,7 @@ export default function (id) {
       returned = {
         id,
         type: "User",
-        server: id.split("@").slice(2),
+        server: id.split("@").slice(2)[0],
       };
       break;
     case !id.startsWith("http") &&
@@ -42,7 +48,7 @@ export default function (id) {
       returned = {
         id,
         type: "Server",
-        server: id.split("@").slice(1),
+        server: id.split("@").slice(1)[0],
       };
       break;
     default:

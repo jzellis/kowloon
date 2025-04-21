@@ -28,9 +28,9 @@ const CircleSchema = new Schema(
       ],
       default: [],
     },
-    to: { type: [String], default: [] },
-    replyTo: { type: [String], default: [] },
-    reactTo: { type: [String], default: [] },
+    to: { type: String, default: "" },
+    replyTo: { type: String, default: "" },
+    reactTo: { type: String, default: "" },
     replyCount: { type: Number, default: 0 }, // The number of replies to this post
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     shareCount: { type: Number, default: 0 }, // The number of shares of this post

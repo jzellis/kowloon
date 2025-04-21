@@ -6,10 +6,10 @@ export default async function (req, res, next) {
     server: {
       id: `@${Kowloon.settings.domain}`,
       profile: {
-        name: Kowloon.settings.title,
-        description: Kowloon.settings.description,
-        icon: Kowloon.settings.icon,
-        location: Kowloon.settings.location || undefined,
+        name: Kowloon.settings.profile.name,
+        description: Kowloon.settings.profile.description,
+        icon: Kowloon.settings.profile.icon,
+        location: Kowloon.settings.profile.location || undefined,
       },
       url: `https://${Kowloon.settings.domain}`,
       inbox: `https://${Kowloon.settings.domain}/inbox`,

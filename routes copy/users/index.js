@@ -37,7 +37,7 @@ export default async function (req, res, next) {
     "@context": "https://www.w3.org/ns/userstreams",
     type: "OrderedCollection",
     // id: `https//${settings.domain}${id ? "/" + id : ""}`,
-    summary: `${Kowloon.settings.title} | Users`,
+    summary: `${Kowloon.settings.profile.name} | Users`,
     totalItems,
     totalPages: Math.ceil(totalItems / (page * pageSize ? pageSize : 20)),
     currentPage: parseInt(page) || 1,

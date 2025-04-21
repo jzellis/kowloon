@@ -19,11 +19,11 @@ export default async function (id, timestamp, signature) {
   if (isValid) {
     return {
       server: {
-        name: settings.title,
-        description: settings.description,
+        name: settings.profile.name,
+        description: settings.profile.description,
         url: `https://${settings.domain}`,
-        icon: settings.icon,
-        location: settings.location || undefined,
+        icon: settings.profile.icon,
+        location: settings.profile.location || undefined,
       },
     };
   } else {

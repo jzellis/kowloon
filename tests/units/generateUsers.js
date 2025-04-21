@@ -23,7 +23,7 @@ export default async function (numUsers) {
       email: `${username}@gmail.com`,
       profile: {
         name: fullName,
-        bio: faker.lorem.sentence(),
+        description: faker.lorem.sentence(),
         urls: [faker.internet.url()],
         icon:
           "https://avatar.iran.liara.run/public?a=" +

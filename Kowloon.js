@@ -12,6 +12,7 @@ import {
   HeadBucketCommand,
 } from "@aws-sdk/client-s3";
 import { Settings } from "./schema/index.js";
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Remove this in production
 
 const Kowloon = {
   settings: {},
@@ -88,4 +89,10 @@ try {
 await Kowloon.init();
 // await Kowloon.__nukeDb();
 
+console.log(
+  await Kowloon.getObjectById(
+    "activity:68064feaef6493ab104a79ae@kowloon.social",
+    "@admin@kowloon.social"
+  )
+);
 export default Kowloon;

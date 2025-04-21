@@ -16,7 +16,7 @@ const UserSchema = new Schema(
       type: Object,
       default: {
         name: { type: String, default: undefined },
-        bio: { type: String, default: undefined },
+        description: { type: String, default: undefined },
         urls: { type: [Object], default: [] },
         pronouns: { type: Object, default: undefined },
         icon: { type: String, default: undefined },
@@ -36,15 +36,15 @@ const UserSchema = new Schema(
     inbox: { type: String },
     outbox: { type: String },
     following: { type: String, default: "" },
-    followers: { type: String, default: "" },
+    // followers: { type: String, default: "" },
     blocked: { type: String, default: "" },
     muted: { type: String, default: "" },
     lastLogin: Date,
     publicKey: String,
     privateKey: String,
-    to: { type: [String], default: [] },
-    replyTo: { type: [String], default: [] },
-    reactTo: { type: [String], default: [] },
+    to: { type: String, default: "" },
+    replyTo: { type: String, default: "" },
+    reactTo: { type: String, default: "" },
     url: { type: String, default: undefined },
     isAdmin: { type: Boolean, default: false },
     active: { type: Boolean, default: true },
@@ -61,7 +61,7 @@ UserSchema.index({
   username: "text",
   email: "text",
   "profile.name": "text",
-  "profile.bio": "text",
+  "profile.description": "text",
   "profile.location": "2dsphere",
   "location.name": "text",
 });
@@ -103,21 +103,27 @@ UserSchema.pre("save", async function (next) {
       name: `Following`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Following`,
-      to: [this.id],
+      to: this.id,
+      replyTo: this.id,
+      reactTo: this.id,
     });
     this.following = followingCircle.id;
     let blockedCircle = await Circle.create({
       name: `Blocked`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Blocked`,
-      to: [this.id],
+      to: this.id,
+      replyTo: this.id,
+      reactTo: this.id,
     });
     this.blocked = blockedCircle.id;
     let mutedCircle = await Circle.create({
       name: `Muted`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Muted`,
-      to: [this.id],
+      to: this.id,
+      replyTo: this.id,
+      reactTo: this.id,
     });
     this.muted = mutedCircle.id;
 
@@ -157,14 +163,26 @@ UserSchema.methods.getMemberships = async function () {
   let memberships = [...circles, ...groups];
   return memberships;
 };
+
+UserSchema.methods.getBlocked = async function () {
+  return (await Circle.findOne({ id: this.blocked })).members.map((m) => m.id);
+};
+
+UserSchema.methods.getMuted = async function () {
+  return (await Circle.findOne({ id: this.muted })).members.map((m) => m.id);
+};
+
 UserSchema.methods.createUserSignature = function (timestamp) {
-  const token = this.id + ":" + timestamp.toString();
+  let user = this;
+  console.log(this);
+  const token = user.id + ":" + timestamp.toString();
   const hash = crypto.createHash("sha256").update(token).digest();
   const signature = crypto
-    .sign("sha256", hash, this.privateKey)
+    .sign("sha256", hash, user.privateKey)
     .toString("base64");
-  return { id: this.id, timestamp, signature };
+  return { id: user.id, timestamp, signature };
 };
+
 UserSchema.methods.verifyUserSignature = function (timestamp, signature) {
   const token = this.id + ":" + timestamp;
   const hash = crypto.createHash("sha256").update(token).digest();

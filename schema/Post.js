@@ -18,6 +18,7 @@ const PostSchema = new Schema(
     source: {
       content: { type: String, default: "" }, // The raw content of the post -- plain text, HTML or Markdown
       mediaType: { type: String, default: "text/html" },
+      contentEncoding: { type: String, default: "utf-8" },
     },
     body: { type: String, default: "" },
     wordCount: { type: Number, default: 0 },
@@ -30,9 +31,9 @@ const PostSchema = new Schema(
     tags: { type: [String], default: [] },
     location: { type: Object, default: undefined }, // A geotag for the post in the ActivityStreams geolocation format
     target: { type: String, default: undefined }, // For Links
-    to: { type: [String], default: [] },
-    replyTo: { type: [String], default: [] },
-    reactTo: { type: [String], default: [] },
+    to: { type: String, default: "" },
+    replyTo: { type: String, default: "" },
+    reactTo: { type: String, default: "" },
     flaggedAt: { type: Date, default: null },
     flaggedBy: { type: String, default: null },
     flaggedReason: { type: String, default: null },
@@ -91,6 +92,22 @@ PostSchema.pre("save", async function (next) {
         )}</p>`;
         break;
     }
+    this.wordCount =
+      this.wordCount ||
+      this.body
+        .replace(/<[^>]*>/g, "")
+        .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
+        .split(" ").length;
+    this.charCount = this.charCount || this.body.replace(/<[^>]*>/g, "").length;
+    this.summary =
+      this.summary ||
+      `<$>${this.body
+        .match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g)
+        .slice(0, 3)
+        .join("</p>")
+        .trim()}${
+        this.body.match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g).length > 3 ? " ..." : ""
+      }</p>`;
 
     let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
     // Sign this post using the user's private key if it's not signed

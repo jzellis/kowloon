@@ -18,7 +18,7 @@ let adminUserActivity = {
     email: "admin@kowloon.social",
     profile: {
       name: "Admin",
-      bio: "I'm the admin",
+      description: "I'm the admin",
       urls: ["http://kowloon.social"],
       location: {
         type: "Point",
@@ -117,7 +117,7 @@ let updateUserActivity = {
   actorId: "@admin@kowloon.social",
   object: {
     profile: {
-      bio: "This is my updated bio",
+      description: "This is my updated description",
       urls: ["https://kowloon.social", "https://www.zenarchery.com"],
     },
   },
@@ -132,7 +132,7 @@ let userCreateActivity = {
     email: "bob@smith.com",
     profile: {
       name: "Bob Smith",
-      bio: "I'm Bob Smith",
+      description: "I'm Bob Smith",
       urls: ["http://bob.com"],
       location: {
         name: "San Francisco",

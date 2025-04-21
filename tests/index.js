@@ -25,7 +25,7 @@ let adminUser = {
     bcc: ["@admin@kowloon.social"],
     profile: {
       name: "Admin",
-      bio: "I'm the admin",
+      description: "I'm the admin",
       urls: ["http://kowloon.social"],
       icon:
         "https://avatar.iran.liara.run/public?a=" +

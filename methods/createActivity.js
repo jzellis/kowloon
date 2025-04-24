@@ -4,7 +4,6 @@ import { Activity, Outbox, User } from "../schema/index.js";
 import ActivityParser from "./ActivityParser/index.js";
 import getSettings from "./getSettings.js";
 import parseId from "./parseId.js";
-import processOutbox from "./processOutbox.js";
 
 const validateActivity = function (activity) {
   switch (true) {

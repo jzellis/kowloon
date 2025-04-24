@@ -160,6 +160,8 @@ export default async function () {
         },
       });
 
+      console.log("Reply activity object id: ", replyActivity.object.id);
+
       let reactActivity = await createActivity({
         type: "React",
         actorId: "@admin@kowloon.social",
@@ -177,6 +179,59 @@ export default async function () {
           replyTo: firstActivity.replyTo,
           reactTo: firstActivity.reactTo,
         },
+      });
+
+      let seconduser = await User.create({
+        username: "bob",
+        password: "12345",
+        email: "bob2gmail.com",
+        profile: {
+          name: "Bob Smith",
+          description: "I am a test user.",
+          urls: [`https://bob.com`],
+          icon: "https://avatar.iran.liara.run/public",
+          // location,
+        },
+      });
+
+      let blockActivity = await createActivity({
+        type: "Block",
+        actorId: "@admin@kowloon.social",
+        target: "@bob@kowloon.social",
+        to: "@admin@kowloon.social",
+        replyTo: "@admin@kowloon.social",
+        reactTo: "@admin@kowloon.social",
+      });
+
+      let blockedReplyActivity = await createActivity({
+        type: "Reply",
+        actorId: "@bob@kowloon.social",
+        to: replyActivity.to,
+        replyTo: replyActivity.replyTo,
+        reactTo: replyActivity.reactTo,
+        objectType: "Reply",
+        target: replyActivity.object.id,
+        object: {
+          target: replyActivity.object.id,
+          actorId: "@bob@kowloon.social",
+          source: {
+            mediaType: "text/html",
+            content: `<p>This is a blocked reply to the first post</p>`,
+          },
+          to: replyActivity.to,
+          replyTo: replyActivity.replyTo,
+          reactTo: replyActivity.reactTo,
+          parent: replyActivity.object.id,
+        },
+      });
+
+      let unBlockActivity = await createActivity({
+        type: "Unblock",
+        actorId: "@admin@kowloon.social",
+        target: "@bob@kowloon.social",
+        to: "@admin@kowloon.social",
+        replyTo: "@admin@kowloon.social",
+        reactTo: "@admin@kowloon.social",
       });
 
       console.log(

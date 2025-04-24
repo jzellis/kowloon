@@ -8,6 +8,7 @@ import {
   Circle,
   Group,
   React,
+  Reply,
   File,
   User,
 } from "../schema/index.js";
@@ -51,6 +52,12 @@ export default async function (id, userId = null) {
         "-_id -__v -flaggedAt -flaggedBy -flaggedReason -deletedAt -deletedBy",
       remoteUrl: "/reacts",
     },
+    Reply: {
+      db: Reply,
+      select:
+        "-_id -__v -flaggedAt -flaggedBy -flaggedReason -deletedAt -deletedBy",
+      remoteUrl: "/replies",
+    },
     File: {
       db: File,
       select:
@@ -65,8 +72,5 @@ export default async function (id, userId = null) {
   let object = {};
   let query = { id };
   let db = dbs[parsedId.type];
-  object = await dbs[parsedId.type].db.findOne(query);
-  // .select(dbs[parsedId.type].select);
-
-  return object;
+  return db ? await dbs[parsedId.type].db.findOne(query) : false;
 }

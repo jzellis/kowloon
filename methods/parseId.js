@@ -5,6 +5,7 @@ const capitalizeFirstLetter = function (val) {
 };
 
 export default function (id) {
+  if (!id) return false;
   let returned;
   if (id === "@public")
     return {

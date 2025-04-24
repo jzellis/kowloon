@@ -6,7 +6,7 @@ const InboxSchema = new Schema(
   {
     status: {
       type: String,
-      enum: ["pending", "completed", "error"],
+      enum: ["pending", "completed", "blocked", "error"],
       default: "pending",
     },
     activity: { type: Object, required: true },

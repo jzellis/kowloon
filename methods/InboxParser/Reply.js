@@ -1,9 +1,9 @@
-import { Reply, User } from "../../schema/index.js";
+import { Reply, Circle } from "../../schema/index.js";
 
 import getObjectById from "../getObjectById.js";
+import parseId from "../parseId.js";
 export default async function (activity) {
   let item = await getObjectById(activity.target);
-
   if (item) {
     let reply = await Reply.findOneAndUpdate(
       { id: activity.object.id },

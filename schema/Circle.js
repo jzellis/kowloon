@@ -35,6 +35,7 @@ const CircleSchema = new Schema(
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     shareCount: { type: Number, default: 0 }, // The number of shares of this post
     deletedAt: { type: Date, default: null },
+    deletedBy: { type: String, default: null },
     url: { type: String, default: undefined },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }

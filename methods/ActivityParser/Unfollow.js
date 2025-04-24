@@ -1,12 +1,19 @@
-import { React, User, Post } from "../../schema/index.js";
-
+import { User, Circle } from "../../schema/index.js";
+import getUser from "../getUser.js";
+import parseId from "../parseId.js";
 export default async function (activity) {
-  let actor = await User.findOne({ id: activity.actorId });
-  let circle = await Circle.findOne({ id: activity.target });
-  activity.summary = `@${actor.profile.name} unfollowed ${circle.name}`;
-  circle.members = circle.members.filter(
-    (member) => member.id !== activity.object
-  );
-  await circle.save();
+  let user = await User.findOne({ id: activity.actorId });
+  let targetUser = await getUser(activity.object);
+  let parsedTargetId = parseId(activity.object);
+  targetUser.serverId = activity.object.split("@").slice(1)[1];
+  activity.summary = `@${user.profile.name} unfollowed ${targetUser.profile.name}`;
+  if (activity.target) {
+    let circle = await Circle.findOne({ id: activity.target });
+    // console.log(circle);
+    circle.members = circle.members.filter(
+      (member) => member.id !== activity.object
+    );
+    await circle.save();
+  }
   return activity;
 }

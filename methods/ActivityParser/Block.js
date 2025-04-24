@@ -1,4 +1,3 @@
-import { parse } from "dotenv";
 import { User, Circle } from "../../schema/index.js";
 import getUser from "../getUser.js";
 import parseId from "../parseId.js";

@@ -1,68 +1,18 @@
-import {
-  Post,
-  Bookmark,
-  Circle,
-  Group,
-  File,
-  Feed,
-  User,
-  Reply,
-  React,
-  Settings,
-} from "../../schema/index.js";
+import getObjectById from "../getObjectById.js";
 import indefinite from "indefinite";
 export default async function (activity) {
   if (!activity.target) return new Error("No target provided");
   if (!activity.object) return new Error("No object provided");
 
-  activity.summary = `${actor?.profile?.name} (${actor?.id}) updated ${
-    actor.profile.pronouns.possAdj
-  } ${indefinite(activity.objectType)}`;
+  let item = await getObjectById(activity.target);
 
-  switch (activity.objectType) {
-    case "Post":
-      await Post.findByIdAndUpdate(
-        { id: activity.target },
-        { $set: activity.object }
-      );
-      break;
+  if (item.actorId == activity.actorId) {
+    for (const [key, value] of Object.entries(activity.object)) {
+      item[key] = value;
+    }
+    await item.save();
+
+    activity.summary = `${activity.actor?.profile?.name} (${activity.actor?.id}) updated ${activity.actor.profile.pronouns.possAdj} ${item.type}`;
   }
-
-  switch (activity.objectType) {
-    case "Group":
-      await Group.findByIdAndUpdate(
-        { id: activity.target },
-        { $set: activity.object }
-      );
-      break;
-  }
-
-  switch (activity.objectType) {
-    case "Circle":
-      await Circle.findByIdAndUpdate(
-        { id: activity.target },
-        { $set: activity.object }
-      );
-      break;
-  }
-
-  switch (activity.objectType) {
-    case "Reply":
-      await Reply.findByIdAndUpdate(
-        { id: activity.target },
-        { $set: activity.object }
-      );
-      break;
-  }
-
-  switch (activity.objectType) {
-    case "React":
-      await React.findByIdAndUpdate(
-        { id: activity.target },
-        { $set: activity.object }
-      );
-      break;
-  }
-
   return activity;
 }

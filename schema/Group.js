@@ -9,7 +9,7 @@ const GroupSchema = new Schema(
     objectType: { type: String, default: "Group" },
     name: { type: String, default: undefined },
     actorId: { type: String, required: true }, // Who created this group?
-    summary: { type: String, default: undefined },
+    description: { type: String, default: undefined },
     icon: { type: String, default: undefined },
     location: { type: Object, default: undefined },
     members: {
@@ -28,7 +28,22 @@ const GroupSchema = new Schema(
       ],
       default: [],
     },
-    pending: { type: [String], default: [] }, // Pending members
+    pending: {
+      type: [
+        {
+          id: { type: String, required: true },
+          name: { type: String, default: undefined },
+          inbox: { type: String, default: undefined },
+          outbox: { type: String, default: undefined },
+          icon: { type: String, default: undefined },
+          url: { type: String, default: undefined },
+          serverId: { type: String },
+          createdAt: { type: Date, default: Date.now },
+          updatedAt: { type: Date, default: Date.now },
+        },
+      ],
+      default: [],
+    }, // Pending members
     blocked: { type: String, default: "" }, // The Circle ID of blocked users who cannot join
     admins: { type: [String], default: [] },
     to: { type: String, default: "" }, // Who can see this group
@@ -87,9 +102,9 @@ GroupSchema.pre("save", async function (next) {
     }
   }
   let blockedCircle = await Circle.create({
-    name: `${this.title} - Blocked`,
+    name: `${this.name} - Blocked`,
     actorId: this.actorId,
-    description: `${this.profile.name} (@${this.username}) | Blocked`,
+    description: `${this.name} | Blocked`,
     to: this.id,
     replyTo: this.id,
     reactTo: this.id,

@@ -65,28 +65,30 @@ export default async function (activity) {
 
     //Create a Circle
     case "Circle":
-      activity.summary = `${actor.profile.name} (${
-        actor.id
-      }) created ${indefinite(activity.object.type)}: ${activity.object.name}`;
+      activity.summary = `${activity.actor.profile.name} (${
+        activity.actor.id
+      }) created ${indefinite(activity.objectType)}: ${activity.object.name}`;
       try {
         let circle = await Circle.create(activity.object);
         activity.objectId = circle.id;
+        activity.object = circle;
       } catch (e) {
+        console.log(e);
         activity.error = e;
       }
       break;
 
     // Create a Group
     case "Group":
-      activity.summary = `${actor.profile.name} (${
-        actor.id
-      }) created ${indefinite(activity.object.type)}: ${activity.object.name}`;
+      activity.summary = `${activity.actor?.profile.name} (${
+        activity.actor?.id
+      }) created ${indefinite(activity.objectType)}: ${activity.object.name}`;
       try {
         let group = await Group.create(activity.object);
-        activity.to.push(group.id);
         activity.objectId = group.id;
+        activity.object = group;
       } catch (e) {
-        settings.profile.name.log(e);
+        console.log(e);
         activity.error = e;
       }
       break;

@@ -1,12 +1,10 @@
 // This initiates and sets up a server if it's not already set up
 
 import Settings from "../schema/Settings.js";
-import { User, Activity, Post } from "../schema/index.js";
+import { User } from "../schema/index.js";
 import crypto from "crypto";
 import getSettings from "./getSettings.js";
 import createActivity from "./createActivity.js";
-import processOutbox from "./processOutbox.js";
-import { setTimeout } from "timers/promises";
 
 export default async function () {
   console.log("Commencing setup....");
@@ -118,15 +116,15 @@ export default async function () {
         isAdmin: true,
       });
 
-      let firstActivity = await createActivity({
+      let postActivity = await createActivity({
         type: "Create",
-        actorId: settings.actorId,
+        actorId: "@admin@kowloon.social",
         to: settings.actorId,
         replyTo: settings.actorId,
         reactTo: settings.actorId,
         objectType: "Post",
         object: {
-          actorId: settings.actorId,
+          actorId: "@admin@kowloon.social",
           type: "Article",
           title: `Welcome to ${settings.profile.name}!`,
           source: {
@@ -142,21 +140,21 @@ export default async function () {
       let replyActivity = await createActivity({
         type: "Reply",
         actorId: "@admin@kowloon.social",
-        to: firstActivity.to,
-        replyTo: firstActivity.replyTo,
-        reactTo: firstActivity.reactTo,
+        to: postActivity.to,
+        replyTo: postActivity.replyTo,
+        reactTo: postActivity.reactTo,
         objectType: "Reply",
-        target: firstActivity.object.id,
+        target: postActivity.object.id,
         object: {
-          target: firstActivity.object.id,
+          target: postActivity.object.id,
           actorId: "@admin@kowloon.social",
           source: {
             mediaType: "text/html",
             content: `<p>This is a reply to the first post</p>`,
           },
-          to: firstActivity.to,
-          replyTo: firstActivity.replyTo,
-          reactTo: firstActivity.reactTo,
+          to: postActivity.to,
+          replyTo: postActivity.replyTo,
+          reactTo: postActivity.reactTo,
         },
       });
 
@@ -165,19 +163,19 @@ export default async function () {
       let reactActivity = await createActivity({
         type: "React",
         actorId: "@admin@kowloon.social",
-        to: firstActivity.to,
-        replyTo: firstActivity.replyTo,
-        reactTo: firstActivity.reactTo,
+        to: postActivity.to,
+        replyTo: postActivity.replyTo,
+        reactTo: postActivity.reactTo,
         objectType: "React",
-        target: firstActivity.object.id,
+        target: postActivity.object.id,
         object: {
-          target: firstActivity.object.id,
+          target: postActivity.object.id,
           actorId: "@admin@kowloon.social",
           emoji: "👍",
           name: "React",
-          to: firstActivity.to,
-          replyTo: firstActivity.replyTo,
-          reactTo: firstActivity.reactTo,
+          to: postActivity.to,
+          replyTo: postActivity.replyTo,
+          reactTo: postActivity.reactTo,
         },
       });
 
@@ -229,6 +227,115 @@ export default async function () {
         type: "Unblock",
         actorId: "@admin@kowloon.social",
         target: "@bob@kowloon.social",
+        to: "@admin@kowloon.social",
+        replyTo: "@admin@kowloon.social",
+        reactTo: "@admin@kowloon.social",
+      });
+
+      let createCircleActivity = await createActivity({
+        type: "Create",
+        objectType: "Circle",
+        actorId: "@admin@kowloon.social",
+        to: "@admin@kowloon.social",
+        replyTo: "@admin@kowloon.social",
+        reactTo: "@admin@kowloon.social",
+        object: {
+          actorId: "@admin@kowloon.social",
+          name: "Admin's Friends",
+          description: "All my homies",
+          to: "@admin@kowloon.social",
+          replyTo: "@admin@kowloon.social",
+          reactTo: "@admin@kowloon.social",
+        },
+      });
+
+      let followActivity = await createActivity({
+        type: "Follow",
+        actorId: "@admin@kowloon.social",
+        object: "@bob@kowloon.social",
+        target: createCircleActivity.object.id,
+        to: "@admin@kowloon.social",
+        replyTo: "@admin@kowloon.social",
+        reactTo: "@admin@kowloon.social",
+      });
+
+      let admin = await User.findOne({ id: "@admin@kowloon.social" });
+
+      let unfollowActivity = await createActivity({
+        type: "Unfollow",
+        actorId: "@admin@kowloon.social",
+        target: createCircleActivity.object.id,
+        object: "@bob@kowloon.social",
+        to: "@admin@kowloon.social",
+        replyTo: "@admin@kowloon.social",
+        reactTo: "@admin@kowloon.social",
+      });
+
+      let deleteActivity = await createActivity({
+        type: "Delete",
+        actorId: "@admin@kowloon.social",
+        target: createCircleActivity.object.id,
+        to: "@admin@kowloon.social",
+        replyTo: "@admin@kowloon.social",
+        reactTo: "@admin@kowloon.social",
+      });
+
+      let updateActivity = await createActivity({
+        type: "Update",
+        actorId: "@admin@kowloon.social",
+        target: postActivity.object.id,
+        to: "@admin@kowloon.social",
+        replyTo: "@admin@kowloon.social",
+        reactTo: "@admin@kowloon.social",
+        object: {
+          source: {
+            content: "<p>This content has been updated, yo.</p>",
+          },
+        },
+      });
+
+      let createGroupActivity = await createActivity({
+        type: "Create",
+        objectType: "Group",
+        actorId: "@admin@kowloon.social",
+        object: {
+          actorId: "@admin@kowloon.social",
+
+          name: "My First Group",
+          description: "This is my very first group",
+          private: true,
+          to: "@public",
+          replyTo: "@public",
+          reactTo: "@public",
+        },
+        to: "@public",
+        replyTo: "@public",
+        reactTo: "@public",
+      });
+
+      // let joinGroupActivity = await createActivity({
+      //   type: "Join",
+      //   actorId: "@bob@kowloon.social",
+      //   target: createGroupActivity.object.id,
+      //   to: "@bob@kowloon.social",
+      //   replyTo: "@bob@kowloon.social",
+      //   reactTo: "@bob@kowloon.social",
+      // });
+
+      let inviteGroupActivity = await createActivity({
+        type: "Invite",
+        actorId: "@admin@kowloon.social",
+        target: createGroupActivity.object.id,
+        object: "@bob@kowloon.social",
+        to: "@admin@kowloon.social",
+        replyTo: "@admin@kowloon.social",
+        reactTo: "@admin@kowloon.social",
+      });
+
+      let rejectGroupActivity = await createActivity({
+        type: "Reject",
+        actorId: "@bob@kowloon.social",
+        target: createGroupActivity.object.id,
         to: "@admin@kowloon.social",
         replyTo: "@admin@kowloon.social",
         reactTo: "@admin@kowloon.social",

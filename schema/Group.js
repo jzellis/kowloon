@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import { Settings, User } from "./index.js";
+import { Circle, Settings, User } from "./index.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -29,7 +29,7 @@ const GroupSchema = new Schema(
       default: [],
     },
     pending: { type: [String], default: [] }, // Pending members
-    banned: { type: [String], default: [] }, // Banned users who cannot join
+    blocked: { type: String, default: "" }, // The Circle ID of blocked users who cannot join
     admins: { type: [String], default: [] },
     to: { type: String, default: "" }, // Who can see this group
     replyTo: { type: String, default: "" }, // Who can reply to this group (unused but here for consistency)
@@ -86,6 +86,15 @@ GroupSchema.pre("save", async function (next) {
       this.admins.push(actor.id);
     }
   }
+  let blockedCircle = await Circle.create({
+    name: `${this.title} - Blocked`,
+    actorId: this.actorId,
+    description: `${this.profile.name} (@${this.username}) | Blocked`,
+    to: this.id,
+    replyTo: this.id,
+    reactTo: this.id,
+  });
+  this.blocked = blockedCircle.id;
   next();
 });
 

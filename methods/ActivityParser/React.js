@@ -1,36 +1,16 @@
-import {
-  Post,
-  Bookmark,
-  Circle,
-  Group,
-  React,
-  File,
-  User,
-  Reply,
-} from "../../schema/index.js";
-
-import indefinite from "indefinite";
-import getUser from "../getUser.js";
 import parseId from "../parseId.js";
-
-const dbs = { Post, Bookmark, Circle, Group, React, File, User, Reply };
+import getSettings from "../getSettings.js";
+import { React, Outbox } from "../../schema/index.js";
+import getObjectById from "../getObjectById.js";
 
 export default async function (activity) {
-  let parsedId = parseId(activity.target);
-
-  let post = await Post.findOne({ id: activity.target });
-  post.actor = post.actor || (await getUser(post.actorId));
-
-  let react = await React.create(activity.object);
-  if (post) {
-    post.reactCount++;
-    await post.save();
+  let item = await getObjectById(activity.target);
+  if (item) {
+    let react = await React.create(activity.object);
+    activity.objectId = react.id;
+    activity.object = react;
+    item.reactCount++;
+    await item.save();
   }
-  activity.objectId = react.id;
-
-  activity.summary = `${actor.profile.name} (${actor.username}) reacted "${
-    activity.object.emoji
-  }" to ${post.type ? indefinite(post.type) : ""}`;
-
   return activity;
 }

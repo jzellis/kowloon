@@ -5,6 +5,8 @@ import { User, Activity, Post } from "../schema/index.js";
 import crypto from "crypto";
 import getSettings from "./getSettings.js";
 import createActivity from "./createActivity.js";
+import processOutbox from "./processOutbox.js";
+import { setTimeout } from "timers/promises";
 
 export default async function () {
   console.log("Commencing setup....");
@@ -116,7 +118,7 @@ export default async function () {
         isAdmin: true,
       });
 
-      await createActivity({
+      let firstActivity = await createActivity({
         type: "Create",
         actorId: settings.actorId,
         to: settings.actorId,
@@ -134,6 +136,46 @@ export default async function () {
           to: settings.actorId,
           replyTo: settings.actorId,
           reactTo: settings.actorId,
+        },
+      });
+
+      let replyActivity = await createActivity({
+        type: "Reply",
+        actorId: "@admin@kowloon.social",
+        to: firstActivity.to,
+        replyTo: firstActivity.replyTo,
+        reactTo: firstActivity.reactTo,
+        objectType: "Reply",
+        target: firstActivity.object.id,
+        object: {
+          target: firstActivity.object.id,
+          actorId: "@admin@kowloon.social",
+          source: {
+            mediaType: "text/html",
+            content: `<p>This is a reply to the first post</p>`,
+          },
+          to: firstActivity.to,
+          replyTo: firstActivity.replyTo,
+          reactTo: firstActivity.reactTo,
+        },
+      });
+
+      let reactActivity = await createActivity({
+        type: "React",
+        actorId: "@admin@kowloon.social",
+        to: firstActivity.to,
+        replyTo: firstActivity.replyTo,
+        reactTo: firstActivity.reactTo,
+        objectType: "React",
+        target: firstActivity.object.id,
+        object: {
+          target: firstActivity.object.id,
+          actorId: "@admin@kowloon.social",
+          emoji: "👍",
+          name: "React",
+          to: firstActivity.to,
+          replyTo: firstActivity.replyTo,
+          reactTo: firstActivity.reactTo,
         },
       });
 

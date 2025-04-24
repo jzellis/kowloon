@@ -10,11 +10,9 @@ const OutboxSchema = new Schema(
       enum: ["pending", "delivered", "error"],
       default: "pending",
     },
-    to: { type: [String], required: true },
-    server: { type: String, required: true },
-    actorId: { type: String, required: true },
-    object: { type: String, required: true },
+    activity: { type: Object, required: true },
     response: { type: Object, default: null },
+    lastAttemptedAt: { type: Date, default: null },
     deliveredAt: { type: Date, default: null },
     error: { type: Object, default: null },
   },
@@ -29,7 +27,7 @@ const OutboxSchema = new Schema(
 OutboxSchema.pre("save", async function (next) {
   // Create the activity id and url
   const domain = (await Settings.findOne({ name: "domain" })).value;
-  this.id = this.id || `inbox:${this._id}@${domain}`;
+  this.id = this.id || `outbox:${this._id}@${domain}`;
   next();
 });
 

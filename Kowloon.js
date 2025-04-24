@@ -12,6 +12,7 @@ import {
   HeadBucketCommand,
 } from "@aws-sdk/client-s3";
 import { Settings } from "./schema/index.js";
+import processOutbox from "./methods/processOutbox.js";
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Remove this in production
 
 const Kowloon = {
@@ -64,7 +65,7 @@ const Kowloon = {
       new winston.transports.File({ filename: "combined.log" }),
     ],
   }),
-  reservedUsernames: ["admin", "kowloon", "public", "server", "recipients"],
+  reservedUsernames: ["admin", "kowloon", "public"],
 };
 
 // This checks for the S3 bucket and creates it if it doesn't exist.
@@ -87,12 +88,6 @@ try {
 }
 
 await Kowloon.init();
-// await Kowloon.__nukeDb();
+await Kowloon.__nukeDb();
 
-console.log(
-  await Kowloon.getObjectById(
-    "activity:68064feaef6493ab104a79ae@kowloon.social",
-    "@admin@kowloon.social"
-  )
-);
 export default Kowloon;

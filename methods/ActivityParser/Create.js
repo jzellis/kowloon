@@ -39,18 +39,14 @@ export default async function (activity) {
 
       try {
         let post = await Post.create(activity.object);
+        activity.object = post;
         activity.objectId = post.id;
 
         await Feed.create({
-          id: post.id,
-          objectType: this.objectType,
-          type: post.type,
-          url: post.url,
+          ...post,
           actor: {
-            id: activity.actor.id,
-            username: activity.actor.username,
-            profile: activity.actor.profile,
-            url: activity.actor.url,
+            ...activity.actor,
+            username: activity.actor.username || activity.actor.id,
           },
           group: group
             ? {
@@ -61,22 +57,6 @@ export default async function (activity) {
                 url: group.url,
               }
             : undefined,
-          href: post.href,
-          actorId: post.actorId,
-          title: post.title,
-          summary: post.summary,
-          body: post.body,
-          image: post.image,
-          tags: post.tags,
-          location: post.location,
-          replyCount: post.replyCount,
-          reactCount: post.reactCount,
-          shareCount: post.shareCount,
-          attachments: post.attachments,
-          to: post.to,
-          replyTo: post.replyTo,
-          reactTo: post.reactTo,
-          retrievedAt: post.createdAt,
         });
       } catch (e) {
         activity.error = e;
@@ -106,7 +86,7 @@ export default async function (activity) {
         activity.to.push(group.id);
         activity.objectId = group.id;
       } catch (e) {
-        console.log(e);
+        settings.profile.name.log(e);
         activity.error = e;
       }
       break;

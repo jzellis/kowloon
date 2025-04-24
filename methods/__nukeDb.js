@@ -6,6 +6,8 @@ import {
   Circle,
   Group,
   React,
+  Inbox,
+  Outbox,
   Reply,
   File,
   Post,
@@ -27,6 +29,8 @@ export default async function () {
   await Post.deleteMany({});
   await User.deleteMany({});
   await File.deleteMany({});
+  await Inbox.deleteMany({});
+  await Outbox.deleteMany({});
   await setup();
   return true;
 }

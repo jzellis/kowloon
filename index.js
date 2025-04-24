@@ -1,4 +1,4 @@
-// import Kowloon from "./Kowloon.js";
+import Kowloon from "./Kowloon.js";
 import express from "express";
 import cookieParser from "cookie-parser";
 import nocache from "nocache";
@@ -9,6 +9,7 @@ import { fileURLToPath } from "url";
 import bodyParser from "body-parser";
 import routes from "./routes/routes.js";
 import fs from "fs";
+import schedule from "node-schedule";
 
 const __dirname = `${dirname(fileURLToPath(import.meta.url))}`;
 
@@ -52,6 +53,11 @@ server.listen(port);
 server.on("error", onError);
 server.on("listening", onListening);
 
+schedule.scheduleJob("*/10 * * * * *", async () => {
+  console.log("Processing outbox and inbox");
+  await Kowloon.processOutbox();
+  await Kowloon.processInbox();
+});
 function onError(error) {
   if (error.syscall !== "listen") {
     throw error;

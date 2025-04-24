@@ -13,6 +13,7 @@ import {
 } from "../schema/index.js";
 
 export default async function (id, userId = null) {
+  if (!id) return false;
   const dbs = {
     Activity: {
       db: Activity,
@@ -62,11 +63,10 @@ export default async function (id, userId = null) {
   let settings = await getSettings();
   let parsedId = parseId(id);
   let object = {};
-  let query = { id: id, ...(await generateQuery(userId || null)) };
+  let query = { id };
   let db = dbs[parsedId.type];
-  object = await dbs[parsedId.type].db
-    .findOne(query)
-    .select(dbs[parsedId.type].select);
+  object = await dbs[parsedId.type].db.findOne(query);
+  // .select(dbs[parsedId.type].select);
 
   return object;
 }

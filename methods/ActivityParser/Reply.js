@@ -1,8 +1,16 @@
 import parseId from "../parseId.js";
 import getSettings from "../getSettings.js";
 import { Reply, Outbox } from "../../schema/index.js";
+import getObjectById from "../getObjectById.js";
 
 export default async function (activity) {
-  activity.objectId = (await Reply.create(activity.object)).id;
+  let item = await getObjectById(activity.target);
+  if (item) {
+    let reply = await Reply.create(activity.object);
+    activity.objectId = reply.id;
+    activity.object = reply;
+    item.replyCount++;
+    await item.save();
+  }
   return activity;
 }

@@ -4,10 +4,16 @@ const Schema = mongoose.Schema;
 
 const InboxSchema = new Schema(
   {
-    id: { type: [String] },
-    to: { type: [String], required: true },
-    item: { type: Object, required: true },
-    read: { type: Boolean, default: false },
+    status: {
+      type: String,
+      enum: ["pending", "completed", "error"],
+      default: "pending",
+    },
+    activity: { type: Object, required: true },
+    server: { type: String, required: true },
+    ipAddress: { type: String, required: true },
+    processedAt: { type: Date, default: null },
+    error: { type: Object, default: null },
   },
   {
     timestamps: true,

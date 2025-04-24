@@ -101,7 +101,7 @@ PostSchema.pre("save", async function (next) {
     this.charCount = this.charCount || this.body.replace(/<[^>]*>/g, "").length;
     this.summary =
       this.summary ||
-      `<$>${this.body
+      `<p>${this.body
         .match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g)
         .slice(0, 3)
         .join("</p>")

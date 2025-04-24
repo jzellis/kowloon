@@ -4,6 +4,7 @@ const Schema = mongoose.Schema;
 import { PostSchema } from "./Post.js";
 
 const FeedSchema = new Schema(
+  // { any: Schema.Types.Mixed },
   {
     id: { type: String, key: true },
     type: { type: String, default: "Note" }, // The type of post this is
@@ -28,7 +29,12 @@ const FeedSchema = new Schema(
     reactTo: { type: String, default: "" },
     retrievedAt: { type: Date, default: null },
   },
-  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
+  {
+    // strict: false,
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
 FeedSchema.index({

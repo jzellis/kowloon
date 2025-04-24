@@ -4,6 +4,7 @@ import { Activity, Outbox, User } from "../schema/index.js";
 import ActivityParser from "./ActivityParser/index.js";
 import getSettings from "./getSettings.js";
 import parseId from "./parseId.js";
+import processOutbox from "./processOutbox.js";
 
 const validateActivity = function (activity) {
   switch (true) {
@@ -51,27 +52,17 @@ export default async function (activity) {
         break;
     }
     activity = await ActivityParser[activity.type](activity); // This is the crucial part -- it parses the activity based on its type by calling the method of the ActivityParser object with the same name as the type.
-    console.log(activity);
     activity = await Activity.create(activity);
 
     // Now to deal with delivery if necessary.
-    if (activity.target && !activity.target.endsWith(settings.domain)) {
-      await Outbox.create({
-        to: [activity.target],
-        server: parseId(activity.target).server,
-        actorId: activity.actorId,
-        object: activity.object,
-      });
-    }
 
-    if (!activity.to.endsWith(settings.domain)) {
-      await Outbox.create({
-        to: activity.to,
-        server: parseId(activity.to).server,
-        actorId: activity.actorId,
-        object: activity.object,
-      });
-    }
+    await Outbox.findOneAndUpdate(
+      { "activity.id": activity.id },
+      { activity: activity },
+      { new: true, upsert: true }
+    );
+
+    return activity;
   } catch (e) {
     console.log(e);
     return new Error(e);

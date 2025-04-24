@@ -1,17 +1,18 @@
-import { React } from "../../schema/index.js";
+import { Reply, User } from "../../schema/index.js";
 
 import getObjectById from "../getObjectById.js";
 export default async function (activity) {
   let item = await getObjectById(activity.target);
+
   if (item) {
-    let react = await React.findOneAndUpdate(
+    let reply = await Reply.findOneAndUpdate(
       { id: activity.object.id },
       { $set: activity.object }, //activity.object,
       { new: true, upsert: true }
     );
-    activity.objectId = react.id;
-    activity.object = react;
-    if (react?.lastErrorObject?.upserted) item.reactCount++; // If the react isn't already in the db, increment the original object's reactCount
+    activity.objectId = reply.id;
+    activity.object = reply;
+    if (reply?.lastErrorObject?.upserted) item.replyCount++; // If the reply isn't already in the db, increment the original object's replyCount
     await item.save();
   }
   return activity;

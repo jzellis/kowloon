@@ -5,11 +5,12 @@ import { Settings, User } from "./index.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
-const replieschema = new Schema(
+const ReplySchema = new Schema(
   {
     id: { type: String, key: true },
     actorId: { type: String },
     target: { type: String, required: true },
+    parent: { type: String, default: null },
     href: { type: String },
     source: {
       content: { type: String, default: "" },
@@ -34,31 +35,43 @@ const replieschema = new Schema(
   }
 );
 
-replieschema.virtual("actor", {
+ReplySchema.virtual("actor", {
   ref: "User",
   localField: "actorId",
   foreignField: "id",
   justOne: true,
 });
 
-replieschema.pre("save", async function (next) {
+ReplySchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;
   this.id = this.id || `reply:${this._id}@${domain}`;
   this.url = this.url || `https://${domain}/posts/${this.id}`;
   this.source.mediaType = this.source.mediaType || "text/html";
 
-  if (this.source.mediaType.includes("markdown"))
-    this.content = `${marked(this.source.content)}`;
+  switch (this.source.mediaType) {
+    case "text/markdown":
+      this.body = `<p>${marked(this.source.content)}</p>`;
+      break;
+    case "text/html":
+      this.body = this.source.content;
+      break;
+    default:
+      this.body = `<p>${this.source.content.replace(
+        /(?:\r\n|\r|\n)/g,
+        "</p><p>"
+      )}</p>`;
+      break;
+  }
   let actor = this.actor || (await User.findOne({ id: this.actorId }));
-  let stringject = Buffer.from(this.id);
-  const sign = crypto.createSign("RSA-SHA256");
-  sign.update(stringject);
-  this.signature = sign.sign(actor.privateKey, "base64");
+  // let stringject = Buffer.from(this.id);
+  // const sign = crypto.createSign("RSA-SHA256");
+  // sign.update(stringject);
+  // this.signature = sign.sign(actor.privateKey, "base64");
 
   next();
 });
 
-replieschema.methods.verifySignature = async function () {
+ReplySchema.methods.verifySignature = async function () {
   let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
   let stringject = Buffer.from(JSON.stringify(this.id));
   return crypto.verify(
@@ -69,4 +82,4 @@ replieschema.methods.verifySignature = async function () {
   );
 };
 
-export default mongoose.model("Reply", replieschema);
+export default mongoose.model("Reply", ReplySchema);

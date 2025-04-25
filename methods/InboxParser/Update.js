@@ -4,6 +4,7 @@ export default async function (activity) {
   if (!activity.target) return new Error("No target provided");
   if (!activity.object) return new Error("No object provided");
 
+  let user = activity.actor;
   let item = await getObjectById(activity.target);
 
   if (item.actorId == activity.actorId && item.updatedAt != Date.now()) {
@@ -12,7 +13,7 @@ export default async function (activity) {
     }
     await item.save();
 
-    activity.summary = `${activity.actor?.profile?.name} (${activity.actor?.id}) updated ${activity.actor?.profile.pronouns.possAdj} ${item.type}`;
+    activity.summary = `${user.profile?.name} (${activity.actor?.id}) updated ${user.profile.pronouns.possAdj} ${item.type}`;
   }
   return activity;
 }

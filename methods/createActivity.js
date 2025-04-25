@@ -52,14 +52,20 @@ export default async function (activity) {
     }
     activity = await ActivityParser[activity.type](activity); // This is the crucial part -- it parses the activity based on its type by calling the method of the ActivityParser object with the same name as the type.
     activity = await Activity.create(activity);
-
-    // Now to deal with delivery if necessary.
-
-    await Outbox.findOneAndUpdate(
-      { "activity.id": activity.id },
-      { activity: activity },
-      { new: true, upsert: true }
-    );
+    activity = activity._doc;
+    delete activity._id;
+    delete activity.__v;
+    (activity.actor = await User.findOne({ id: activity.actorId }).select(
+      "-_id username profile publicKey"
+    )),
+      // Now to deal with delivery if necessary.
+      await Outbox.findOneAndUpdate(
+        { "activity.id": activity.id },
+        {
+          activity: activity,
+        },
+        { new: true, upsert: true }
+      );
 
     return activity;
   } catch (e) {

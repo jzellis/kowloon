@@ -2,6 +2,9 @@ import { User, Circle } from "../../schema/index.js";
 import getUser from "../getUser.js";
 import parseId from "../parseId.js";
 export default async function (activity) {
+  activity.to = activity.actorId;
+  activity.replyTo = activity.actorId;
+  activity.reactTo = activity.actorId;
   let user = await User.findOne({ id: activity.actorId });
   let targetUser = await getUser(activity.object);
   let parsedTargetId = parseId(activity.object);

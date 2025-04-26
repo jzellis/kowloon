@@ -9,6 +9,8 @@ const ReactSchema = new Schema(
     type: { type: String, default: "React" },
     target: { type: String, required: true },
     actorId: { type: String, required: true },
+    actor: { type: Object, defalt: undefined },
+
     emoji: { type: String, required: true },
     name: { type: String, required: true },
     to: { type: String, default: "" },
@@ -25,13 +27,6 @@ const ReactSchema = new Schema(
     toObject: { virtuals: true },
   }
 );
-
-ReactSchema.virtual("actor", {
-  ref: "User",
-  localField: "actorId",
-  foreignField: "id",
-  justOne: true,
-});
 
 ReactSchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;

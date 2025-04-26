@@ -14,6 +14,7 @@ const BookmarkSchema = new Schema(
     href: { type: String, required: false },
     title: { type: String, default: undefined },
     actorId: { type: String, required: true },
+    actor: { type: Object, defalt: undefined },
     tags: { type: [String], default: [] },
     summary: { type: String, default: undefined },
     source: {
@@ -38,13 +39,6 @@ const BookmarkSchema = new Schema(
     toObject: { virtuals: true },
   }
 );
-
-BookmarkSchema.virtual("actor", {
-  ref: "User",
-  localField: "actorId",
-  foreignField: "id",
-  justOne: true,
-});
 
 BookmarkSchema.virtual("reacts", {
   ref: "React",

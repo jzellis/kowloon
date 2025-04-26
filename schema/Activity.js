@@ -5,6 +5,7 @@ const Schema = mongoose.Schema;
 const ActivitySchema = new Schema(
   {
     id: { type: String, key: true }, // This is different from the _id, this is the global UUID of the activity.
+    actor: { type: Object, default: undefined },
     actorId: { type: String, required: true }, // The actor ID of the activity's author. Required.
     type: { type: String, default: "Create" },
     object: { type: Object, default: undefined }, // The object of the Activity.
@@ -26,6 +27,7 @@ const ActivitySchema = new Schema(
     url: { type: String, default: undefined },
   },
   {
+    strict: false,
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },

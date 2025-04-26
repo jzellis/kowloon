@@ -9,6 +9,8 @@ const CircleSchema = new Schema(
     objectType: { type: String, default: "Circle" },
     name: { type: String, default: undefined },
     actorId: { type: String, required: true },
+    actor: { type: Object, defalt: undefined },
+
     summary: { type: String, default: undefined },
     icon: { type: String, default: undefined },
     members: {
@@ -40,13 +42,6 @@ const CircleSchema = new Schema(
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
-
-CircleSchema.virtual("actor", {
-  ref: "User",
-  localField: "actorId",
-  foreignField: "id",
-  justOne: true,
-});
 
 CircleSchema.virtual("reacts", {
   ref: "React",

@@ -3,10 +3,12 @@ import getUser from "../getUser.js";
 import parseId from "../parseId.js";
 
 export default async function (activity) {
-  activity.public = false;
+  activity.to = activity.actorId;
+  activity.replyTo = activity.actorId;
+  activity.reactTo = activity.actorId;
   let user = await User.findOne({ id: activity.actorId });
   let blockedUser = await getUser(activity.target);
-  if (blockedUser) {
+  if (user && blockedUser) {
     let blockedUserServer = parseId(activity.target).server;
     activity.summary = `@${user.profile.name} blocked ${blockedUser.profile.name}`;
     await Circle.findOneAndUpdate(

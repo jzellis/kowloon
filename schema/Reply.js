@@ -9,6 +9,7 @@ const ReplySchema = new Schema(
   {
     id: { type: String, key: true },
     actorId: { type: String },
+    actor: { type: Object, defalt: undefined },
     target: { type: String, required: true },
     parent: { type: String, default: null },
     href: { type: String },
@@ -35,13 +36,6 @@ const ReplySchema = new Schema(
   }
 );
 
-ReplySchema.virtual("actor", {
-  ref: "User",
-  localField: "actorId",
-  foreignField: "id",
-  justOne: true,
-});
-
 ReplySchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;
   this.id = this.id || `reply:${this._id}@${domain}`;
@@ -62,7 +56,6 @@ ReplySchema.pre("save", async function (next) {
       )}</p>`;
       break;
   }
-  let actor = this.actor || (await User.findOne({ id: this.actorId }));
   // let stringject = Buffer.from(this.id);
   // const sign = crypto.createSign("RSA-SHA256");
   // sign.update(stringject);

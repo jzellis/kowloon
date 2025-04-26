@@ -4,7 +4,8 @@ import getObjectById from "../getObjectById.js";
 import parseId from "../parseId.js";
 export default async function (activity) {
   let target = getObjectById(activity.target);
-  if (target && activity.objectType === "Post") {
+  let to = getObjectById(activity.to);
+  if ((to || target) && activity.objectType === "Post") {
     let post = await Post.findOneAndUpdate(
       { id: activity.object.id },
       { $set: activity.object },

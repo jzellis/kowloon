@@ -23,6 +23,10 @@ export default async function (activity) {
       "-flaggedAt -flaggedBy -flaggedReason -approval  -deletedAt -deletedBy -_id -__v -members -admins -pending -banned"
     );
 
+  if (activity.objectType != "User") {
+    activity.object.actor = activity.actor;
+    activity.object.actorId = activity.actorId;
+  }
   switch (activity.objectType) {
     //Create a Post
     case "Post":

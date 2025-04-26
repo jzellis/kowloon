@@ -1,22 +1,19 @@
 import { Group, User } from "../../schema/index.js";
 import parseId from "../parseId.js";
 export default async function (activity) {
-  activity.to = activity.actorId;
-  activity.replyTo = activity.actorId;
-  activity.reactTo = activity.actorId;
   let user = await User.findOne({ id: activity.actorId });
   let group = await Group.findOne({ id: activity.target });
 
   if (
     user &&
     group &&
-    group.pending.some((member) => member.id === activity.actorId)
+    group.members.some((member) => member.id === activity.actorId)
   ) {
-    group.pending = group.pending.filter(
+    group.members = group.members.filter(
       (member) => member.id !== activity.actorId
     );
     await group.save();
-    activity.summary = `@${user.profile.name} rejected an invite to join ${group.name}`;
+    activity.summary = `@${user.profile.name} left ${group.name}`;
   }
   return activity;
 }

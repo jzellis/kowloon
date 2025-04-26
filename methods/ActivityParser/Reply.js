@@ -6,6 +6,7 @@ import getObjectById from "../getObjectById.js";
 export default async function (activity) {
   let item = await getObjectById(activity.target);
   if (item) {
+    activity.object.actor = activity.actor;
     let reply = await Reply.create(activity.object);
     activity.objectId = reply.id;
     activity.object = reply;

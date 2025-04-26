@@ -9,6 +9,8 @@ const GroupSchema = new Schema(
     objectType: { type: String, default: "Group" },
     name: { type: String, default: undefined },
     actorId: { type: String, required: true }, // Who created this group?
+    actor: { type: Object, defalt: undefined },
+
     description: { type: String, default: undefined },
     icon: { type: String, default: undefined },
     location: { type: Object, default: undefined },
@@ -63,13 +65,6 @@ const GroupSchema = new Schema(
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
-
-GroupSchema.virtual("actor", {
-  ref: "User",
-  localField: "actorId",
-  foreignField: "id",
-  justOne: true,
-});
 
 GroupSchema.virtual("reacts", {
   ref: "React",

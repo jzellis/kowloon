@@ -9,7 +9,7 @@ const ReplySchema = new Schema(
   {
     id: { type: String, key: true },
     actorId: { type: String },
-    actor: { type: Object, defalt: undefined },
+    actor: { type: Object, default: undefined },
     target: { type: String, required: true },
     parent: { type: String, default: null },
     href: { type: String },

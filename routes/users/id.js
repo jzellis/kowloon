@@ -6,7 +6,7 @@ export default async function (req, res, next) {
   let qStart = Date.now();
   let query = { id: req.params.id };
   let user = await User.findOne(query).select(
-    "username profile prefs publicKey"
+    "username profile prefs publicKey id -_id"
   );
   let response = {
     queryTime: Date.now() - qStart,

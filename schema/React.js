@@ -9,7 +9,7 @@ const ReactSchema = new Schema(
     type: { type: String, default: "React" },
     target: { type: String, required: true },
     actorId: { type: String, required: true },
-    actor: { type: Object, defalt: undefined },
+    actor: { type: Object, default: undefined },
 
     emoji: { type: String, required: true },
     name: { type: String, required: true },

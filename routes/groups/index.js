@@ -12,18 +12,17 @@ export default async function (req, res, next) {
   } else {
     sort.createdAt = -1;
   }
-  let query = {};
+  let query = await Kowloon.generateQuery(req.user?.id);
   if (req.query.type) query.type = req.query.type;
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
   let items = await Group.find(query)
     .select(
-      "-flaggedAt -flaggedBy -flaggedReason -approval  -deletedAt -deletedBy -_id -__v -members -admins -pending -banned"
+      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
     )
     .limit(pageSize ? pageSize : 0)
     .skip(pageSize ? pageSize * (page - 1) : 0)
-    .sort({ sort: -1 })
-    .populate("actor", "-_id username id profile publicKey");
+    .sort({ sort: -1 });
   let totalItems = await Group.countDocuments(query);
 
   response = {
@@ -39,7 +38,7 @@ export default async function (req, res, next) {
     count: items.length,
     items,
   };
-  // response.activities = await Group.find(query);
+  // response.groups = await Group.find(query);
   response.query = query;
   response.queryTime = Date.now() - qStart;
 

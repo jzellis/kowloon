@@ -40,7 +40,7 @@ export default async function (activity) {
           activity.actorId
         }) posted ${indefinite(activity.object.type)} in ${group.name}`;
       }
-
+      if (group) activity.object.group = group;
       try {
         let post = await Post.create(activity.object);
         activity.object = post;
@@ -128,7 +128,7 @@ export default async function (activity) {
         activity.object.email = activity.object.email.toLowerCase().trim();
         let actor = await User.create(activity.object);
         activity.objectId = actor.id;
-        activity.actorId = settings.actorId;
+        // activity.actorId = settings.actorId;
         activity.object = actor;
         activity.object.password = undefined;
         activity.summary = `${actor.profile.name} (${actor.id}) joined the server`;

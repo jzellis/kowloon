@@ -9,7 +9,7 @@ const CircleSchema = new Schema(
     objectType: { type: String, default: "Circle" },
     name: { type: String, default: undefined },
     actorId: { type: String, required: true },
-    actor: { type: Object, defalt: undefined },
+    actor: { type: Object, default: undefined },
 
     summary: { type: String, default: undefined },
     icon: { type: String, default: undefined },

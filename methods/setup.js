@@ -113,13 +113,14 @@ export default async function () {
           icon: "https://avatar.iran.liara.run/public",
           // location,
         },
+        to: "@public",
         isAdmin: true,
       });
 
       let postActivity = await createActivity({
         type: "Create",
         actorId: "@admin@kowloon.social",
-        to: settings.actorId,
+        to: "@public",
         replyTo: settings.actorId,
         reactTo: settings.actorId,
         objectType: "Post",
@@ -131,7 +132,7 @@ export default async function () {
             mediaType: "text/html",
             content: `<p>Welcome to ${settings.profile.name}! This is a social network for people who want to connect with others in a secure and private way. Join us today and experience the power of Kowloon!</p>`,
           },
-          to: settings.actorId,
+          to: "@public",
           replyTo: settings.actorId,
           reactTo: settings.actorId,
         },
@@ -196,7 +197,7 @@ export default async function () {
         type: "Block",
         actorId: "@admin@kowloon.social",
         target: "@bob@kowloon.social",
-        to: "@admin@kowloon.social",
+        to: "@public",
         replyTo: "@admin@kowloon.social",
         reactTo: "@admin@kowloon.social",
       });
@@ -227,7 +228,7 @@ export default async function () {
         type: "Unblock",
         actorId: "@admin@kowloon.social",
         target: "@bob@kowloon.social",
-        to: "@admin@kowloon.social",
+        to: "@public",
         replyTo: "@admin@kowloon.social",
         reactTo: "@admin@kowloon.social",
       });
@@ -236,14 +237,14 @@ export default async function () {
         type: "Create",
         objectType: "Circle",
         actorId: "@admin@kowloon.social",
-        to: "@admin@kowloon.social",
+        to: "@public",
         replyTo: "@admin@kowloon.social",
         reactTo: "@admin@kowloon.social",
         object: {
           actorId: "@admin@kowloon.social",
           name: "Admin's Friends",
           description: "All my homies",
-          to: "@admin@kowloon.social",
+          to: "@public",
           replyTo: "@admin@kowloon.social",
           reactTo: "@admin@kowloon.social",
         },
@@ -254,7 +255,7 @@ export default async function () {
         actorId: "@admin@kowloon.social",
         object: "@bob@kowloon.social",
         target: createCircleActivity.object.id,
-        to: "@admin@kowloon.social",
+        to: "@public",
         replyTo: "@admin@kowloon.social",
         reactTo: "@admin@kowloon.social",
       });
@@ -266,7 +267,7 @@ export default async function () {
         actorId: "@admin@kowloon.social",
         target: createCircleActivity.object.id,
         object: "@bob@kowloon.social",
-        to: "@admin@kowloon.social",
+        to: "@public",
         replyTo: "@admin@kowloon.social",
         reactTo: "@admin@kowloon.social",
       });
@@ -275,7 +276,7 @@ export default async function () {
         type: "Delete",
         actorId: "@admin@kowloon.social",
         target: createCircleActivity.object.id,
-        to: "@admin@kowloon.social",
+        to: "@public",
         replyTo: "@admin@kowloon.social",
         reactTo: "@admin@kowloon.social",
       });
@@ -284,7 +285,7 @@ export default async function () {
         type: "Update",
         actorId: "@admin@kowloon.social",
         target: postActivity.object.id,
-        to: "@admin@kowloon.social",
+        to: "@public",
         replyTo: "@admin@kowloon.social",
         reactTo: "@admin@kowloon.social",
         object: {
@@ -327,7 +328,7 @@ export default async function () {
         actorId: "@admin@kowloon.social",
         target: createGroupActivity.object.id,
         object: "@bob@kowloon.social",
-        to: "@admin@kowloon.social",
+        to: "@public",
         replyTo: "@admin@kowloon.social",
         reactTo: "@admin@kowloon.social",
       });
@@ -336,7 +337,7 @@ export default async function () {
         type: "Reject",
         actorId: "@bob@kowloon.social",
         target: createGroupActivity.object.id,
-        to: "@admin@kowloon.social",
+        to: "@public",
         replyTo: "@admin@kowloon.social",
         reactTo: "@admin@kowloon.social",
       });

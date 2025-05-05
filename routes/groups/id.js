@@ -9,7 +9,7 @@ export default async function (req, res, next) {
   };
 
   let group = await Group.findOne(query).select(
-    "-flaggedAt -flaggedBy -flaggedReason -approval  -deletedAt -deletedBy -_id -__v -members -admins -pending -banned"
+    "-members -admins -pending -blocked -flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
   );
   if (group) {
     response = {

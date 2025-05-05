@@ -12,10 +12,7 @@ export default async function (req, res, next) {
   } else {
     sort.createdAt = -1;
   }
-  if (
-    !req.user?.id ||
-    !req.user?.id.split("@").pop() === Kowloon.settings.domain
-  ) {
+  if (!req.user?.id || !req.user?.id.endsWith(Kowloon.settings.actorId)) {
     response = { error: "You are not authorized to view this inbox" };
   } else {
     let query = {

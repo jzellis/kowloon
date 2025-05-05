@@ -1,5 +1,5 @@
 import Kowloon from "../../Kowloon.js";
-import { Feed } from "../../schema/index.js";
+import { Post } from "../../schema/index.js";
 export default async function (req, res, next) {
   let status = 200;
   let qStart = Date.now();
@@ -8,30 +8,23 @@ export default async function (req, res, next) {
   let pageSize = req.query.num || 20;
   let sort = req.query.sort ? `-£{req.query.sort}` : "-createdAt";
   let query = {
-    // to: {
-    //   $in: ["@public", req.user?.id, req.server?.id].concat(
-    //     req.user?.memberships,
-    //     req.server?.memberships
-    //   ),
-    // },
     to: "@public",
   };
-  // if (req.user?.id && req.user.id.split("@").pop() === Kowloon.settings.domain)
-  //   query.to.$in.push("@server");
+  if (req.user?.id && req.user.id.endsWith(Kowloon.settings.actorId))
+    query.to = { $in: ["@public", Kowloon.settings.actorId] };
   if (req.user) query.from = { $nin: req.user.blocked.concat(req.user.muted) };
   if (req.query.type) query.type = req.query.type;
 
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
-  let items = await Feed.find(query)
+  let items = await Post.find(query)
     .select(
       "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
     )
     .limit(pageSize ? pageSize : 0)
     .skip(pageSize ? pageSize * (page - 1) : 0)
-    .sort(sort)
-    .populate("actor", "-_id username id profile publicKey");
-  let totalItems = await Feed.countDocuments(query);
+    .sort(sort);
+  let totalItems = await Post.countDocuments(query);
 
   response = {
     "@context": "https://www.w3.org/ns/activitystreams",

@@ -13,8 +13,8 @@ const PostSchema = new Schema(
     url: { type: String }, // The URL of the post
     href: { type: String, default: undefined }, // If the post is a link, this is what it links to
     actorId: { type: String }, // The ID of the post's author
-    actor: { type: Object, defalt: undefined },
-
+    actor: { type: Object, default: undefined },
+    group: { type: Object, default: undefined },
     title: { type: String, default: undefined }, // An optional title for post types other than Notes
     summary: { type: String, default: undefined }, // An optional summary for post types other than Notes
     source: {

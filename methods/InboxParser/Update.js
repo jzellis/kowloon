@@ -13,7 +13,7 @@ export default async function (activity) {
       item.actorId == activity.actorId ||
       (item.objectType === "Group" &&
         item.admins.includes(activity.actorId))) &&
-    new Date(object.updatedAt).getTime() < Date.now() - 10 * 1000 // Has it been updated in the last ten seconds?
+    new Date(activity.updatedAt).getTime() < Date.now() - 10 * 1000 // Has it been updated in the last ten seconds?
   ) {
     if (item.objectType === "User") {
       item.isAdmin = false;

@@ -22,8 +22,7 @@ export default async function (req, res, next) {
     )
     .limit(pageSize ? pageSize : 0)
     .skip(pageSize ? pageSize * (page - 1) : 0)
-    .sort({ sort: -1 })
-    .populate("actor", "-_id username id profile publicKey");
+    .sort({ sort: -1 });
   let totalItems = await Activity.countDocuments(query);
 
   response = {
@@ -39,7 +38,7 @@ export default async function (req, res, next) {
     count: items.length,
     items,
   };
-  // response.activities = await Activity.find(query);
+  // response.files = await Activity.find(query);
   response.query = query;
   response.queryTime = Date.now() - qStart;
 

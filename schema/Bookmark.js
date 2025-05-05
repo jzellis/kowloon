@@ -14,7 +14,7 @@ const BookmarkSchema = new Schema(
     href: { type: String, required: false },
     title: { type: String, default: undefined },
     actorId: { type: String, required: true },
-    actor: { type: Object, defalt: undefined },
+    actor: { type: Object, default: undefined },
     tags: { type: [String], default: [] },
     summary: { type: String, default: undefined },
     source: {

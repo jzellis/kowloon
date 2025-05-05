@@ -17,6 +17,7 @@ import circleById from "./circles/id.js";
 import groups from "./groups/index.js";
 import groupById from "./groups/id.js";
 import groupByIdPosts from "./groups/posts.js";
+import groupByIdMembers from "./groups/members.js";
 import posts from "./posts/index.js";
 import postById from "./posts/id.js";
 import postReactsById from "./posts/reacts.js";
@@ -61,6 +62,7 @@ const routes = {
     "/groups": groups,
     "/groups/:id": groupById,
     "/groups/:id/posts": groupByIdPosts,
+    "/groups/:id/members": groupByIdMembers,
 
     "/posts": posts,
     "/posts/:id": postById,

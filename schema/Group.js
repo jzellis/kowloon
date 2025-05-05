@@ -9,7 +9,7 @@ const GroupSchema = new Schema(
     objectType: { type: String, default: "Group" },
     name: { type: String, default: undefined },
     actorId: { type: String, required: true }, // Who created this group?
-    actor: { type: Object, defalt: undefined },
+    actor: { type: Object, default: undefined },
 
     description: { type: String, default: undefined },
     icon: { type: String, default: undefined },

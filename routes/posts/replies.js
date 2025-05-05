@@ -13,9 +13,9 @@ export default async function (req, res, next) {
     sort.createdAt = -1;
   }
   let items = await Reply.find({ target: req.query.id })
-    // .select(
-    //   "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
-    // )
+    .select(
+      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
+    )
     .limit(pageSize ? pageSize : 0)
     .skip(pageSize ? pageSize * (page - 1) : 0)
     .sort({ sort: -1 });

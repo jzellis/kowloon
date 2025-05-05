@@ -7,14 +7,22 @@ export default async function (req, res, next) {
   let query = {
     id: req.params.id,
   };
+
   let post = await Post.findOne(query).select(
     "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
   );
-
   if (post) {
-    response.post = post;
+    response = {
+      "@context": "https://www.w3.org/ns/activitystreams",
+      type: "Post",
+      post,
+    };
+    // response.activities = await Post.find(query);
   } else {
     response.error = "Post not found";
   }
-  (response.queryTime = Date.now() - qStart), res.status(status).json(response);
+  response.query = query;
+  response.queryTime = Date.now() - qStart;
+
+  res.status(status).json(response);
 }

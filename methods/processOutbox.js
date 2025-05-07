@@ -21,7 +21,7 @@ export default async function (limit = 0, skip = 0) {
           item.status = "error";
         }
       } catch (e) {
-        console.log(e);
+        // console.log(e);
         item.error = e;
         item.status = "error";
       }

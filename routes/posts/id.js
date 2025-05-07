@@ -5,6 +5,7 @@ export default async function (req, res, next) {
   let qStart = Date.now();
   let response = {};
   let query = {
+    ...(await Kowloon.generateQuery(req.user?.id)),
     id: req.params.id,
   };
 

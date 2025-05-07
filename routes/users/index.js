@@ -1,4 +1,5 @@
 import Kowloon from "../../Kowloon.js";
+import generateQuery from "../../methods/generateQuery.js";
 import { User } from "../../schema/index.js";
 export default async function (req, res, next) {
   let status = 200;
@@ -10,20 +11,10 @@ export default async function (req, res, next) {
   if (req.query.sort) {
     sort[req.query.sort] = -1;
   } else {
-    sort.createdAt = -1;
+    sort.updatedAt = -1;
   }
-  let query = {
-    to: {
-      $in: ["@public", req.user?.id, req.server?.id].concat(
-        req.user?.memberships,
-        req.server?.memberships
-      ),
-    },
-  };
-  if (req.user?.id && req.user.id.split("@").pop() === Kowloon.settings.domain)
-    query.to.$in.push("@server");
+  let query = await generateQuery(req.user?.id);
   if (req.query.type) query.type = req.query.type;
-  if (req.user) query.from = { $nin: req.user.blocked.concat(req.user.muted) };
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
   let items = await User.find(query)

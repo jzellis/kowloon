@@ -10,48 +10,44 @@ export default async function (req, res, next) {
   if (req.query.sort) {
     sort[req.query.sort] = -1;
   } else {
-    sort.createdAt = -1;
+    sort.updatedAt = -1;
   }
-  let query = {
-    id: req.params.id,
-  };
+  let group = await Group.findOne({ id: req.params.id });
+  if (
+    group.to === "@public" ||
+    (req.user?.id && group.members.some((m) => m.id === req.user?.id))
+  ) {
+    let query = { to: req.params.id };
+    if (req.query.type) query.type = req.query.type;
+    if (req.query.since)
+      query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
+    let items = await Post.find(query)
+      .select(
+        "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
+      )
+      .limit(pageSize ? pageSize : 0)
+      .skip(pageSize ? pageSize * (page - 1) : 0)
+      .sort({ sort: -1 });
+    let totalItems = await Post.countDocuments(query);
 
-  let group = await Group.findOne(query).select(
-    "-flaggedAt -flaggedBy -flaggedReason -approval  -deletedAt -deletedBy -_id -__v -members -admins -pending -banned"
-  );
-
-  query = { to: group.id };
-
-  let items = await Post.find(query)
-    .select(
-      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
-    )
-    .limit(pageSize ? pageSize : 0)
-    .skip(pageSize ? pageSize * (page - 1) : 0)
-    .sort({ sort: -1 })
-    .populate("actor", "-_id username id profile publicKey");
-  let totalItems = await Post.countDocuments(query);
-
-  if (group) {
     response = {
       "@context": "https://www.w3.org/ns/activitystreams",
       type: "OrderedCollection",
-      group,
+      // id: `https//${settings.domain}${id ? "/" + id : ""}`,
+      summary: `${Kowloon.settings.profile.name} | Posts`,
       totalItems,
       totalPages: Math.ceil(totalItems / (page * pageSize ? pageSize : 20)),
       currentPage: parseInt(page) || 1,
       firstItem: pageSize * (page - 1) + 1,
       lastItem: pageSize * (page - 1) + items.length,
       count: items.length,
-
       items,
     };
-    // response.activities = await Group.find(query);
+    // response.posts = await Post.find(query);
+    response.query = query;
+    response.queryTime = Date.now() - qStart;
   } else {
-    response.error = "Group not found";
+    response.error = "You are not authorized to see posts from this group";
   }
-  response.query = query;
-  response.queryTime = Date.now() - qStart;
-
   res.status(status).json(response);
 }

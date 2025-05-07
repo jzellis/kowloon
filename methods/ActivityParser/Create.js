@@ -98,15 +98,17 @@ export default async function (activity) {
       break;
 
     case "Bookmark":
-      activity.summary = `${actor.profile.name} (${actor.id}) bookmarked "${activity.object.title}"`;
-      if (bookmark.parent) {
-        let parent = await Bookmark.findOne({ id: bookmark.parent });
+      activity.summary = `${activity.actor.profile.name} (${activity.actor.id}) bookmarked "${activity.object.title}"`;
+      if (activity.object.parent) {
+        let parent = await Bookmark.findOne({ id: activity.object.parent });
         if (parent) activity += ` in ${parent.title}`;
       }
       try {
         let bookmark = await Bookmark.create(activity.object);
         activity.objectId = bookmark.id;
+        activity.object = bookmark;
       } catch (e) {
+        console.log(e);
         activity.error = e;
       }
       break;

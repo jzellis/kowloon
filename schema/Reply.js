@@ -11,6 +11,8 @@ const ReplySchema = new Schema(
     actorId: { type: String },
     actor: { type: Object, default: undefined },
     target: { type: String, required: true },
+    targetActorId: { type: String, required: true },
+
     parent: { type: String, default: null },
     href: { type: String },
     source: {

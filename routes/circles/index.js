@@ -10,15 +10,16 @@ export default async function (req, res, next) {
   if (req.query.sort) {
     sort[req.query.sort] = -1;
   } else {
-    sort.createdAt = -1;
+    sort.updatedAt = -1;
   }
   let query = await Kowloon.generateQuery(req.user?.id);
   if (req.query.type) query.type = req.query.type;
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
+  console.log("Circle query: ", query);
   let items = await Circle.find(query)
     .select(
-      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
+      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source -members"
     )
     .limit(pageSize ? pageSize : 0)
     .skip(pageSize ? pageSize * (page - 1) : 0)

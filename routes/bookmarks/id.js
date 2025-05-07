@@ -5,6 +5,7 @@ export default async function (req, res, next) {
   let qStart = Date.now();
   let response = {};
   let query = {
+    ...(await Kowloon.generateQuery(req.user?.id)),
     id: req.params.id,
   };
 
@@ -13,11 +14,11 @@ export default async function (req, res, next) {
   );
   if (bookmark) {
     response = {
-      "@context": "https://www.w3.org/ns/activitystreams",
+      "@context": "https://www.w3.org/ns/bookmarkstreams",
       type: "Bookmark",
       bookmark,
     };
-    // response.activities = await Bookmark.find(query);
+    // response.bookmarks = await Bookmark.find(query);
   } else {
     response.error = "Bookmark not found";
   }

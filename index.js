@@ -53,10 +53,10 @@ server.listen(port);
 server.on("error", onError);
 server.on("listening", onListening);
 
-schedule.scheduleJob("*/10 * * * * *", async () => {
-  await Kowloon.processOutbox();
-  await Kowloon.processInbox();
-});
+// schedule.scheduleJob("*/10 * * * * *", async () => {
+//   await Kowloon.processOutbox();
+//   await Kowloon.processInbox();
+// });
 function onError(error) {
   if (error.syscall !== "listen") {
     throw error;

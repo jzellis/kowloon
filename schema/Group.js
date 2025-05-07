@@ -30,6 +30,8 @@ const GroupSchema = new Schema(
       ],
       default: [],
     },
+    memberCount: { type: Number, default: 0 },
+
     pending: {
       type: [
         {
@@ -54,7 +56,6 @@ const GroupSchema = new Schema(
     replyCount: { type: Number, default: 0 }, // The number of replies to this post (unused but here for consistency)
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     shareCount: { type: Number, default: 0 }, // The number of shares of this post
-    private: { type: Boolean, default: false }, // If members must be approved to join
     flaggedAt: { type: Date, default: null },
     flaggedBy: { type: String, default: null },
     flaggedReason: { type: String, default: null },
@@ -95,16 +96,18 @@ GroupSchema.pre("save", async function (next) {
     if (this.admins.length === 0) {
       this.admins.push(actor.id);
     }
+
+    let blockedCircle = await Circle.create({
+      name: `${this.name} - Blocked`,
+      actorId: this.id,
+      description: `${this.name} | Blocked`,
+      to: this.id,
+      replyTo: this.id,
+      reactTo: this.id,
+    });
+    this.blocked = blockedCircle.id;
   }
-  let blockedCircle = await Circle.create({
-    name: `${this.name} - Blocked`,
-    actorId: this.actorId,
-    description: `${this.name} | Blocked`,
-    to: this.id,
-    replyTo: this.id,
-    reactTo: this.id,
-  });
-  this.blocked = blockedCircle.id;
+
   next();
 });
 

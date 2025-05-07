@@ -11,9 +11,9 @@ export default function (bookmarks) {
 
   // Populate tree structure
   bookmarks.forEach((bookmark) => {
-    if (bookmark.parent) {
+    if (bookmark.parentFolder) {
       // Attach bookmark to its parent's items array
-      const parent = map.get(bookmark.parent);
+      const parent = map.get(bookmark.parentFolder);
       if (parent) {
         parent.items.push(map.get(bookmark.id));
       }

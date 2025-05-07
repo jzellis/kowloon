@@ -30,7 +30,7 @@ const ReactSchema = new Schema(
 
 ReactSchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;
-  this.id = this.id || `like:${this._id}@${domain}`;
+  this.id = this.id || `react:${this._id}@${domain}`;
   next();
 });
 export default mongoose.model("React", ReactSchema);

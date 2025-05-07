@@ -59,6 +59,7 @@ export default async function (activity) {
       activity.object.actor = activity.object.actor || activity.actor;
       activity.object.actorId = activity.object.actorId || activity.actorId;
     }
+
     activity = await Activity.create(activity);
 
     // Now to deal with delivery if necessary.
@@ -69,7 +70,6 @@ export default async function (activity) {
       },
       { new: true, upsert: true }
     );
-
     return activity;
   } catch (e) {
     console.log(e);

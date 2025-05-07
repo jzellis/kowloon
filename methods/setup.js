@@ -39,9 +39,14 @@ export default async function () {
       blocked: [],
       likeEmojis: [
         {
-          name: "React",
+          name: "Like",
           emoji: "👍",
         },
+        {
+          name: "Laugh",
+          emoji: "😂",
+        },
+
         {
           name: "Love",
           emoji: "❤️",
@@ -148,6 +153,7 @@ export default async function () {
         target: postActivity.object.id,
         object: {
           target: postActivity.object.id,
+          targetActorId: postActivity.object.actorId,
           actorId: "@admin@kowloon.social",
           source: {
             mediaType: "text/html",
@@ -159,7 +165,10 @@ export default async function () {
         },
       });
 
-      console.log("Reply activity object id: ", replyActivity.object.id);
+      let react =
+        settings.likeEmojis[
+          Math.floor(Math.random() * settings.likeEmojis.length)
+        ];
 
       let reactActivity = await createActivity({
         type: "React",
@@ -171,9 +180,10 @@ export default async function () {
         target: postActivity.object.id,
         object: {
           target: postActivity.object.id,
+          targetActorId: postActivity.object.actorId,
           actorId: "@admin@kowloon.social",
-          emoji: "👍",
-          name: "React",
+          emoji: react.emoji,
+          name: react.name,
           to: postActivity.to,
           replyTo: postActivity.replyTo,
           reactTo: postActivity.reactTo,
@@ -212,6 +222,7 @@ export default async function () {
         target: replyActivity.object.id,
         object: {
           target: replyActivity.object.id,
+          targetActorId: replyActivity.actorId,
           actorId: "@bob@kowloon.social",
           source: {
             mediaType: "text/html",
@@ -340,6 +351,81 @@ export default async function () {
         to: "@public",
         replyTo: "@admin@kowloon.social",
         reactTo: "@admin@kowloon.social",
+      });
+
+      let createGroupPostActivity = await createActivity({
+        type: "Create",
+        actorId: "@admin@kowloon.social",
+        to: createGroupActivity.object.id,
+        replyTo: createGroupActivity.object.id,
+        reactTo: createGroupActivity.object.id,
+        objectType: "Post",
+        object: {
+          actorId: "@admin@kowloon.social",
+          type: "Note",
+          source: {
+            mediaType: "text/html",
+            content: `<p>This is the first post for my new group!</p>`,
+          },
+          to: createGroupActivity.object.id,
+          replyTo: createGroupActivity.object.id,
+          reactTo: createGroupActivity.object.id,
+        },
+      });
+
+      let createBookmarkFolderActivity = await createActivity({
+        type: "Create",
+        actorId: "@admin@kowloon.social",
+        to: "@public",
+        replyTo: "@public",
+        reactTo: "@public",
+        objectType: "Bookmark",
+        object: {
+          actorId: "@admin@kowloon.social",
+          type: "Folder",
+          title: "Search Engines",
+          to: "@public",
+          replyTo: "@public",
+          reactTo: "@public",
+        },
+      });
+
+      let createBookmarkActivity = await createActivity({
+        type: "Create",
+        actorId: "@admin@kowloon.social",
+        to: "@public",
+        replyTo: "@public",
+        reactTo: "@public",
+        objectType: "Bookmark",
+        object: {
+          actorId: "@admin@kowloon.social",
+          type: "Bookmark",
+          title: "Google",
+          parentFolder: createBookmarkFolderActivity.objectId,
+          href: "https://www.google.com",
+          to: "@public",
+          replyTo: "@public",
+          reactTo: "@public",
+        },
+      });
+
+      let createGroupBookmarkActivity = await createActivity({
+        type: "Create",
+        actorId: "@admin@kowloon.social",
+        to: createGroupActivity.object.id,
+        replyTo: createGroupActivity.object.id,
+        reactTo: createGroupActivity.object.id,
+        objectType: "Bookmark",
+        object: {
+          actorId: "@admin@kowloon.social",
+          type: "Bookmark",
+          title: "Google",
+          parentFolder: createBookmarkFolderActivity.objectId,
+          href: "https://www.google.com",
+          to: createGroupActivity.object.id,
+          replyTo: createGroupActivity.object.id,
+          reactTo: createGroupActivity.object.id,
+        },
       });
 
       console.log(

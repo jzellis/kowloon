@@ -10,7 +10,7 @@ export default async function (req, res, next) {
   if (req.query.sort) {
     sort[req.query.sort] = -1;
   } else {
-    sort.createdAt = -1;
+    sort.updatedAt = -1;
   }
   let query = await Kowloon.generateQuery(req.user?.id);
   if (req.query.type) query.type = req.query.type;

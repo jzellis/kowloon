@@ -10,7 +10,7 @@ export default async function (req, res, next) {
   if (req.query.sort) {
     sort[req.query.sort] = -1;
   } else {
-    sort.createdAt = -1;
+    sort.updatedAt = -1;
   }
   if (!req.user?.id || !req.user?.id.endsWith(Kowloon.settings.actorId)) {
     response = { error: "You are not authorized to view this inbox" };

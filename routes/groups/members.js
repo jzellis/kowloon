@@ -10,7 +10,7 @@ export default async function (req, res, next) {
   if (req.query.sort) {
     sort[req.query.sort] = -1;
   } else {
-    sort.createdAt = -1;
+    sort.updatedAt = -1;
   }
   let query = {
     id: req.params.id,
@@ -23,8 +23,8 @@ export default async function (req, res, next) {
       pageSize ? pageSize * (page - 1) : 0,
       pageSize ? pageSize : 0
     );
-  let items = group.members;
-  let totalItems = group.members.length;
+  let items = group.members || [];
+  let totalItems = items.length;
   if (group) {
     response = {
       "@context": "https://www.w3.org/ns/activitystreams",

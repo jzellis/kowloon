@@ -30,6 +30,7 @@ const CircleSchema = new Schema(
       ],
       default: [],
     },
+    memberCount: { type: Number, default: 0 },
     to: { type: String, default: "" },
     replyTo: { type: String, default: "" },
     reactTo: { type: String, default: "" },

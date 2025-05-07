@@ -14,9 +14,12 @@ import bookmarks from "./bookmarks/index.js";
 import bookmarksById from "./bookmarks/id.js";
 import circles from "./circles/index.js";
 import circleById from "./circles/id.js";
+import circleByIdMembers from "./circles/members.js";
 import groups from "./groups/index.js";
 import groupById from "./groups/id.js";
 import groupByIdPosts from "./groups/posts.js";
+import groupByIdBookmarks from "./groups/bookmarks.js";
+
 import groupByIdMembers from "./groups/members.js";
 import posts from "./posts/index.js";
 import postById from "./posts/id.js";
@@ -33,6 +36,7 @@ import userReacts from "./users/reacts.js";
 import userReplies from "./users/replies.js";
 import userInbox from "./users/inbox.js";
 import userOutbox from "./users/outbox.js";
+import userTimeline from "./users/timeline.js";
 import idGet from "./id/index.js";
 import outboxGet from "./outbox/get.js";
 import inboxGet from "./inbox/get.js";
@@ -57,11 +61,14 @@ const routes = {
     "/activities/:id": activityById,
     "/circles": circles,
     "/circles/:id": circleById,
+    "/circles/:id/members": circleByIdMembers,
+
     "/bookmarks": bookmarks,
     "/bookmarks/:id": bookmarksById,
     "/groups": groups,
     "/groups/:id": groupById,
     "/groups/:id/posts": groupByIdPosts,
+    "/groups/:id/bookmarks": groupByIdBookmarks,
     "/groups/:id/members": groupByIdMembers,
 
     "/posts": posts,
@@ -79,6 +86,7 @@ const routes = {
     "/users/:id/reacts": userReacts,
     "/users/:id/inbox": userInbox,
     "/users/:id/outbox": userOutbox,
+    "/users/:id/timeline": userTimeline,
     "/id/:id": idGet,
     "/inbox": function () {},
     "/outbox": outboxGet,
@@ -155,6 +163,7 @@ router.use(async (req, res, next) => {
   } else {
     req.user = null;
   }
+
   // if (req.headers.accept != "application/json") {
   //   express.static("./frontend/dist/")(req, res, next); //this is a
   // } else {

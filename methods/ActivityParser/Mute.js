@@ -29,7 +29,7 @@ export default async function (activity) {
       }
     );
   } else {
-    activity.error = "User not found";
+    activity.error = new Error("User not found");
   }
   return activity;
 }

@@ -9,10 +9,10 @@ export default async function (activity) {
   if (
     user &&
     target &&
-    target.pending.some((member) => member.id === activity.actorId) &&
-    !target.members.some((member) => member.id === activity.actorId)
+    target.invited.some((member) => member.id === activity.actorId) &&
+    !target.attending.some((member) => member.id === activity.actorId)
   ) {
-    target.members.push({
+    target.attending.push({
       id: activity.actorId,
       serverId: `@${parseId(activity.actorId).server}`,
       name: user.profile.name,
@@ -26,12 +26,15 @@ export default async function (activity) {
       url: `https://${parseId(activity.actorId).server}/users/${
         activity.target
       }`,
+      status: activity.object,
     });
-    target.pending = target.pending.filter(
+    target.invited = target.invited.filter(
       (member) => member.id !== activity.actorId
     );
     await target.save();
-    activity.summary = `@${user.profile.name} joined ${target.name}`;
+    activity.summary = `@${
+      user.profile.name
+    } is ${activity.object.toLowerCase()} ${target.name}`;
   }
   return activity;
 }

@@ -1,7 +1,14 @@
 import Kowloon from "../Kowloon.js";
+import buildPageTree from "../methods/buildPageTree.js";
+import Page from "../schema/Page.js";
 export default async function (req, res, next) {
   let status = 200;
   let qStart = Date.now();
+
+  let query = await Kowloon.generateQuery(req.user?.id);
+  let pages = await Page.find(query).lean();
+
+  pages = buildPageTree(pages);
   let response = {
     status,
     ok: "ok",
@@ -18,6 +25,7 @@ export default async function (req, res, next) {
       outbox: `https://${Kowloon.settings.domain}/outbox`,
       publicKey: Kowloon.settings.publicKey,
     },
+    pages,
     queryTime: Date.now() - qStart,
   };
 

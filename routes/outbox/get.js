@@ -13,7 +13,7 @@ export default async function (req, res, next) {
   if (req.user?.id && req.user.id.endsWith(Kowloon.settings.actorId))
     query.to = { $in: ["@public", Kowloon.settings.actorId] };
   if (req.user) query.from = { $nin: req.user.blocked.concat(req.user.muted) };
-  if (req.query.type) query.type = req.query.type;
+  if (req.query.type) query.type = req.query.type.split(",");
 
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };

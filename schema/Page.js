@@ -2,76 +2,97 @@ import mongoose from "mongoose";
 import { marked } from "marked";
 import crypto from "crypto";
 import { Feed, Settings, User } from "./index.js";
+import { type } from "os";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
-const PostSchema = new Schema(
+const slugify = function (str) {
+  str = str.replace(/^\s+|\s+$/g, ""); // trim
+  str = str.toLowerCase();
+
+  // remove accents, swap ñ for n, etc
+  var from = "àáäâèéëêìíïîòóöôùúüûñç·/_,:;";
+  var to = "aaaaeeeeiiiioooouuuunc------";
+  for (var i = 0, l = from.length; i < l; i++) {
+    str = str.replace(new RegExp(from.charAt(i), "g"), to.charAt(i));
+  }
+
+  str = str
+    .replace(/[^a-z0-9 -]/g, "") // remove invalid chars
+    .replace(/\s+/g, "-") // collapse whitespace and replace by -
+    .replace(/-+/g, "-"); // collapse dashes
+
+  return str;
+};
+
+const PageSchema = new Schema(
   {
     id: { type: String, key: true },
-    objectType: { type: String, default: "Post" },
-    type: { type: String, default: "Note" }, // The type of post this is
-    url: { type: String }, // The URL of the post
-    href: { type: String, default: undefined }, // If the post is a link, this is what it links to
-    actorId: { type: String }, // The ID of the post's author
+    objectType: { type: String, default: "Page" },
+    type: { type: String, default: "Page", enum: ["Page", "Folder"] }, // The type of page this is
+    parentFolder: { type: String, default: null },
+    url: { type: String }, // The URL of the page
+    href: { type: String, default: undefined }, // If the page is a link, this is what it links to
+    actorId: { type: String }, // The ID of the page's author
     actor: { type: Object, default: undefined },
-    group: { type: Object, default: undefined },
-    title: { type: String, default: undefined }, // An optional title for post types other than Notes
-    summary: { type: String, default: undefined }, // An optional summary for post types other than Notes
+    title: { type: String, required: true }, // An optional title for page types other than Notes
+    slug: { type: String, default: undefined },
+    summary: { type: String, default: undefined }, // An optional summary for page types other than Notes
     source: {
-      content: { type: String, default: "" }, // The raw content of the post -- plain text, HTML or Markdown
+      content: { type: String, default: "" }, // The raw content of the page -- plain text, HTML or Markdown
       mediaType: { type: String, default: "text/html" },
       contentEncoding: { type: String, default: "utf-8" },
     },
     body: { type: String, default: "" },
     wordCount: { type: Number, default: 0 },
     charCount: { type: Number, default: 0 },
-    replyCount: { type: Number, default: 0 }, // The number of replies to this post
-    reactCount: { type: Number, default: 0 }, // The number of likes to this post
-    shareCount: { type: Number, default: 0 }, // The number of shares of this post
-    image: { type: String, default: undefined }, // The post's featured/preview image
-    attachments: { type: [Object], default: [] }, // Any post attachments. Each attachment is an object with a filetype, size, url where it's stored and optional title and description
+    replyCount: { type: Number, default: 0 }, // The number of replies to this page
+    reactCount: { type: Number, default: 0 }, // The number of likes to this page
+    shareCount: { type: Number, default: 0 }, // The number of shares of this page
+    image: { type: String, default: undefined }, // The page's featured/preview image
+    attachments: { type: [Object], default: [] }, // Any page attachments. Each attachment is an object with a filetype, size, url where it's stored and optional title and description
     tags: { type: [String], default: [] },
-    location: { type: Object, default: undefined }, // A geotag for the post in the ActivityStreams geolocation format
-    target: { type: String, default: undefined }, // For Links
     to: { type: String, default: "" },
     replyTo: { type: String, default: "" },
     reactTo: { type: String, default: "" },
     flaggedAt: { type: Date, default: null },
     flaggedBy: { type: String, default: null },
     flaggedReason: { type: String, default: null },
-    deletedAt: { type: Date, default: null }, // If this post was deleted, this is when it was deleted. If it's not set the post is not deleted
+    deletedAt: { type: Date, default: null }, // If this page was deleted, this is when it was deleted. If it's not set the page is not deleted
     deletedBy: { type: String, default: null }, // I`f the activity is deleted, who deleted it (usually the user unless an admin does it)
     signature: Buffer, // The creator's public signature for verification
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 
-PostSchema.index({
+PageSchema.index({
   title: "text",
   source: "text",
   "source.content": "text",
   "location.name": "text",
 });
 
-PostSchema.virtual("reacts", {
+PageSchema.virtual("reacts", {
   ref: "React",
   localField: "id",
   foreignField: "target",
 });
 
-PostSchema.virtual("replies", {
+PageSchema.virtual("replies", {
   ref: "Reply",
   localField: "id",
   foreignField: "target",
 });
 
-PostSchema.pre("save", async function (next) {
+PageSchema.pre("save", async function (next) {
   try {
     const domain = (await Settings.findOne({ name: "domain" })).value;
     this.title = this.title && this.title.trim();
-    this.id = this.id || `post:${this._id}@${domain}`;
-    this.url = this.url || `https://${domain}/posts/${this.id}`;
+    this.id = this.id || `page:${this._id}@${domain}`;
+    this.url = this.url || `https://${domain}/pages/${this.slug}`;
     this.source.mediaType = this.source.mediaType || "text/html";
+
+    this.slug = this.slug || slugify(this.title);
 
     switch (this.source.mediaType) {
       case "text/markdown":
@@ -105,7 +126,7 @@ PostSchema.pre("save", async function (next) {
       }</p>`;
 
     let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
-    // Sign this post using the user's private key if it's not signed
+    // Sign this page using the user's private key if it's not signed
     if (actor) {
       let stringject = Buffer.from(`${this.id} | ${this.createdAt}`);
       const sign = crypto.createSign("RSA-SHA256");
@@ -118,7 +139,10 @@ PostSchema.pre("save", async function (next) {
   }
 });
 
-PostSchema.pre("updateOne", async function (next) {
+PageSchema.pre("updateOne", async function (next) {
+  this.slug = this.slug || slugify(this.title);
+  this.url = this.url || `https://${domain}/pages/${this.slug}`;
+
   this.source.mediaType = this.source.mediaType || "text/html";
   switch (this.source.mediaType) {
     case "text/markdown":
@@ -148,7 +172,7 @@ PostSchema.pre("updateOne", async function (next) {
   next();
 });
 
-PostSchema.methods.verifySignature = async function () {
+PageSchema.methods.verifySignature = async function () {
   let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
   let stringject = Buffer.from(JSON.stringify(this.id));
   return crypto.verify(
@@ -159,5 +183,4 @@ PostSchema.methods.verifySignature = async function () {
   );
 };
 
-const Post = mongoose.model("Post", PostSchema);
-export { Post, PostSchema };
+export default mongoose.model("Page", PageSchema);

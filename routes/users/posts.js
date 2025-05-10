@@ -16,7 +16,7 @@ export default async function (req, res, next) {
     ...(await Kowloon.generateQuery(req.user?.id)),
     actorId: req.params.id,
   };
-  if (req.query.type) query.type = req.query.type;
+  if (req.query.type) query.type = req.query.type.split(",");
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
   let items = await Post.find(query)

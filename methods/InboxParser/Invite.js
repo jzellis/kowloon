@@ -1,17 +1,18 @@
-import { Group, User } from "../../schema/index.js";
+import { User } from "../../schema/index.js";
+import getObjectById from "../getObjectById.js";
 import parseId from "../parseId.js";
 export default async function (activity) {
   let user = await User.findOne({ id: activity.actorId });
-  let group = await Group.findOne({ id: activity.target });
+  let target = await getObjectById(activity.target);
   let invitedUser = await User.findOne({ id: activity.object });
 
   if (
     user &&
-    group &&
-    !group.members.some((member) => member.id === activity.object) &&
-    !group.pending.some((member) => member.id === activity.object)
+    target &&
+    !target.members.some((member) => member.id === activity.object) &&
+    !target.pending.some((member) => member.id === activity.object)
   ) {
-    group.pending.push({
+    target.pending.push({
       id: activity.object,
       serverId: `@${parseId(activity.object).server}`,
       name: invitedUser.profile.name,
@@ -27,8 +28,8 @@ export default async function (activity) {
       }`,
     });
 
-    await group.save();
-    activity.summary = `@${user.profile.name} invited ${invitedUser.profile.name} to join ${group.name}`;
+    await target.save();
+    activity.summary = `@${user.profile.name} invited ${invitedUser.profile.name} to join ${target.name}`;
   }
   return activity;
 }

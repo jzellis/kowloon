@@ -6,6 +6,7 @@ import {
   Post,
   Bookmark,
   Circle,
+  Event,
   Group,
   React,
   Reply,
@@ -40,6 +41,13 @@ export default async function (id, userId = null) {
         "-_id -__v -flaggedAt -flaggedBy -flaggedReason -deletedAt -deletedBy",
       remoteUrl: "/circles",
     },
+    Event: {
+      db: Event,
+      select:
+        "-_id -__v -flaggedAt -flaggedBy -flaggedReason -deletedAt -deletedBy",
+      remoteUrl: "/events",
+    },
+
     Group: {
       db: Group,
       select:

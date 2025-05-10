@@ -18,7 +18,7 @@ export default async function (req, res, next) {
     (req.user?.id && group.members.some((m) => m.id === req.user?.id))
   ) {
     let query = { to: req.params.id };
-    if (req.query.type) query.type = req.query.type;
+    if (req.query.type) query.type = req.query.type.split(",");
     if (req.query.since)
       query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
     let items = await Post.find(query)

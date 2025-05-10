@@ -1,5 +1,5 @@
 import Kowloon from "../../Kowloon.js";
-import { Bookmark } from "../../schema/index.js";
+import { Event } from "../../schema/index.js";
 export default async function (req, res, next) {
   let status = 200;
   let qStart = Date.now();
@@ -12,27 +12,24 @@ export default async function (req, res, next) {
   } else {
     sort.updatedAt = -1;
   }
-  let query = {
-    ...(await Kowloon.generateQuery(req.user?.id)),
-    actorId: req.params.id,
-  };
+  let query = await Kowloon.generateQuery(req.user?.id);
   if (req.query.type) query.type = req.query.type.split(",");
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
-  let items = await Bookmark.find(query)
+  let items = await Event.find(query)
     .select(
       "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
     )
     .limit(pageSize ? pageSize : 0)
     .skip(pageSize ? pageSize * (page - 1) : 0)
     .sort({ sort: -1 });
-  let totalItems = await Bookmark.countDocuments(query);
+  let totalItems = await Event.countDocuments(query);
 
   response = {
-    "@context": "https://www.w3.org/ns/activitystreams",
+    "@context": "https://www.w3.org/ns/eventstreams",
     type: "OrderedCollection",
     // id: `https//${settings.domain}${id ? "/" + id : ""}`,
-    summary: `${Kowloon.settings.profile.name} | Bookmarks`,
+    summary: `${Kowloon.settings.profile.name} | Events`,
     totalItems,
     totalPages: Math.ceil(totalItems / (page * pageSize ? pageSize : 20)),
     currentPage: parseInt(page) || 1,
@@ -41,7 +38,7 @@ export default async function (req, res, next) {
     count: items.length,
     items,
   };
-  // response.files = await Bookmark.find(query);
+  // response.files = await Event.find(query);
   response.query = query;
   response.queryTime = Date.now() - qStart;
 

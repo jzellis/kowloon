@@ -60,16 +60,18 @@ export default async function (activity) {
       activity.object.actorId = activity.object.actorId || activity.actorId;
     }
 
-    activity = await Activity.create(activity);
+    if (!activity.error) {
+      activity = await Activity.create(activity);
 
-    // Now to deal with delivery if necessary.
-    await Outbox.findOneAndUpdate(
-      { "activity.id": activity.id },
-      {
-        activity: activity,
-      },
-      { new: true, upsert: true }
-    );
+      // Now to deal with delivery if necessary.
+      await Outbox.findOneAndUpdate(
+        { "activity.id": activity.id },
+        {
+          activity: activity,
+        },
+        { new: true, upsert: true }
+      );
+    }
     return activity;
   } catch (e) {
     console.log(e);

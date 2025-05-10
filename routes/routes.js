@@ -15,12 +15,16 @@ import bookmarksById from "./bookmarks/id.js";
 import circles from "./circles/index.js";
 import circleById from "./circles/id.js";
 import circleByIdMembers from "./circles/members.js";
+import events from "./events/index.js";
+import eventsById from "./events/id.js";
 import groups from "./groups/index.js";
 import groupById from "./groups/id.js";
 import groupByIdPosts from "./groups/posts.js";
 import groupByIdBookmarks from "./groups/bookmarks.js";
 
 import groupByIdMembers from "./groups/members.js";
+import pageById from "./pages/id.js";
+import pages from "./pages/index.js";
 import posts from "./posts/index.js";
 import postById from "./posts/id.js";
 import postReactsById from "./posts/reacts.js";
@@ -62,15 +66,17 @@ const routes = {
     "/circles": circles,
     "/circles/:id": circleById,
     "/circles/:id/members": circleByIdMembers,
-
     "/bookmarks": bookmarks,
     "/bookmarks/:id": bookmarksById,
+    "/events": events,
+    "/events/:id": eventsById,
     "/groups": groups,
     "/groups/:id": groupById,
     "/groups/:id/posts": groupByIdPosts,
     "/groups/:id/bookmarks": groupByIdBookmarks,
     "/groups/:id/members": groupByIdMembers,
-
+    "/pages": pages,
+    "/pages/:id": pageById,
     "/posts": posts,
     "/posts/:id": postById,
     "/posts/:id/replies": postRepliesById,

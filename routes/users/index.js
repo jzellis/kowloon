@@ -14,7 +14,7 @@ export default async function (req, res, next) {
     sort.updatedAt = -1;
   }
   let query = await generateQuery(req.user?.id);
-  if (req.query.type) query.type = req.query.type;
+  if (req.query.type) query.type = req.query.type.split(",");
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
   let items = await User.find(query)

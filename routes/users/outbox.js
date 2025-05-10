@@ -23,7 +23,7 @@ export default async function (req, res, next) {
   };
   if (req.user?.id && req.user.id.split("@").pop() === Kowloon.settings.domain)
     query.to.$in.push("@server");
-  if (req.query.type) query.type = req.query.type;
+  if (req.query.type) query.type = req.query.type.split(",");
 
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };

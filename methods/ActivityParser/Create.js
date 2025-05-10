@@ -1,13 +1,13 @@
 import {
   Post,
+  Page,
   Bookmark,
   Circle,
+  Event,
   Group,
   File,
   Feed,
   User,
-  Reply,
-  Settings,
 } from "../../schema/index.js";
 import indefinite from "indefinite";
 export default async function (activity) {
@@ -63,7 +63,7 @@ export default async function (activity) {
             : undefined,
         });
       } catch (e) {
-        activity.error = e;
+        activity.error = new Error(e);
       }
       break;
 
@@ -78,7 +78,7 @@ export default async function (activity) {
         activity.object = circle;
       } catch (e) {
         console.log(e);
-        activity.error = e;
+        activity.error = new Error(e);
       }
       break;
 
@@ -93,7 +93,7 @@ export default async function (activity) {
         activity.object = group;
       } catch (e) {
         console.log(e);
-        activity.error = e;
+        activity.error = new Error(e);
       }
       break;
 
@@ -109,7 +109,30 @@ export default async function (activity) {
         activity.object = bookmark;
       } catch (e) {
         console.log(e);
-        activity.error = e;
+        activity.error = new Error(e);
+      }
+      break;
+
+    case "Event":
+      try {
+        let event = await Event.create(activity.object);
+        activity.objectId = event.id;
+      } catch (e) {
+        activity.error = new Error(e);
+      }
+      break;
+
+    case "Page":
+      try {
+        let user = await User.findOne({ id: activity.actorId }).lean();
+        if (user.isAdmin) {
+          let page = await Page.create(activity.object);
+          activity.objectId = page.id;
+        } else {
+          activity.error = new Error("Only admins can create pages");
+        }
+      } catch (e) {
+        activity.error = new Error(e);
       }
       break;
 
@@ -118,7 +141,7 @@ export default async function (activity) {
         let file = await File.create(activity.object);
         activity.objectId = file.id;
       } catch (e) {
-        activity.error = e;
+        activity.error = new Error(e);
       }
       break;
 
@@ -135,7 +158,7 @@ export default async function (activity) {
         activity.object.password = undefined;
         activity.summary = `${actor.profile.name} (${actor.id}) joined the server`;
       } catch (e) {
-        activity.error = e;
+        activity.error = new Error(e);
       }
       break;
   }

@@ -45,7 +45,8 @@ export default async function (req, res, next) {
       )
       .limit(pageSize ? pageSize : 0)
       .skip(pageSize ? pageSize * (page - 1) : 0)
-      .sort({ sort: -1 });
+      .sort({ sort: -1 })
+      .lean();
 
     let posts = await Post.find(query)
       .select(
@@ -53,7 +54,8 @@ export default async function (req, res, next) {
       )
       .limit(pageSize ? pageSize : 0)
       .skip(pageSize ? pageSize * (page - 1) : 0)
-      .sort({ sort: -1 });
+      .sort({ sort: -1 })
+      .lean();
 
     let replyQuery = {
       targetActorId: user.id,
@@ -69,14 +71,19 @@ export default async function (req, res, next) {
       )
       .limit(pageSize ? pageSize : 0)
       .skip(pageSize ? pageSize * (page - 1) : 0)
-      .sort({ sort: -1 });
+      .sort({ sort: -1 })
+      .lean();
 
     let totalItems = bookmarks.length + posts.length + replies.length;
-    let items = [...bookmarks, ...posts, ...replies].sort((a, b) =>
-      req.query.sort
-        ? b[req.query.sort] - a[req.query.sort]
-        : b.updatedAt - a.updatedAt
-    );
+    let items = [...bookmarks, ...posts, ...replies]
+      .sort((a, b) =>
+        req.query.sort
+          ? b[req.query.sort] - a[req.query.sort]
+          : b.updatedAt - a.updatedAt
+      )
+      .map((i) => {
+        return { ...i, to: undefined };
+      });
 
     response = {
       "@context": "https://www.w3.org/ns/bookmarkstreams",

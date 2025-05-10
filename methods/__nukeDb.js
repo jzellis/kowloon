@@ -14,6 +14,8 @@ import {
   User,
   Feed,
   Settings,
+  Page,
+  Event,
 } from "../schema/index.js";
 import setup from "./setup.js";
 
@@ -26,6 +28,8 @@ export default async function () {
   await Group.deleteMany({});
   await React.deleteMany({});
   await Reply.deleteMany({});
+  await Page.deleteMany({});
+  await Event.deleteMany({});
   await Post.deleteMany({});
   await User.deleteMany({});
   await File.deleteMany({});

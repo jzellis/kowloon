@@ -12,15 +12,17 @@ export default async function (req, res, next) {
   } else {
     sort.updatedAt = -1;
   }
-  let query = await Kowloon.generateQuery(req.user?.id);
+  let query = req.user?.id
+    ? { to: { $in: ["@public", Kowloon.settings.actorId] } }
+    : { to: "@public" };
+  query.actorId = Kowloon.settings.actorId;
+  query.members = { $ne: [] };
   if (req.query.type) query.type = req.query.type.split(",");
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
   console.log("Circle query: ", query);
   let items = await Circle.find(query)
-    .select(
-      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source -members"
-    )
+    .select("-deletedAt -deletedBy -_id -__v -source -members")
     .limit(pageSize ? pageSize : 0)
     .skip(pageSize ? pageSize * (page - 1) : 0)
     .sort({ sort: -1 });

@@ -86,13 +86,13 @@ PageSchema.virtual("replies", {
 
 PageSchema.pre("save", async function (next) {
   try {
+    this.slug = this.slug || slugify(this.title);
+
     const domain = (await Settings.findOne({ name: "domain" })).value;
     this.title = this.title && this.title.trim();
     this.id = this.id || `page:${this._id}@${domain}`;
     this.url = this.url || `https://${domain}/pages/${this.slug}`;
     this.source.mediaType = this.source.mediaType || "text/html";
-
-    this.slug = this.slug || slugify(this.title);
 
     switch (this.source.mediaType) {
       case "text/markdown":
@@ -115,15 +115,15 @@ PageSchema.pre("save", async function (next) {
         .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
         .split(" ").length;
     this.charCount = this.charCount || this.body.replace(/<[^>]*>/g, "").length;
-    this.summary =
-      this.summary ||
-      `<p>${this.body
-        .match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g)
-        .slice(0, 3)
-        .join("</p>")
-        .trim()}${
-        this.body.match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g).length > 3 ? " ..." : ""
-      }</p>`;
+    // this.summary =
+    //   this.summary ||
+    //   `<p>${this.body
+    //     .match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g)
+    //     .slice(0, 3)
+    //     .join("</p>")
+    //     .trim()}${
+    //     this.body.match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g).length > 3 ? " ..." : ""
+    //   }</p>`;
 
     let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
     // Sign this page using the user's private key if it's not signed

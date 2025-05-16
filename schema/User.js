@@ -9,6 +9,7 @@ const UserSchema = new Schema(
   {
     id: { type: String, key: true },
     objectType: { type: String, default: "User" },
+    type: { type: String, default: "Person" },
     username: { type: String, default: undefined, unique: true },
     password: { type: String, default: undefined },
     email: { type: String, default: undefined },
@@ -16,6 +17,7 @@ const UserSchema = new Schema(
       type: Object,
       default: {
         name: { type: String, default: undefined },
+        subtitle: { type: String, default: undefined },
         description: { type: String, default: undefined },
         urls: { type: [Object], default: [] },
         pronouns: { type: Object, default: undefined },
@@ -27,10 +29,14 @@ const UserSchema = new Schema(
       type: Object,
       default: {
         defaultPostType: "Note",
-        defaultPostAudience: "@public",
-        defaultPostReplyAudience: "",
-        defaultPostView: "Note,Article,Media,Link",
+        defaultTo: "@public",
+        defaultReplyTo: "@public",
+        defaultReactTo: "@public",
+        defaultPostView: ["Note", "Article", "Media", "Link"],
         defaultCircleView: "",
+        defaultEditorType: "html", // html or markdown
+        lang: "en",
+        theme: "light",
       },
     },
     inbox: { type: String },
@@ -100,7 +106,7 @@ UserSchema.pre("save", async function (next) {
     this.privateKey = privateKey;
 
     let followingCircle = await Circle.create({
-      name: `@${this.username} | Following`,
+      name: `${this.id} | Following`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Following`,
       to: this.id,
@@ -109,7 +115,7 @@ UserSchema.pre("save", async function (next) {
     });
     this.following = followingCircle.id;
     let blockedCircle = await Circle.create({
-      name: `@${this.username} | Blocked`,
+      name: `${this.id} | Blocked`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Blocked`,
       to: this.id,
@@ -118,7 +124,7 @@ UserSchema.pre("save", async function (next) {
     });
     this.blocked = blockedCircle.id;
     let mutedCircle = await Circle.create({
-      name: `@${this.username} | Muted`,
+      name: `${this.id} | Muted`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Muted`,
       to: this.id,

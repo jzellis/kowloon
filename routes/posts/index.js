@@ -12,7 +12,9 @@ export default async function (req, res, next) {
   } else {
     sort.updatedAt = -1;
   }
-  let query = await Kowloon.generateQuery(req.user?.id);
+  // let query = await Kowloon.generateQuery(req.user?.id);
+  let query = { to: "@public" };
+
   if (req.query.type) query.type = req.query.type.split(",");
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };

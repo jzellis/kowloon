@@ -1,5 +1,6 @@
 import Kowloon from "../Kowloon.js";
 import { User } from "../schema/index.js";
+// import faker from "@faker-js/faker";
 
 let postActivity = await Kowloon.createActivity({
   type: "Create",

@@ -88,6 +88,6 @@ try {
 }
 
 await Kowloon.init();
-await Kowloon.__nukeDb();
+// await Kowloon.__nukeDb();
 
 export default Kowloon;

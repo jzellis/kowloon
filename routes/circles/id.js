@@ -10,7 +10,7 @@ export default async function (req, res, next) {
   };
 
   let circle = await Circle.findOne(query).select(
-    "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source -members"
+    "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
   );
   if (circle) {
     response = {

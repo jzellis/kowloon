@@ -1,0 +1,20 @@
+@import "tailwindcss";
+
+#header {
+  /* @apply pl-8; */
+  background: #309898;
+  background: linear-gradient(
+    90deg,
+    rgba(48, 152, 152, 0.25) 0%,
+    rgba(48, 152, 152, 0.25) 0.25%,
+    rgba(255, 159, 0, 0.25) 0.25%,
+    rgba(255, 159, 0, 0.25) 1%,
+    rgba(244, 99, 30, 0.25) 1%,
+    rgba(244, 99, 30, 0.25) 1.5%,
+    rgba(203, 4, 4, 0.25) 1.5%,
+    rgba(203, 4, 4, 0.25) 2%,
+    rgba(255, 240, 224, 0.25) 2%,
+    rgba(255, 240, 224, 0.25) 100%
+  );
+  background-repeat: no-repeat;
+}

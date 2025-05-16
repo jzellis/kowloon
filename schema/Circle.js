@@ -17,7 +17,7 @@ const CircleSchema = new Schema(
       type: [
         {
           id: { type: String, required: true },
-          serverId: { type: String },
+          serverId: { type: String, default: undefined },
           type: { type: String, default: "kowloon" },
           name: { type: String, default: undefined },
           inbox: { type: String, default: undefined },
@@ -56,7 +56,7 @@ CircleSchema.pre("save", async function (next) {
     this.title = this.title && this.title.trim();
     this.id = this.id || `circle:${this._id}@${domain}`;
     this.url = this.url || `//${domain}/circles/${this.id}`;
-
+    this.memberCount = this.members.length;
     this.icon = this.icon || `https://${domain}/images/circle.png`;
   }
   next();

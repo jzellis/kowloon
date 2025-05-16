@@ -1,0 +1,11 @@
+@import "tailwindcss";
+body {
+  background-color: #fffdf6;
+}
+#sidebar {
+  background-color: #faf6e9;
+
+  .description {
+    background-color: #ddeb9d;
+  }
+}

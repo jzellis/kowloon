@@ -94,15 +94,15 @@ PostSchema.pre("save", async function (next) {
         .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
         .split(" ").length;
     this.charCount = this.charCount || this.body.replace(/<[^>]*>/g, "").length;
-    this.summary =
-      this.summary ||
-      `<p>${this.body
-        .match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g)
-        .slice(0, 3)
-        .join("</p>")
-        .trim()}${
-        this.body.match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g).length > 3 ? " ..." : ""
-      }</p>`;
+    // this.summary =
+    //   this.summary ||
+    //   `<p>${this.body
+    //     .match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g)
+    //     .slice(0, 3)
+    //     .join("</p>")
+    //     .trim()}${
+    //     this.body.match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g).length > 3 ? " ..." : ""
+    //   }</p>`;
 
     let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
     // Sign this post using the user's private key if it's not signed

@@ -1,0 +1,25 @@
+@import "tailwindcss";
+.tiptap {
+  p {
+    @apply mb-[1.25em];
+  }
+  blockquote {
+    @apply border-l-2 border-gray-400 pl-4 mb-[1.25em];
+  }
+
+  h1 {
+    @apply text-3xl;
+  }
+
+  h2 {
+    @apply text-2xl;
+  }
+
+  h3 {
+    @apply text-xl;
+  }
+
+  a {
+    @apply decoration-dotted underline;
+  }
+}

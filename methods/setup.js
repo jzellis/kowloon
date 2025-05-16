@@ -15,7 +15,9 @@ export default async function () {
       actorId: `@${process.env.KOWLOON_DOMAIN}`,
       profile: {
         name: "My Kowloon Server",
-        description: "My brand new Kowloon server",
+        subtitle: "My brand new Kowloon server",
+        description:
+          "<p>This is a new Kowloon server that I've set up. It's going to be a great place for me and my community to share ideas with each other and the world!</p>",
         location: {
           name: "Kowloon Walled City, Hong Kong",
           type: "Place",
@@ -112,11 +114,17 @@ export default async function () {
         password: process.env.KOWLOON_ADMIN_PASSWORD,
         email: process.env.KOWLOON_ADMIN_EMAIL,
         profile: {
-          name: "Admin User",
+          name: "Admin",
+          subtitle: "The human, the myth, the legend",
           description: "I am the admin of this server.",
           urls: [`https://${settings.domain}`],
           icon: "https://avatar.iran.liara.run/public",
-          // location,
+          location: {
+            name: "Kowloon Walled City, Hong Kong",
+            type: "Place",
+            latitude: "22.332222",
+            longitude: "114.190278",
+          },
         },
         to: "@public",
         isAdmin: true,

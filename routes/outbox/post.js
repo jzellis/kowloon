@@ -5,8 +5,12 @@ export default async function (req, res, next) {
   let response = {};
 
   if (req.user && req.body.activity) {
-    req.body.activity.actorId = req.user.id;
-    response.activity = await Kowloon.createActivity(req.body.activity);
+    try {
+      console.log("Creating activity...");
+      response.activity = await Kowloon.createActivity(req.body.activity);
+    } catch (e) {
+      console.log(e);
+    }
   } else {
     response.error = !req.user
       ? "No user specified"

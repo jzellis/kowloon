@@ -43,6 +43,7 @@ import userOutbox from "./users/outbox.js";
 import userTimeline from "./users/timeline.js";
 import idGet from "./id/index.js";
 import outboxGet from "./outbox/get.js";
+import outboxPost from "./outbox/post.js";
 import inboxGet from "./inbox/get.js";
 import test from "./test.js";
 // Post Routes
@@ -106,7 +107,7 @@ const routes = {
     "/login": login,
     "/logout": function () {},
     "/inbox": inboxPost,
-    "/outbox": function () {},
+    "/outbox": outboxPost,
     "/files": filePost,
   },
 };

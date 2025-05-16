@@ -35,9 +35,16 @@ const validateActivity = function (activity) {
 };
 
 export default async function (activity) {
+  console.log("Creating activity....");
   let settings = await getSettings();
   try {
     activity = validateActivity(activity);
+    if (!ActivityParser[activity.type])
+      return new Error(
+        `Invalid activity type "${
+          activity.type
+        }". Valid activity types are: ${Object.keys(ActivityParser).join(", ")}`
+      );
     let parsedId = parseId(activity.actorId);
     switch (parsedId.type) {
       case "User":
@@ -61,7 +68,9 @@ export default async function (activity) {
     }
 
     if (!activity.error) {
+      console.log("Error: ", activity.error);
       activity = await Activity.create(activity);
+      console.log(activity);
 
       // Now to deal with delivery if necessary.
       await Outbox.findOneAndUpdate(

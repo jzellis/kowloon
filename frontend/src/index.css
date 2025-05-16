@@ -1,0 +1,134 @@
+@import "tailwindcss";
+@plugin "daisyui";
+
+body,
+html {
+  @apply max-h-screen overflow-hidden;
+}
+@theme {
+  --color-article-900: #309898;
+  --color-article-800: #309898;
+  --color-article-700: #59adad;
+  --color-article-600: #6eb7b7;
+  --color-article-500: #83c1c1;
+  --color-article-400: #98cccc;
+  --color-article-300: #add8d8;
+  --color-article-200: #c3e0e0;
+  --color-article-100: #d9e8e8;
+  --color-article-50: #f0f8f8;
+  --color-article: #309898;
+
+  --color-note-900: #ff9f00;
+  --color-note-800: #ffa91a;
+  --color-note-700: #ffb233;
+  --color-note-600: #ffbc4c;
+  --color-note-500: #ffc566;
+  --color-note-400: #ffcf80;
+  --color-note-300: #ffd999;
+  --color-note-200: #ffe2b2;
+  --color-note-100: #ffeccc;
+  --color-note-50: #fff;
+  --color-note: #ff9f00;
+
+  --color-link-900: #f4631e;
+  --color-link-800: #f57334;
+  --color-link-700: #f6824b;
+  --color-link-600: #f79262;
+  --color-link-500: #f8a178;
+  --color-link-400: #fab18e;
+  --color-link-300: #fbc1a5;
+  --color-link-200: #fcd0bc;
+  --color-link-100: #fde0d2;
+  --color-link-50: #fff;
+  --color-link: #f4631e;
+
+  --color-media-900: #cb0404;
+  --color-media-800: #d01d1d;
+  --color-media-700: #d53636;
+  --color-media-600: #db4f4f;
+  --color-media-500: #e06868;
+  --color-media-400: #e58282;
+  --color-media-300: #ea9b9b;
+  --color-media-200: #efb4b4;
+  --color-media-100: #f5cdcd;
+  --color-media-50: #fae6e6;
+  --color-media: #cb0404;
+  /* --color-raisin-black: #2e2320;
+  --color-ash-gray: #aec8c1;
+  --color-beaver: #a99181;
+  --color-redwood: #a75644;
+  --color-battleship-gray: #6c8583; */
+}
+
+.post.Article {
+  color: #194f4f;
+  background: #fff;
+  background: linear-gradient(
+    270deg,
+    #fff 0%,
+    #fff 98%,
+    #d9e8e8 98%,
+    #d9e8e8 100%
+  );
+}
+
+.post.Note {
+  color: #633d00;
+  background: #fff;
+  background: linear-gradient(
+    270deg,
+    #fff 0%,
+    #fff 98%,
+    #ffeccc 98%,
+    #ffeccc 100%
+  );
+}
+
+.post.Link {
+  color: #7c3210;
+  background: #fff;
+  background: linear-gradient(
+    270deg,
+    #fff 0%,
+    #fff 98%,
+    #fde0d2 98%,
+    #fde0d2 100%
+  );
+}
+
+.post.Media {
+  color: #700000;
+  background: #fff;
+  background: linear-gradient(
+    270deg,
+    #fff 0%,
+    #fff 98%,
+    #f5cdcd 98%,
+    #f5cdcd 100%
+  );
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: "Roboto Condensed", sans-serif;
+}
+
+.page-tree ul li {
+  @apply text-sm;
+}
+
+.post h4.title * {
+  @apply text-2xl;
+  font-family: "Roboto Condensed", sans-serif;
+}
+.post .body,
+.page .body {
+  @apply leading-[1.25rem];
+  font-weight: 400;
+}
+.post .body p,
+.page .body p {
+  @apply mb-[1.25rem];
+}

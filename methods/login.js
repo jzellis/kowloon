@@ -5,7 +5,7 @@ import createUserSignature from "./createUserSignature.js";
 export default async function (username, password = "") {
   let user = await User.findOne({
     $or: [{ username: username }, { id: username }],
-  }).select("id username password profile prefs keys");
+  }).select("id username password profile prefs keys blocked muted");
 
   if (!user) return { error: "User not found" };
   if (!(await user.verifyPassword(password)))

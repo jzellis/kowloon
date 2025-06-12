@@ -4,6 +4,12 @@ export const uiSlice = createSlice({
   name: "ui",
   initialState: {
     showPostEditor: false,
+    showImageModal: false,
+    currentMedia: {
+      type: "image",
+      src: "",
+      description: "",
+    },
     currentPage: "/",
   },
   reducers: {
@@ -16,6 +22,21 @@ export const uiSlice = createSlice({
     hidePostEditor: (state) => {
       state.showPostEditor = false;
     },
+
+    toggleImageModal: (state) => {
+      state.showImageModal = !state.showImageModal;
+    },
+    showImageModal: (state) => {
+      state.showImageModal = true;
+    },
+    hideImageModal: (state) => {
+      state.showImageModal = false;
+      state.currentMedia = {};
+    },
+    setCurrentMedia: (state, action) => {
+      let u = action.payload;
+      state.currentMedia = { ...state.currentMedia, ...u };
+    },
     setCurrentPage: (state, action) => {
       state.currentPage = action.payload;
     },
@@ -27,6 +48,10 @@ export const {
   togglePostEditor,
   showPostEditor,
   hidePostEditor,
+  toggleImageModal,
+  showImageModal,
+  hideImageModal,
+  setCurrentMedia,
   setCurrentPage,
 } = uiSlice.actions;
 

@@ -1,23 +1,25 @@
-import Kowloon from "../../lib/Kowloon"
-import { useSelector } from "react-redux";
+import Kowloon from "../../lib/Kowloon";
 import { useState, useEffect } from "react"
-import { NavLink } from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
+import { setPosts } from "../../store/timeline";
 import Timeline from "../../components/Timeline";
 const Home = () => {
 
-const [posts, setPosts] = useState([]);
-const user = useSelector(state => state.user.user);
+// const [posts, setPosts] = useState([]);
+  const user = useSelector(state => state.user.user);
+  const posts = useSelector(state => state.timeline.posts);
+  const dispatch = useDispatch();
 useEffect(() => {
 const getPublicTimeline = async () => {
   let res = await Kowloon.getPosts();
-  setPosts(res.items);
+  dispatch(setPosts(res.items));
 }
 getPublicTimeline();
 }, []);
 
   return (
     <>
-      <div className="w-2/3 mx-auto relative bottom-0 max-h-screen overflow-x-hidden overflow-y-auto px-8 mt-8">
+      <div className="pr-[33%] mx-auto relative bottom-0 max-h-screen overflow-x-hidden overflow-y-auto px-8 mt-8">
         <Timeline showCirclesFilter={true} title={`${user ? "Public/Server" : "Public"} Posts`} posts={posts} />
         </div>
       </>

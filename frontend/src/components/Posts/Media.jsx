@@ -8,6 +8,9 @@ import timezone from "dayjs/plugin/timezone";
 import advancedFormat from "dayjs/plugin/advancedFormat";
 import { NavLink } from "react-router-dom";
 import UserBar from "./UserBar";
+import { useSelector, useDispatch } from "react-redux";
+import { showImageModal, setCurrentMedia } from "../../store/ui";
+
 dayjs.extend(relativeTime);
 dayjs.extend(utc);
 dayjs.extend(timezone);
@@ -15,12 +18,17 @@ dayjs.extend(advancedFormat);
 const Media = (post) => {
 
     post = post.post;
+    const dispatch = useDispatch();
+    const showPostMedia = ({src,type}) => {
+        dispatch(setCurrentMedia({src,type}));
+        dispatch(showImageModal());
+    }
     return (<>
         <li key={post.key} className="post Media card w-full shadow-sm p-4 border border-media-100 bg-white">
         <div className="card-body">
             <UserBar actor={post.actor} />
         <h4 className="title font-bold text-lg mb-4"><NavLink className="hover:underline decoration-dotted" to={`/posts/${post.id}`}>{post.title}</NavLink></h4>
-            {post.image && <div className="relative h-64 overflow-hidden w-auto rounded-lg"><img className="absolute top-1/2 left-0 w-full -translate-y-1/2" src={post.image} /></div>}
+            {post.image && <div className="relative h-64 overflow-hidden w-auto rounded-lg"><img className="absolute top-1/2 left-0 w-full -translate-y-1/2" src={post.image} onClick={() => showPostMedia({src:post.image,type:"image"}) } /></div>}
                 <div className="my-4 attachments flex gap-4 mb-8">{post.attachments?.map((a, i) => <div key={i}  className="flex-1"><img className="w-full rounded-md" src={a.url} /></div>)}</div>
             <div className="body" dangerouslySetInnerHTML={{ __html: post.body }}></div>
             <div className="meta text-xs flex mt-4">

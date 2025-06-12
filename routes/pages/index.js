@@ -7,17 +7,12 @@ export default async function (req, res, next) {
   let response = {};
   let page = req.query.page || 1;
   let pageSize = req.query.num || 20;
-  let sort = {};
-  if (req.query.sort) {
-    sort[req.query.sort] = -1;
-  } else {
-    sort.updatedAt = -1;
-  }
   let query = await Kowloon.generateQuery(req.user?.id);
   let items = await Page.find(query)
     .select(
       "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
     )
+    .sort("order")
     .lean();
   items = buildPageTree(items);
   let totalItems = await Page.countDocuments(query);

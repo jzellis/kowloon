@@ -6,7 +6,7 @@ export default async function (req, res, next) {
   let response = {};
   let page = req.query.page || 1;
   let pageSize = req.query.num || 20;
-  let sort = req.query.sort ? `-£{req.query.sort}` : "-createdAt";
+  let sort = req.query.sort ? `-${req.query.sort}` : "-updatedAt";
   let query = {
     to: "@public",
   };

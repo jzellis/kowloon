@@ -58,6 +58,8 @@ ReplySchema.pre("save", async function (next) {
       )}</p>`;
       break;
   }
+
+  if (!this.parent) this.parent = this.target;
   // let stringject = Buffer.from(this.id);
   // const sign = crypto.createSign("RSA-SHA256");
   // sign.update(stringject);

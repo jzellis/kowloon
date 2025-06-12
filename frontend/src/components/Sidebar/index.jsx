@@ -10,7 +10,7 @@ const Sidebar = () => {
     
     
     return (<>
-        <div className="relative bottom-0 max-h-screen overflow-x-hidden overflow-y-auto p-8 pb-40">
+        <div className="relative bottom-0 max-h-screen overflow-x-hidden overflow-y-auto p-8 pb-40 no-scrollbar">
             <div className="description mb-8 card shadow-lg rounded-lg"><div className="card-body" dangerouslySetInnerHTML={{ __html: server?.profile?.description }}></div></div>
             <h2 className="font-bold text-xl mb-8">Pages <a  href="/pages"className="text-sm font-normal">Show All</a></h2>
             <PageTree items={pages} />
@@ -18,7 +18,8 @@ const Sidebar = () => {
             <h2 className="font-bold text-xl mb-8">Circles <a  href="/circles"className="text-sm font-normal">Show All</a></h2>
                 <CircleList title={""} circles={circles.slice(0, 5)} />
                 </div>
-        </div></>)
+        </div>
+    </>)
 }
 
 export default Sidebar

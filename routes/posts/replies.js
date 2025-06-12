@@ -26,7 +26,8 @@ export default async function (req, res, next) {
       )
       .limit(pageSize ? pageSize : 0)
       .skip(pageSize ? pageSize * (page - 1) : 0)
-      .sort({ sort: -1 });
+      .sort({ sort: -1 })
+      .lean();
     let totalItems = await Reply.countDocuments(query);
 
     response = {

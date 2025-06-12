@@ -5,11 +5,12 @@ import PostEditor from "../PostEditor";
 import { useSelector } from "react-redux";
 import "./index.css"
 import PageTracker from "../PageTracker";
+import ImageModal from "../ImageModal";
 const Layout = () => {
 
     const user = useSelector((state) => state.user.user);
     return (
-        <div className="w-full h-screen overflow-hidden">
+        <div className="w-full">
                   <PageTracker />
             <div id="header"><Header /></div>
 
@@ -19,7 +20,8 @@ const Layout = () => {
                     <Sidebar />
                     </div>
                     <div className="col-span-9">
-                    {user?.id && <PostEditor />}
+                        {user?.id && <PostEditor />}
+                        <ImageModal />
                     <Outlet />
 </div>
                     </div>

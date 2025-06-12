@@ -32,14 +32,14 @@ const Timeline = (props) => {
           
 
     <div className="flex"><h3 className="text-xl font-bold mb-4 flex-1">{title || "Posts"}</h3>
-<ul className="flex-none">
-<li className="flex-1 tooltip cursor-pointer"  data-tip="Click to show/hide Notes"><FaRegStickyNote className={`inline -mt-1 ml-2 ${showNotes === true ? "text-black" : "text-gray-300"}`} onClick={(e)=> dispatch(toggleNotes())} /></li>
-<li className="flex-1 tooltip cursor-pointer"  data-tip="Click to show/hide Articles"><GrDocumentText className={`inline -mt-1 ml-2 ${showArticles === true ? "text-black" : "text-gray-300"}`} onClick={(e)=> dispatch(toggleArticles())} /></li>
-<li className="flex-1 tooltip cursor-pointer"  data-tip="Click to show/hide Links"><FaLink className={`inline -mt-1 ml-2 ${showLinks === true ? "text-black" : "text-gray-300"}`} onClick={(e)=> dispatch(toggleLinks())} /></li>
-<li className="flex-1 tooltip cursor-pointer"  data-tip="Click to show/hide Media"><FaRegCirclePlay className={`inline -mt-1 ml-2 ${showMedia === true ? "text-black" : "text-gray-300"}`} onClick={(e)=> dispatch(toggleMedia())} /></li>
+<ul className="flex-none text-2xl">
+<li className="flex-1 tooltip cursor-pointer"  data-tip="Click to show/hide Notes"><FaRegStickyNote className={`inline -mt-1 ml-2 ${showNotes === true ? "text-note" : "text-gray-300"}`} onClick={(e)=> dispatch(toggleNotes())} /></li>
+<li className="flex-1 tooltip cursor-pointer"  data-tip="Click to show/hide Articles"><GrDocumentText className={`inline -mt-1 ml-2 ${showArticles === true ? "text-article" : "text-gray-300"}`} onClick={(e)=> dispatch(toggleArticles())} /></li>
+<li className="flex-1 tooltip cursor-pointer"  data-tip="Click to show/hide Links"><FaLink className={`inline -mt-1 ml-2 ${showLinks === true ? "text-link" : "text-gray-300"}`} onClick={(e)=> dispatch(toggleLinks())} /></li>
+<li className="flex-1 tooltip cursor-pointer"  data-tip="Click to show/hide Media"><FaRegCirclePlay className={`inline -mt-1 ml-2 ${showMedia === true ? "text-media" : "text-gray-300"}`} onClick={(e)=> dispatch(toggleMedia())} /></li>
         </ul>
       {(props.showCirclesFilter === true) &&
-        <div className={`flex-none tooltip ${filteredByCircle ? "font-black" : "text-gray-300"}`} data-tip="Filter timeline by Circle"><FaRegCircle className={`inline -mt-1 ml-4`} onClick={(e) => { dispatch(setFilteredByCircle(!filteredByCircle)); dispatch(toggleTimelineControls()) }} /></div>
+        <div className={`text-2xl flex-none tooltip ${filteredByCircle ? "font-black" : "text-gray-300"}`} data-tip="Filter timeline by Circle"><FaRegCircle className={`inline -mt-1 ml-4`} onClick={(e) => { dispatch(setFilteredByCircle(!filteredByCircle)); dispatch(toggleTimelineControls()) }} /></div>
       }
     </div>
     {(props.showCirclesFilter === true) && <div className={`timeline-controls mb-4 text-right ${showTimelineControls ? "" : "hidden"}`}>

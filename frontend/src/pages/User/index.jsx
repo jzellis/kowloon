@@ -3,16 +3,20 @@ import { useState, useEffect, use } from "react";
 import { NavLink } from "react-router-dom";
 import Kowloon from "../../lib/Kowloon";
 import "./index.css";
+import { useSelector, useDispatch } from "react-redux";
+import { setPosts } from "../../store/timeline";
 import Timeline from "../../components/Timeline";
+
 import { FaLocationDot, FaLink, FaTransgender  } from "react-icons/fa6";
 import CircleList from "../../components/CircleList";
 const User = () => {
 
   let {id} = useParams();
   let [user, setUser] = useState(null);
-  let [posts, setPosts] = useState(null);
+  const posts = useSelector(state => state.timeline.posts);
   let [activeTab, setActiveTab] = useState("posts");
-  let [circles,setCircles] = useState(null);
+  let [circles, setCircles] = useState(null);
+  const dispatch = useDispatch();
 
   useEffect(() => {
     const getUser = async (id) => {
@@ -26,7 +30,7 @@ const User = () => {
 
     const getPosts = async (id) => {
       let req = await Kowloon.getUserPosts(id);
-      setPosts(req.items);
+      dispatch(setPosts(req.items));
     }
     getUser(id);
     getPosts(id);

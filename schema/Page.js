@@ -31,6 +31,7 @@ const PageSchema = new Schema(
     objectType: { type: String, default: "Page" },
     type: { type: String, default: "Page", enum: ["Page", "Folder"] }, // The type of page this is
     parentFolder: { type: String, default: null },
+    order: { type: Number, default: 0 },
     url: { type: String }, // The URL of the page
     href: { type: String, default: undefined }, // If the page is a link, this is what it links to
     actorId: { type: String }, // The ID of the page's author

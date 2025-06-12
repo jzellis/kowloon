@@ -1,10 +1,18 @@
 @import "tailwindcss";
 @plugin "daisyui";
 
-body,
-html {
-  @apply max-h-screen overflow-hidden;
+@layer utilities {
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  .no-scrollbar {
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
+  }
 }
+
 @theme {
   --color-article-900: #309898;
   --color-article-800: #309898;
@@ -58,6 +66,11 @@ html {
   --color-beaver: #a99181;
   --color-redwood: #a75644;
   --color-battleship-gray: #6c8583; */
+}
+
+body,
+html {
+  /* @apply max-h-screen overflow-hidden; */
 }
 
 .post.Article {

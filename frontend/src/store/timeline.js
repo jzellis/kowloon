@@ -11,6 +11,7 @@ export const timelineSlice = createSlice({
     filteredByCircle: false,
     showTimelineControls: false,
     page: 1,
+    posts: [],
   },
   reducers: {
     showNotes: (state) => {
@@ -64,12 +65,17 @@ export const timelineSlice = createSlice({
     decrementPage: (state) => {
       state.page -= 1;
     },
+    setPosts: (state, action) => {
+      state.posts = action.payload;
+    },
     reset: (state) => {
       state.notes = true;
       state.articles = true;
       state.links = true;
       state.media = true;
       state.filteredByCircle = false;
+      state.page = 1;
+      state.posts = [];
     },
   },
 });
@@ -93,6 +99,7 @@ export const {
   setPage,
   incrementPage,
   decrementPage,
+  setPosts,
   reset,
 } = timelineSlice.actions;
 

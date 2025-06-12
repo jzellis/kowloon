@@ -35,7 +35,6 @@ const validateActivity = function (activity) {
 };
 
 export default async function (activity) {
-  console.log("Creating activity....");
   let settings = await getSettings();
   try {
     activity = validateActivity(activity);
@@ -68,9 +67,7 @@ export default async function (activity) {
     }
 
     if (!activity.error) {
-      console.log("Error: ", activity.error);
       activity = await Activity.create(activity);
-      console.log(activity);
 
       // Now to deal with delivery if necessary.
       await Outbox.findOneAndUpdate(

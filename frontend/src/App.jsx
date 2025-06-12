@@ -7,6 +7,7 @@ import Layout from './components/Layout';
 import Home from './pages/Home';
 import User from './pages/User';
 import Page from './pages/Page';
+import Post from './pages/Post';
 import Login from './pages/Login';
 import "./App.css";
 import Kowloon from './lib/Kowloon';
@@ -24,7 +25,9 @@ const router = createBrowserRouter(
         { index: true, Component: Home },
         { path: "users/:id", Component: User },
         { path: "pages/:id" , Component: Page},
-      { path: "login", Component: Login },
+        { path: "posts/:id" , Component: Post},
+
+        { path: "login", Component: Login },
     ]
   },
 
@@ -80,15 +83,6 @@ const dispatch = useDispatch();
       <div className='relative'>
         <RouterProvider router={router} />
         </div>
-      <svg>
-    {/* <filter id='roughpaper'>
-        <feTurbulence type="fractalNoise" baseFrequency='0.02' result='noise' numOctaves="5" />
-
-        <feDiffuseLighting in='noise' lighting-color='white' surfaceScale='2'>
-            <feDistantLight azimuth='45' elevation='60' />
-        </feDiffuseLighting>
-    </filter> */}
-</svg>
     </>
   );
 }

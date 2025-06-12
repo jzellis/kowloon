@@ -24,12 +24,14 @@ const getRandomItems = (arr, x) => {
 
 const postTypes = ["Note", "Article", "Link", "Media"];
 
-let numPosts = 1000;
+let numPosts = 100;
 let numGroups = 100;
 let numCircles = 100;
 let numUsers = 100;
 let numEvents = 100;
 let numPages = 50;
+let numRepliesPerPost = 5;
+let numReactsPerPost = 5;
 
 let posts = [];
 let circles = [];
@@ -299,6 +301,69 @@ for (let i = 0; i < numPages / 2; i++) {
   if (activity.error) console.log("Error: ", activity.error);
 }
 process.stdout.write(`Created ${numPages} in ${Date.now() - startTime}ms\n`);
+
+await Promise.all(
+  posts.map(async (post) => {
+    for (let i = 0; i < numRepliesPerPost; i++) {
+      let activity = await Kowloon.createActivity({
+        actorId: "@admin@kowloon.social",
+        type: "Reply",
+        objectType: "Reply",
+        target: post.id,
+        to: post.to,
+        replyTo: post.replyTo,
+        reactTo: post.reactTo,
+        object: {
+          actorId: "@admin@kowloon.social",
+          target: post.id,
+          to: post.to,
+          replyTo: post.replyTo,
+          reactTo: post.reactTo,
+          source: {
+            mediaType: "text/html",
+            content: `<p>${faker.lorem.paragraphs(
+              { min: 5, max: 10 },
+              "</p><p>"
+            )}</p>`,
+          },
+        },
+      });
+      process.stdout.write(
+        `\rCreating replies... ${i + 1} of ${numRepliesPerPost * numPosts}`
+      );
+      if (activity.error) console.log("Error: ", activity.error);
+    }
+    for (let i = 0; i < numReactsPerPost; i++) {
+      let react =
+        Kowloon.settings.likeEmojis[
+          Math.floor(Math.random() * Kowloon.settings.likeEmojis.length)
+        ];
+      let activity = await Kowloon.createActivity({
+        actorId: "@admin@kowloon.social",
+        type: "React",
+        objectType: "React",
+        target: post.id,
+        to: post.to,
+        replyTo: post.replyTo,
+        reactTo: post.reactTo,
+        object: {
+          actorId: "@admin@kowloon.social",
+          type: "React",
+          target: post.id,
+          emoji: react.emoji,
+          name: react.name,
+          to: post.to,
+          replyTo: post.replyTo,
+          reactTo: post.reactTo,
+        },
+      });
+      process.stdout.write(
+        `\rCreating reacts... ${i + 1} of ${numReactsPerPost * numPosts}`
+      );
+      if (activity.error) console.log("Error: ", activity.error);
+    }
+  })
+);
 
 let adminCircleMembers = getRandomItems(
   users,

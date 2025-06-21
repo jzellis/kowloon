@@ -1,0 +1,873 @@
+openapi: 3.1.0
+info:
+  title: "Kowloon API"
+  version: "1.0.0"
+  description: "API specification for Kowloon social media server implementing ActivityStreams endpoints."
+
+servers:
+  - url: "https://kowloon.social"
+
+paths:
+  /activities:
+    get:
+      summary: "Retrieve recent activities"
+      description: "Returns a paginated list of recent activities visible to the user. If unauthenticated, only public activities are shown. Authenticated users see additional private and server-only activities."
+      parameters:
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of items per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of activities"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /activities/{id}:
+    get:
+      summary: "Retrieve a specific activity by ID"
+      description: "Fetches an activity object by its unique ID."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the activity"
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Activity object"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Activity"
+
+  /bookmarks:
+    get:
+      summary: "Retrieve recent bookmarks"
+      description: "Returns a paginated list of bookmarks visible to the user. Unauthenticated users see public bookmarks only."
+      parameters:
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of bookmarks per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of bookmarks"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /bookmarks/{id}:
+    get:
+      summary: "Retrieve a specific bookmark by ID"
+      description: "Fetches a bookmark object by its unique ID."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the bookmark"
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Bookmark object"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Bookmark"
+
+  /circles:
+    get:
+      summary: "Retrieve recent circles"
+      description: "Returns a paginated list of circles visible to the user. Unauthenticated users see public circles only."
+      parameters:
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of circles per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of circles"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /circles/{id}:
+    get:
+      summary: "Retrieve a specific circle by ID"
+      description: "Fetches a circle object by its unique ID."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the circle"
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Circle object"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Circle"
+
+  /events:
+    get:
+      summary: "Retrieve recent events"
+      description: "Returns a paginated list of events visible to the user. Unauthenticated users see public events only."
+      parameters:
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of events per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of events"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /events/{id}:
+    get:
+      summary: "Retrieve a specific event by ID"
+      description: "Fetches an event object by its unique ID."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the event"
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Event object"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Event"
+
+  /groups:
+    get:
+      summary: "Retrieve recent groups"
+      description: "Returns a paginated list of groups visible to the user. Unauthenticated users see public groups only."
+      parameters:
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of groups per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of groups"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /groups/{id}:
+    get:
+      summary: "Retrieve a specific group by ID"
+      description: "Fetches a group object by its unique ID."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the group"
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Group object"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Group"
+
+  /groups/{id}/members:
+    get:
+      summary: "Retrieve members of a group"
+      description: "Returns a list of publicly visible group members if unauthenticated. Authenticated users see additional server-only members."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the group"
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Array of group member objects"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Member"
+
+  /groups/{id}/posts:
+    get:
+      summary: "Retrieve posts of a group"
+      description: "Returns a list of publicly visible posts in the group if unauthenticated. Authenticated users see additional server-only posts."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the group"
+          required: true
+          schema:
+            type: string
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of posts per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+        - name: type
+          in: query
+          description: "Filter posts by one or more types"
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of group posts"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /pages:
+    get:
+      summary: "Retrieve public pages"
+      description: "Returns a paginated list of server public pages."
+      parameters:
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of pages per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of pages"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /posts:
+    get:
+      summary: "Retrieve recent posts"
+      description: "Returns a paginated list of recent posts visible to the user. Unauthenticated users see public posts only."
+      parameters:
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of posts per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+        - name: type
+          in: query
+          description: "Filter posts by one or more types"
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of posts"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /posts/{id}:
+    get:
+      summary: "Retrieve a specific post by ID"
+      description: "Fetches a post object by its unique ID."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the post"
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Post object"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Post"
+
+  /posts/{id}/reacts:
+    get:
+      summary: "Retrieve reactions to a post"
+      description: "Returns all reactions (emojis, likes) associated with a post."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the post"
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Array of react objects"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/React"
+
+  /posts/{id}/replies:
+    get:
+      summary: "Retrieve replies to a post"
+      description: "Returns all replies associated with a post."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the post"
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "Array of reply objects"
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reply"
+
+  /users:
+    get:
+      summary: "Retrieve recent users"
+      description: "Returns a paginated list of publicly visible users. Unauthenticated users see public profiles only."
+      parameters:
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of users per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of users"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /users/{id}:
+    get:
+      summary: "Retrieve a specific user by ID"
+      description: "Fetches a user object by its unique ID."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the user"
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: "User object"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+
+  /users/{id}/activities:
+    get:
+      summary: "Retrieve activities by user"
+      description: "Returns activities created by a specific user."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the user"
+          required: true
+          schema:
+            type: string
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of activities per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of activities"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /users/{id}/bookmarks:
+    get:
+      summary: "Retrieve bookmarks by user"
+      description: "Returns bookmarks created by a specific user."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the user"
+          required: true
+          schema:
+            type: string
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of bookmarks per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of bookmarks"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /users/{id}/circles:
+    get:
+      summary: "Retrieve circles by user"
+      description: "Returns circles associated with a specific user."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the user"
+          required: true
+          schema:
+            type: string
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of circles per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of circles"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /users/{id}/events:
+    get:
+      summary: "Retrieve events by user"
+      description: "Returns events associated with a specific user."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the user"
+          required: true
+          schema:
+            type: string
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of events per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of events"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /users/{id}/groups:
+    get:
+      summary: "Retrieve groups by user"
+      description: "Returns groups associated with a specific user."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the user"
+          required: true
+          schema:
+            type: string
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of groups per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of groups"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /users/{id}/posts:
+    get:
+      summary: "Retrieve posts by user"
+      description: "Returns posts created by a specific user."
+      parameters:
+        - name: "id"
+          in: "path"
+          description: "Unique identifier of the user"
+          required: true
+          schema:
+            type: string
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of posts per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+        - name: type
+          in: query
+          description: "Filter posts by one or more types"
+          required: false
+          schema:
+            type: array
+            items:
+              type: string
+          style: form
+          explode: true
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of posts"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /outbox:
+    get:
+      summary: "Retrieve server collective timeline"
+      description: "Returns a paginated list of activities composing the server's collective timeline."
+      parameters:
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of items per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of timeline activities"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+  /inbox:
+    get:
+      summary: "Retrieve logged-in user's timeline"
+      description: "Returns a paginated list of activities in the logged-in user's timeline."
+      parameters:
+        - name: "page"
+          in: "query"
+          description: "Page number for pagination (default: 1)"
+          schema:
+            type: integer
+            default: 1
+        - name: "limit"
+          in: "query"
+          description: "Number of items per page (default: 20)"
+          schema:
+            type: integer
+            default: 20
+      responses:
+        '200':
+          description: "ActivityStreams OrderedCollection of timeline activities"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrderedCollection"
+
+    post:
+      summary: "Accept an incoming activity"
+      description: "Accepts and processes an incoming ActivityStreams activity."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Activity"
+      responses:
+        '201':
+          description: "Activity accepted successfully"
+        '400':
+          description: "Invalid activity data"
+
+components:
+  schemas:
+
+    OrderedCollection:
+      type: object
+      description: "An OrderedCollection as defined in ActivityStreams 2.0."
+      properties:
+        totalItems:
+          type: integer
+          example: 100
+          description: "Total number of items in the collection"
+        items:
+          type: array
+          description: "Array of items in the collection"
+          items:
+            type: object
+            description: "Item object (could be Activity, Post, etc.)"
+        currentPage:
+          type: integer
+          example: 1
+          description: "Current page number"
+        totalPages:
+          type: integer
+          example: 5
+          description: "Total number of pages available"
+
+    Activity:
+      type: object
+      description: "An ActivityStreams Activity object."
+      properties:
+        id:
+          type: string
+          example: "activity123"
+        type:
+          type: string
+          example: "Create"
+        actorId:
+          type: string
+          example: "user123"
+        actor:
+          type: object
+          description: "Actor object"
+        objectType:
+          type: string
+          example: "Note"
+        summary:
+          type: string
+        object:
+          type: object
+          description: "The object of the activity"
+        to:
+          type: array
+          items:
+            type: string
+
+    Bookmark:
+      type: object
+      description: "A bookmark object."
+      properties:
+        id:
+          type: string
+        url:
+          type: string
+          format: uri
+        title:
+          type: string
+
+    Circle:
+      type: object
+      description: "A circle (group of users)."
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+    Event:
+      type: object
+      description: "An event with start and end times."
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        startTime:
+          type: string
+          format: date-time
+        endTime:
+          type: string
+          format: date-time
+        location:
+          type: string
+
+    Group:
+      type: object
+      description: "A user group."
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+
+    Member:
+      type: object
+      description: "A member of a group."
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+
+    Post:
+      type: object
+      description: "A post object."
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        authorId:
+          type: string
+
+    React:
+      type: object
+      description: "A reaction to a post (like, emoji)."
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+          example: "Like"
+        actorId:
+          type: string
+
+    Reply:
+      type: object
+      description: "A reply to a post."
+      properties:
+        id:
+          type: string
+        content:
+          type: string
+        authorId:
+          type: string
+
+    User:
+      type: object
+      description: "A user profile object."
+      properties:
+        id:
+          type: string
+        username:
+          type: string
+        displayName:
+          type: string

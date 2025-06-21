@@ -1,10 +1,12 @@
 import Kowloon from "../Kowloon.js";
 import express from "express";
 import winston from "winston";
-
+import yaml from "js-yaml";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
+import fs from "fs";
 const __dirname = dirname(fileURLToPath(import.meta.url));
+import swaggerUi from "swagger-ui-express";
 
 // Routes
 import home from "./index.js";
@@ -131,6 +133,19 @@ const logger = winston.createLogger({
     // new winston.transports.File({ filename: "logs/server.log" }),
   ],
 });
+
+// This serves our Swagger UI
+router.get("/openapi.yaml", (req, res) => {
+  const yamlPath = path.join(process.cwd(), "openapi.yaml");
+  const yamlContent = fs.readFileSync(yamlPath, "utf8");
+  res.type("text/yaml").send(yamlContent);
+});
+
+const openapiDocument = yaml.load(
+  fs.readFileSync(path.join(process.cwd(), "openapi.yaml"), "utf8")
+);
+
+router.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
 
 router.use(async (req, res, next) => {
   res.header("Access-Control-Allow-Credentials", true);

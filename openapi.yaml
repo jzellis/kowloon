@@ -280,6 +280,11 @@ paths:
             type: array
             items:
               type: string
+              enum:
+              - Note
+              - Article
+              - Media
+              - Link
           style: form
           explode: true
       responses:
@@ -340,6 +345,11 @@ paths:
             type: array
             items:
               type: string
+              enum:
+              - Note
+              - Article
+              - Media
+              - Link
           style: form
           explode: true
       responses:
@@ -641,8 +651,14 @@ paths:
             type: array
             items:
               type: string
+              enum:
+              - Note
+              - Article
+              - Media
+              - Link
           style: form
           explode: true
+
       responses:
         '200':
           description: "ActivityStreams OrderedCollection of posts"

@@ -783,10 +783,14 @@ components:
           type: object
           description: "The object of the activity"
         to:
-          type: array
-          items:
-            type: string
-
+          type: string
+          required: true
+        replyTo:
+          type: string
+          required: true
+        reactTo:
+          type: string
+          required: true
     Bookmark:
       type: object
       description: "A bookmark object."
@@ -798,7 +802,15 @@ components:
           format: uri
         title:
           type: string
-
+        to:
+          type: string
+          required: true
+        replyTo:
+          type: string
+          required: true
+        reactTo:
+          type: string
+          required: true
     Circle:
       type: object
       description: "A circle (group of users)."
@@ -807,7 +819,15 @@ components:
           type: string
         name:
           type: string
-
+        to:
+          type: string
+          required: true
+        replyTo:
+          type: string
+          required: true
+        reactTo:
+          type: string
+          required: true
     Event:
       type: object
       description: "An event with start and end times."
@@ -824,6 +844,15 @@ components:
           format: date-time
         location:
           type: string
+        to:
+          type: string
+          required: true
+        replyTo:
+          type: string
+          required: true
+        reactTo:
+          type: string
+          required: true
 
     Group:
       type: object
@@ -833,6 +862,15 @@ components:
           type: string
         name:
           type: string
+        to:
+          type: string
+          required: true
+        replyTo:
+          type: string
+          required: true
+        reactTo:
+          type: string
+          required: true
 
     Member:
       type: object
@@ -853,6 +891,15 @@ components:
           type: string
         authorId:
           type: string
+        to:
+          type: string
+          required: true
+        replyTo:
+          type: string
+          required: true
+        reactTo:
+          type: string
+          required: true
 
     React:
       type: object
@@ -887,3 +934,12 @@ components:
           type: string
         displayName:
           type: string
+        to:
+          type: string
+          required: true
+        replyTo:
+          type: string
+          required: true
+        reactTo:
+          type: string
+          required: true

@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: "Kowloon API"
   version: "1.0.0"
-  description: "API specification for Kowloon social media server implementing ActivityStreams endpoints."
+  description: "API specification for Kowloon social media server implementing a modified version of ActivityStreams endpoints."
 
 servers:
   - url: "https://kowloon.social"
@@ -764,7 +764,8 @@ components:
       properties:
         id:
           type: string
-          example: "activity123"
+          example: "activity:1a2b3c4d5e6f7g8h9i0j@server.example"
+          readOnly: true
         type:
           type: string
           example: "Create"
@@ -817,6 +818,8 @@ components:
       properties:
         id:
           type: string
+          example: "circle:1a2b3c4d5e6f7g8h9i0j@server.example"
+          readOnly: true
         name:
           type: string
         to:
@@ -834,6 +837,8 @@ components:
       properties:
         id:
           type: string
+          example: "event:1a2b3c4d5e6f7g8h9i0j@server.example"
+          readOnly: true        
         name:
           type: string
         startTime:
@@ -860,6 +865,8 @@ components:
       properties:
         id:
           type: string
+          example: "group:1a2b3c4d5e6f7g8h9i0j@server.example"
+          readOnly: true
         name:
           type: string
         to:
@@ -878,6 +885,8 @@ components:
       properties:
         id:
           type: string
+          example: "@jzellis@server.example"
+          readOnly: true
         username:
           type: string
 
@@ -887,6 +896,8 @@ components:
       properties:
         id:
           type: string
+          example: "post:1a2b3c4d5e6f7g8h9i0j@server.example"
+          readOnly: true
         content:
           type: string
         authorId:
@@ -907,6 +918,8 @@ components:
       properties:
         id:
           type: string
+          example: "react:1a2b3c4d5e6f7g8h9i0j@server.example"
+          readOnly: true
         type:
           type: string
           example: "Like"
@@ -919,6 +932,8 @@ components:
       properties:
         id:
           type: string
+          example: "reply:1a2b3c4d5e6f7g8h9i0j@server.example"
+          readOnly: true
         content:
           type: string
         authorId:
@@ -930,6 +945,8 @@ components:
       properties:
         id:
           type: string
+          example: "@user@server.example"
+          readOnly: true
         username:
           type: string
         displayName:

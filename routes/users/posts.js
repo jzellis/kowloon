@@ -13,7 +13,6 @@ export default async function (req, res, next) {
     sort.updatedAt = -1;
   }
   let query = {
-    // ...(await Kowloon.generateQuery(req.user?.id)),
     actorId: req.params.id,
   };
   if (req.query.type) query.type = { $in: req.query.type };

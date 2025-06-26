@@ -107,9 +107,14 @@ PostSchema.pre("save", async function (next) {
     let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
     // Sign this post using the user's private key if it's not signed
     if (actor) {
-      let stringject = Buffer.from(`${this.id} | ${this.createdAt}`);
-      const sign = crypto.createSign("RSA-SHA256");
-      sign.update(stringject);
+      // let stringject = Buffer.from(`${this.id} | ${this.createdAt}`);
+      // const sign = crypto.createSign("RSA-SHA256");
+      // sign.update(stringject);
+      // this.signature = sign.sign(actor.privateKey, "base64");
+
+      const sign = crypto.createSign("SHA256");
+      sign.update(this.source.content);
+      sign.end();
       this.signature = sign.sign(actor.privateKey, "base64");
     }
     next();

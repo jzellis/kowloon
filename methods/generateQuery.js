@@ -4,28 +4,32 @@ It retrieves items addressed to the logged in user, "@public", the user's home s
 
 */
 import parseId from "./parseId.js";
-import { User } from "../schema/index.js";
-export default async function (userId) {
-  let response = { to: "@public", deletedAt: null };
-  let user = await User.findOne({ id: userId });
+import { User, Circle } from "../schema/index.js";
+import getUserMemberships from "./getUserMemberships.js";
+export default async function (user) {
+  console.log("Query user: ", user);
+  let response = user
+    ? {
+        actorId: { $nin: [...user.blocked, ...user.muted] },
+        $or: [
+          {
+            to: {
+              $in: Array.from(
+                new Set([
+                  user.id,
+                  "@public",
+                  `@${parseId(user.id).server}`,
+                  ...user.memberships,
+                ])
+              ),
+            },
+          },
+          { actorId: user.id },
+        ],
 
-  if (user)
-    response = {
-      to: {
-        $in: Array.from(
-          new Set([
-            user.id,
-            "@public",
-            `@${parseId(user.id).server}`,
-            ...(await user.getMemberships()),
-          ])
-        ),
-      },
+        deletedAt: null,
+      }
+    : { to: "@public", deletedAt: null };
 
-      actorId: {
-        $nin: [...(await user.getBlocked()), ...(await user.getMuted())],
-      },
-      deletedAt: null,
-    };
   return response;
 }

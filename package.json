@@ -30,6 +30,7 @@
     "fs-extra": "^11.3.0",
     "https": "^1.0.0",
     "indefinite": "^2.5.1",
+    "jose": "^6.0.11",
     "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
     "klaw-sync": "^6.0.0",

@@ -6,7 +6,10 @@ import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 const __dirname = dirname(fileURLToPath(import.meta.url));
-import swaggerUi from "swagger-ui-express";
+import swaggerUi, { setup } from "swagger-ui-express";
+import jwt from "jsonwebtoken";
+
+import { createRemoteJWKSet, jwtVerify } from "jose";
 
 // Routes
 import home from "./index.js";
@@ -54,15 +57,18 @@ import inboxPost from "./inbox/post.js";
 import fileGet from "./files/get.js";
 import filePost from "./files/post.js";
 import preview from "./utils/preview.js";
-import setup from "./setup/index.js";
-import User from "../schema/User.js";
-import id from "./id/index.js";
+import setupGet from "./setup/get.js";
+import setupPost from "./setup/post.js";
+import publicKey from "./well-known/publicKey.js";
+import jwks from "./well-known/jwks.js";
+
+const CONFIG_FLAG = path.join(process.cwd(), ".configured");
 
 const routes = {
   get: {
     "/auth": auth,
 
-    "/": home,
+    "/": outboxGet,
     "/activities": activities,
     "/activities/:id": activityById,
     "/circles": circles,
@@ -102,7 +108,9 @@ const routes = {
     "/test": test,
     "/files/:id": fileGet,
     "/utils/preview": preview,
-    "/setup": setup,
+    "/setup": setupGet,
+    "/.well-known/public-key": publicKey,
+    "/.well-known/jwks.json": jwks,
   },
   post: {
     "/login": login,
@@ -110,12 +118,11 @@ const routes = {
     "/inbox": inboxPost,
     "/outbox": outboxPost,
     "/files": filePost,
+    "/setup": setupPost,
   },
 };
 
 const router = express.Router();
-
-// const staticPage = await fs.readFile("./frontend/dist/index.html", "utf-8");
 
 const logger = winston.createLogger({
   // Log only if level is less than (meaning more severe) or equal to this
@@ -134,78 +141,109 @@ const logger = winston.createLogger({
   ],
 });
 
-// This serves our Swagger UI
-router.get("/openapi.yaml", (req, res) => {
-  const yamlPath = path.join(process.cwd(), "openapi.yaml");
-  const yamlContent = fs.readFileSync(yamlPath, "utf8");
-  res.type("text/yaml").send(yamlContent);
-});
+// This checks to see if the server has been configured
+if (!fs.existsSync(CONFIG_FLAG)) {
+  logger.info("Running setup");
+  router.use((req, res, next) => {
+    console.log(req.path);
+    if (req.path != "/setup" && req.method === "GET") {
+      return res.redirect("/setup");
+    } else {
+      return req.method === "GET" ? setupGet(req, res) : setupPost(req, res);
+    }
+  });
+} else {
+  // This serves our Swagger UI
+  router.get("/openapi.yaml", (req, res) => {
+    const yamlPath = path.join(process.cwd(), "openapi.yaml");
+    const yamlContent = fs.readFileSync(yamlPath, "utf8");
+    res.type("text/yaml").send(yamlContent);
+  });
 
-const openapiDocument = yaml.load(
-  fs.readFileSync(path.join(process.cwd(), "openapi.yaml"), "utf8")
-);
+  const openapiDocument = yaml.load(
+    fs.readFileSync(path.join(process.cwd(), "openapi.yaml"), "utf8")
+  );
 
-router.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
+  router.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
 
-router.use(async (req, res, next) => {
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header("Access-Control-Allow-Origin", "*");
-  res.header("Access-Control-Allow-Methods", "GET,HEAD,POST,OPTIONS");
-  res.header("Access-Control-Allow-Headers", "*");
+  router.use(async (req, res, next) => {
+    res.header("Access-Control-Allow-Credentials", true);
+    res.header("Access-Control-Allow-Origin", "*");
+    res.header("Access-Control-Allow-Methods", "GET,HEAD,POST,OPTIONS");
+    res.header("Access-Control-Allow-Headers", "*");
 
-  if (
-    req.headers["kowloon-id"] &&
-    req.headers["kowloon-signature"] &&
-    req.headers["kowloon-timestamp"]
-  ) {
-    let serverId = req.headers["kowloon-server-id"] || null;
-    let serverTimestamp = req.headers["kowloon-server-timestamp"] || null;
-    let serverSignature = req.headers["kowloon-server-signature"] || null;
-    let result = await Kowloon.authenticateRequest(
-      {
-        id: req.headers["kowloon-id"],
-        timestamp: req.headers["kowloon-timestamp"],
-        signature: req.headers["kowloon-signature"],
-      },
-      {
-        serverId,
-        serverTimestamp,
-        serverSignature,
+    req.server = {
+      id: Kowloon.settings.actorId,
+      version: Kowloon.settings.version,
+      profile: Kowloon.settings.profile,
+      publicKey: `https://${Kowloon.settings.domain}/.well-known/public-key`,
+    };
+
+    if (req.header("Authorization")) {
+      const authHeader = req.header("Authorization") || "";
+      const token = authHeader.startsWith("Bearer ")
+        ? authHeader.slice(7).trim()
+        : null;
+
+      if (token) {
+        try {
+          const decoded = jwt.decode(token, {
+            complete: true,
+          });
+
+          const kid = decoded.header.kid;
+          const user = decoded.payload.user;
+          const loggedIn = decoded.payload.loggedIn;
+          const iat = decoded.payload.iat;
+          const issuer =
+            decoded.payload.iss || `https://${Kowloon.settings.domain}`;
+          let verified = {};
+          if (user.id.includes(Kowloon.settings.domain)) {
+            verified = jwt.verify(token, Kowloon.settings.publicKey, {
+              algorithms: ["RS256"],
+              issuer: `https://${Kowloon.settings.domain}`,
+            });
+          } else {
+            const JWKS = createRemoteJWKSet(
+              new URL(`${issuer}/.well-known/jwks.json`)
+            );
+
+            const remote = await jwtVerify(token, JWKS, {
+              algorithms: ["RS256"],
+              issuer,
+            });
+            verified = remote.payload;
+          }
+
+          if (verified.user.id == decoded.payload.user.id) {
+            req.user = verified.user;
+
+            // This returns whatever local groups and circles the user is a member of, regardless of whether they are local or remote
+            req.user.memberships = await Kowloon.getUserMemberships(
+              req.user.id
+            );
+          }
+        } catch (err) {
+          console.log(err);
+          return res.status(401).json({ error: "Unauthorized" });
+        }
       }
-    );
-    if (result.user) {
-      req.user = result.user;
-      req.user.memberships = await Kowloon.getUserMemberships(req.user.id);
     }
-    if (result.server) {
-      req.server = result.server;
-      req.server.memberships = await Kowloon.getUserMemberships(req.server.id);
+
+    let logline = `${req.method} ${req.url}`;
+    if (req.user) logline += ` | User: ${req.user.id}`;
+    if (req.server) logline += ` | Server: ${req.server.id}`;
+
+    logger.info(logline);
+
+    for (const [url, route] of Object.entries(routes.get)) {
+      router.get(`${url}`, route);
     }
-  } else {
-    req.user = null;
-  }
 
-  // if (req.headers.accept != "application/json") {
-  //   express.static("./frontend/dist/")(req, res, next); //this is a
-  // } else {
-  //   next();
-  // }
-
-  let logline = `${req.method} ${req.url}`;
-  if (req.user) logline += ` | User: ${req.user.id}`;
-  if (req.server) logline += ` | Server: ${req.server.id}`;
-
-  logger.info(logline);
-
-  for (const [url, route] of Object.entries(routes.get)) {
-    router.get(`${url}`, route);
-  }
-
-  for (const [url, route] of Object.entries(routes.post)) {
-    router.post(`${url}`, route);
-  }
-
-  next();
-});
-
+    for (const [url, route] of Object.entries(routes.post)) {
+      router.post(`${url}`, route);
+    }
+    next();
+  });
+}
 export default router;

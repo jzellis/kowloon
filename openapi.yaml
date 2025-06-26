@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: "Kowloon API"
-  version: "1.0.0"
+  version: "0.0.1"
   description: "API specification for Kowloon social media server implementing a modified version of ActivityStreams endpoints."
 
 servers:
@@ -40,8 +40,8 @@ paths:
       parameters:
         - name: "id"
           in: "path"
-          description: "Unique identifier of the activity"
           required: true
+          description: "Unique identifier of the activity"
           schema:
             type: string
       responses:
@@ -126,10 +126,10 @@ paths:
       summary: "Retrieve a specific circle by ID"
       description: "Fetches a circle object by its unique ID."
       parameters:
-        - name: "id"
-          in: "path"
-          description: "Unique identifier of the circle"
+        - name: id
+          in: path
           required: true
+          description: "Unique identifier of the circle"
           schema:
             type: string
       responses:
@@ -139,6 +139,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/Circle"
+
 
   /events:
     get:
@@ -771,7 +772,7 @@ components:
           example: "Create"
         actorId:
           type: string
-          example: "user123"
+          example: "@user@server.example"
         actor:
           type: object
           description: "Actor object"
@@ -785,13 +786,17 @@ components:
           description: "The object of the activity"
         to:
           type: string
-          required: true
         replyTo:
           type: string
-          required: true
         reactTo:
           type: string
-          required: true
+      required:
+        - type
+        - actorId
+        - to
+        - replyTo
+        - reactTo
+
     Bookmark:
       type: object
       description: "A bookmark object."
@@ -805,13 +810,15 @@ components:
           type: string
         to:
           type: string
-          required: true
         replyTo:
           type: string
-          required: true
         reactTo:
           type: string
-          required: true
+      required:
+        - to
+        - replyTo
+        - reactTo
+
     Circle:
       type: object
       description: "A circle (group of users)."
@@ -824,13 +831,15 @@ components:
           type: string
         to:
           type: string
-          required: true
         replyTo:
           type: string
-          required: true
         reactTo:
           type: string
-          required: true
+      required:
+        - to
+        - replyTo
+        - reactTo
+
     Event:
       type: object
       description: "An event with start and end times."
@@ -838,7 +847,7 @@ components:
         id:
           type: string
           example: "event:1a2b3c4d5e6f7g8h9i0j@server.example"
-          readOnly: true        
+          readOnly: true
         name:
           type: string
         startTime:
@@ -851,13 +860,14 @@ components:
           type: string
         to:
           type: string
-          required: true
         replyTo:
           type: string
-          required: true
         reactTo:
           type: string
-          required: true
+      required:
+        - to
+        - replyTo
+        - reactTo
 
     Group:
       type: object
@@ -871,13 +881,14 @@ components:
           type: string
         to:
           type: string
-          required: true
         replyTo:
           type: string
-          required: true
         reactTo:
           type: string
-          required: true
+      required:
+        - to
+        - replyTo
+        - reactTo
 
     Member:
       type: object
@@ -904,13 +915,14 @@ components:
           type: string
         to:
           type: string
-          required: true
         replyTo:
           type: string
-          required: true
         reactTo:
           type: string
-          required: true
+      required:
+        - to
+        - replyTo
+        - reactTo
 
     React:
       type: object
@@ -953,10 +965,11 @@ components:
           type: string
         to:
           type: string
-          required: true
         replyTo:
           type: string
-          required: true
         reactTo:
           type: string
-          required: true
+      required:
+        - to
+        - replyTo
+        - reactTo

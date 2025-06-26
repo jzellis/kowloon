@@ -3,17 +3,16 @@ import { Activity } from "../../schema/index.js";
 export default async function (req, res, next) {
   let status = 200;
   let qStart = Date.now();
-  let response = {};
+  let response = { server: req.server };
   let page = req.query.page || 1;
   let pageSize = req.query.num || 20;
   let sort = {};
   if (req.query.sort) {
-    sort[req.query.sort] = -1;
+    sort = `-${req.query.sort}`;
   } else {
-    sort.updatedAt = -1;
+    sort = `-updatedAt`;
   }
-  let query = await Kowloon.generateQuery(req.user?.id);
-  if (req.query.type) query.type = req.query.type.split(",").split(",");
+  let query = await Kowloon.generateQuery(req.user);
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
   let items = await Activity.find(query)
@@ -26,6 +25,7 @@ export default async function (req, res, next) {
   let totalItems = await Activity.countDocuments(query);
 
   response = {
+    server: req.server,
     "@context": "https://www.w3.org/ns/activitystreams",
     type: "OrderedCollection",
     // id: `https//${settings.domain}${id ? "/" + id : ""}`,

@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { marked } from "marked";
 import crypto from "crypto";
-import { Feed, Settings, User } from "./index.js";
+import { Settings, User } from "./index.js";
 import { type } from "os";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
@@ -36,6 +36,7 @@ const PageSchema = new Schema(
     href: { type: String, default: undefined }, // If the page is a link, this is what it links to
     actorId: { type: String }, // The ID of the page's author
     actor: { type: Object, default: undefined },
+    server: { type: String, default: undefined }, // The server of the page's author
     title: { type: String, required: true }, // An optional title for page types other than Notes
     slug: { type: String, default: undefined },
     summary: { type: String, default: undefined }, // An optional summary for page types other than Notes
@@ -93,6 +94,8 @@ PageSchema.pre("save", async function (next) {
     this.title = this.title && this.title.trim();
     this.id = this.id || `page:${this._id}@${domain}`;
     this.url = this.url || `https://${domain}/pages/${this.slug}`;
+    this.server =
+      this.server || (await Settings.findOne({ name: "actorId" })).value;
     this.source.mediaType = this.source.mediaType || "text/html";
 
     switch (this.source.mediaType) {

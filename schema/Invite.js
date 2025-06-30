@@ -7,6 +7,7 @@ import QRCode from "qrcode";
 const InviteSchema = new Schema(
   {
     actorId: { type: String, required: true }, // This is who's creating the invite
+    server: { type: String, default: undefined }, // The server of the actor
     email: { type: String }, // Can be optionally used to send invitation
     code: { type: String },
     qrCode: String,
@@ -26,6 +27,8 @@ InviteSchema.pre("save", async function (next) {
   if (!this.url) {
     const domain = (await Settings.findOne({ name: "domain" })).value;
     this.url = `https://${domain}/invites/${this.key}`;
+    this.server =
+      this.server || (await Settings.findOne({ name: "actorId" })).value;
   }
   this.qrCode = await QRCode.toDataURL(this.url);
   next();

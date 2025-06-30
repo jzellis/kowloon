@@ -13,7 +13,8 @@ import Inbox from "./Inbox.js";
 import Invite from "./Invite.js";
 import Outbox from "./Outbox.js";
 import File from "./File.js";
-import Feed from "./Feed.js";
+import CachedPosts from "./CachedPosts.js";
+import UserFeed from "./UserFeed.js";
 
 export {
   Activity,
@@ -31,5 +32,6 @@ export {
   Invite,
   Outbox,
   File,
-  Feed,
+  CachedPosts,
+  UserFeed,
 };

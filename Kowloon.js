@@ -52,18 +52,15 @@ const Kowloon = {
 
     try {
       await s3.send(new HeadBucketCommand({ Bucket: process.env.S3_BUCKET }));
+      console.log("S3 bucket exists");
     } catch (error) {
       if (error.name === "NotFound")
         await s3.send(
           new CreateBucketCommand({ Bucket: process.env.S3_BUCKET })
         );
+      console.log("S3 bucket created");
     }
-    console.log("S3 bucket checked");
-    // } else {
-    //   console.log(
-    //     "Kowloon is not configured, please go to /setup to configure it."
-    //   );
-    // }
+
     // This loads all methods from the "methods" folder
     const methodsDir = `${dirname(fileURLToPath(import.meta.url))}/methods`;
 

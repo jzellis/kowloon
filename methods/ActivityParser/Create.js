@@ -6,7 +6,6 @@ import {
   Event,
   Group,
   File,
-  Feed,
   User,
 } from "../../schema/index.js";
 import indefinite from "indefinite";
@@ -45,23 +44,6 @@ export default async function (activity) {
         let post = await Post.create(activity.object);
         activity.object = post;
         activity.objectId = post.id;
-
-        await Feed.create({
-          ...post,
-          actor: {
-            ...activity.actor,
-            username: activity.actor.username || activity.actor.id,
-          },
-          group: group
-            ? {
-                id: group.id,
-                name: group.name,
-                icon: group.icon,
-                summary: group.summary,
-                url: group.url,
-              }
-            : undefined,
-        });
       } catch (e) {
         activity.error = new Error(e);
       }

@@ -15,6 +15,7 @@ const BookmarkSchema = new Schema(
     title: { type: String, default: undefined },
     actorId: { type: String, required: true },
     actor: { type: Object, default: undefined },
+    server: { type: String, default: undefined }, // The server of the activity's author. This is used to determine the server of the activity.
     tags: { type: [String], default: [] },
     summary: { type: String, default: undefined },
     source: {
@@ -72,6 +73,8 @@ BookmarkSchema.pre("save", async function (next) {
         )}</p>`;
         break;
     }
+    this.server =
+      this.server || (await Settings.findOne({ name: "actorId" })).value;
   }
   next();
 });

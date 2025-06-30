@@ -10,7 +10,7 @@ const ReactSchema = new Schema(
     target: { type: String, required: true },
     actorId: { type: String, required: true },
     actor: { type: Object, default: undefined },
-
+    server: { type: String, default: undefined },
     emoji: { type: String, required: true },
     name: { type: String, required: true },
     to: { type: String, default: "" },
@@ -31,6 +31,8 @@ const ReactSchema = new Schema(
 ReactSchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;
   this.id = this.id || `react:${this._id}@${domain}`;
+  this.server =
+    this.server || (await Settings.findOne({ name: "actorId" })).value;
   next();
 });
 export default mongoose.model("React", ReactSchema);

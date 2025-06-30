@@ -8,6 +8,7 @@ import { Settings, Circle, Group } from "./index.js";
 const UserSchema = new Schema(
   {
     id: { type: String, key: true },
+    server: { type: String, default: undefined }, // The server of the actor
     objectType: { type: String, default: "User" },
     type: { type: String, default: "Person" },
     username: { type: String, default: undefined, unique: true },
@@ -59,6 +60,7 @@ const UserSchema = new Schema(
     flaggedReason: { type: String, default: null },
     deletedAt: { type: Date, default: undefined },
     lastLogin: Date,
+    feedRefreshedAt: Date,
   },
   { toJSON: { virtuals: true }, toObject: { virtuals: true }, timestamps: true }
 );
@@ -95,6 +97,8 @@ UserSchema.pre("save", async function (next) {
     this.id = this.id || `@${this.username}@${domain}`;
     this.profile.icon = this.profile.icon || `//${domain}/images/user.png`;
     this.url = this.url || `https://${domain}/users/${this.id}`;
+    this.server =
+      this.server || (await Settings.findOne({ name: "actorId" })).value;
 
     const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
       modulusLength: 2048, // Adjust the key length as per your requirements
@@ -104,6 +108,8 @@ UserSchema.pre("save", async function (next) {
 
     this.publicKey = publicKey;
     this.privateKey = privateKey;
+    if (!this.inbox) this.inbox = `https://${domain}/users/${this.id}/inbox`;
+    if (!this.outbox) this.outbox = `https://${domain}/users/${this.id}/outbox`;
 
     let followingCircle = await Circle.create({
       name: `${this.id} | Following`,
@@ -112,6 +118,18 @@ UserSchema.pre("save", async function (next) {
       to: this.id,
       replyTo: this.id,
       reactTo: this.id,
+      members: [
+        {
+          id: this.id,
+          serverId: this.server,
+          type: "kowloon",
+          name: this.profile.name,
+          inbox: this.inbox,
+          outbox: this.outbox,
+          icon: this.profile.icon,
+          url: this.url,
+        },
+      ],
     });
     this.following = followingCircle.id;
     let blockedCircle = await Circle.create({
@@ -141,8 +159,6 @@ UserSchema.pre("save", async function (next) {
       ).value;
     }
   }
-  if (!this.inbox) this.inbox = `https://${domain}/users/${this.id}/inbox`;
-  if (!this.outbox) this.outbox = `https://${domain}/users/${this.id}/outbox`;
 
   next();
 });

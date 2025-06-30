@@ -17,6 +17,13 @@ export default async function (activity) {
       (member) => member.id !== activity.object
     );
     await circle.save();
+
+    let following = await Circle.findOne({ id: user.following });
+    // console.log(circle);
+    following.members = circle.members.filter(
+      (member) => member.id !== activity.object
+    );
+    await following.save();
   }
   return activity;
 }

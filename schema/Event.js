@@ -7,6 +7,7 @@ const EventSchema = new Schema(
     id: { type: String, key: true }, // This is different from the _id, this is the global UUID of the event.
     actor: { type: Object, default: undefined },
     actorId: { type: String, required: true }, // The actor ID of the event's author. Required.
+    server: { type: String, default: undefined }, // The server of the event's author.
     type: { type: String, default: "Event" }, // We can create a list of possible event types later
     to: { type: String, default: "" },
     replyTo: { type: String, default: "" },
@@ -28,7 +29,7 @@ const EventSchema = new Schema(
           outbox: { type: String, default: undefined },
           icon: { type: String, default: undefined },
           url: { type: String, default: undefined },
-          serverId: { type: String },
+          server: { type: String },
           createdAt: { type: Date, default: Date.now },
           updatedAt: { type: Date, default: Date.now },
           status: {
@@ -49,7 +50,7 @@ const EventSchema = new Schema(
           outbox: { type: String, default: undefined },
           icon: { type: String, default: undefined },
           url: { type: String, default: undefined },
-          serverId: { type: String },
+          server: { type: String },
           createdAt: { type: Date, default: Date.now },
           updatedAt: { type: Date, default: Date.now },
         },
@@ -81,6 +82,8 @@ EventSchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;
   this.id = this.id || `event:${this._id}@${domain}`;
   this.url = this.url || `https://${domain}/events/${this.id}`;
+  this.server =
+    this.server || (await Settings.findOne({ name: "actorId" })).value;
   next();
 });
 

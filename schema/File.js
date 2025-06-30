@@ -15,6 +15,7 @@ const FileSchema = new Schema(
     extension: { type: String, default: undefined },
     size: { type: Number, default: undefined },
     actorId: { type: String, required: true }, // Who created this group?
+    server: { type: String, default: undefined }, // The server of the actor
     flagged: { type: Object, default: false }, // Has this group been flagged? If so, it'll include a reason, who flagged it and when.
     deletedAt: { type: Date, default: null }, // If the group is deleted, when it was deleted
   },
@@ -34,6 +35,8 @@ FileSchema.pre("save", async function (next) {
     this.id = this.id || `file:${this._id}@${domain}`;
     this.url =
       this.url || `https://${domain}/files/${this.id}.${this.extension}`;
+    this.server =
+      this.server || (await Settings.findOne({ name: "actorId" })).value;
   }
   next();
 });

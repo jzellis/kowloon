@@ -10,7 +10,7 @@ const GroupSchema = new Schema(
     name: { type: String, default: undefined },
     actorId: { type: String, required: true }, // Who created this group?
     actor: { type: Object, default: undefined },
-
+    server: { type: String, default: undefined }, // The server of the actor
     description: { type: String, default: undefined },
     icon: { type: String, default: undefined },
     location: { type: Object, default: undefined },
@@ -23,7 +23,7 @@ const GroupSchema = new Schema(
           outbox: { type: String, default: undefined },
           icon: { type: String, default: undefined },
           url: { type: String, default: undefined },
-          serverId: { type: String },
+          server: { type: String },
           createdAt: { type: Date, default: Date.now },
           updatedAt: { type: Date, default: Date.now },
         },
@@ -41,7 +41,7 @@ const GroupSchema = new Schema(
           outbox: { type: String, default: undefined },
           icon: { type: String, default: undefined },
           url: { type: String, default: undefined },
-          serverId: { type: String },
+          server: { type: String },
           createdAt: { type: Date, default: Date.now },
           updatedAt: { type: Date, default: Date.now },
         },
@@ -81,6 +81,8 @@ GroupSchema.pre("save", async function (next) {
     this.id = this.id || `group:${this._id}@${domain}`;
     this.url = this.url || `https://${domain}/groups/${this.id}`;
     this.icon = this.icon || `https://${domain}/images/group.png`;
+    this.server =
+      this.server || (await Settings.findOne({ name: "actorId" })).value;
     if (this.members.length === 0) {
       this.members.push({
         id: actor.id,

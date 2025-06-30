@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { marked } from "marked";
 import crypto from "crypto";
-import { Feed, Settings, User } from "./index.js";
+import { Settings, User } from "./index.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -14,6 +14,7 @@ const PostSchema = new Schema(
     href: { type: String, default: undefined }, // If the post is a link, this is what it links to
     actorId: { type: String }, // The ID of the post's author
     actor: { type: Object, default: undefined },
+    server: { type: String, default: undefined }, // The server of the post's author
     group: { type: Object, default: undefined },
     title: { type: String, default: undefined }, // An optional title for post types other than Notes
     summary: { type: String, default: undefined }, // An optional summary for post types other than Notes
@@ -71,6 +72,8 @@ PostSchema.pre("save", async function (next) {
     this.title = this.title && this.title.trim();
     this.id = this.id || `post:${this._id}@${domain}`;
     this.url = this.url || `https://${domain}/posts/${this.id}`;
+    this.server =
+      this.server || (await Settings.findOne({ name: "actorId" })).value;
     this.source.mediaType = this.source.mediaType || "text/html";
 
     switch (this.source.mediaType) {

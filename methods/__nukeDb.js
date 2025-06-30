@@ -12,7 +12,6 @@ import {
   File,
   Post,
   User,
-  Feed,
   Settings,
   Page,
   Event,
@@ -24,7 +23,6 @@ export default async function () {
   await Activity.deleteMany({});
   await Bookmark.deleteMany({});
   await Circle.deleteMany({});
-  await Feed.deleteMany({});
   await Group.deleteMany({});
   await React.deleteMany({});
   await Reply.deleteMany({});

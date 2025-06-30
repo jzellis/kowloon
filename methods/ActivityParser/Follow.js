@@ -25,5 +25,28 @@ export default async function (activity) {
     }
   );
 
+  if (activity.target != user.following) {
+    let existing = await Circle.findOne({
+      id: user.following,
+      "members.id": activity.object,
+    });
+    if (!existing)
+      await Circle.findOneAndUpdate(
+        { id: user.following },
+        {
+          $push: {
+            members: {
+              id: activity.object,
+              serverId: `@${parsedTargetId.server}`,
+              name: targetUser.profile.name,
+              inbox: `https://${parsedTargetId.server}/users/${targetUser.id}/inbox`,
+              outbox: `https://${parsedTargetId.server}/users/${targetUser.id}/outbox`,
+              icon: targetUser.profile.icon,
+              url: `https://${parsedTargetId.server}/users/${targetUser.id}`,
+            },
+          },
+        }
+      );
+  }
   return activity;
 }

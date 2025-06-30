@@ -365,10 +365,7 @@ await Promise.all(
   })
 );
 
-let adminCircleMembers = getRandomItems(
-  users,
-  Math.floor(Math.random() * 10)
-).map((i) => {
+let adminCircleMembers = users.map((i) => {
   return {
     id: i.id,
     serverId: Kowloon.settings.actorId,

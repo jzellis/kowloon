@@ -11,49 +11,15 @@ import jwt from "jsonwebtoken";
 
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
-// Routes
-import home from "./index.js";
-import activities from "./activities/index.js";
-import activityById from "./activities/id.js";
-import bookmarks from "./bookmarks/index.js";
-import bookmarksById from "./bookmarks/id.js";
-import circles from "./circles/index.js";
-import circleById from "./circles/id.js";
-import circleByIdMembers from "./circles/members.js";
-import events from "./events/index.js";
-import eventsById from "./events/id.js";
-import groups from "./groups/index.js";
-import groupById from "./groups/id.js";
-import groupByIdPosts from "./groups/posts.js";
-import groupByIdBookmarks from "./groups/bookmarks.js";
-import groupByIdMembers from "./groups/members.js";
-import pageById from "./pages/id.js";
-import pages from "./pages/index.js";
-import posts from "./posts/index.js";
-import postById from "./posts/id.js";
-import postReactsById from "./posts/reacts.js";
-import postRepliesById from "./posts/replies.js";
-import users from "./users/index.js";
-import userById from "./users/id.js";
-import userActivities from "./users/activities.js";
-import userBookmarks from "./users/bookmarks.js";
-import userCircles from "./users/circles.js";
-import userGroups from "./users/groups.js";
-import userPosts from "./users/posts.js";
-import userReacts from "./users/reacts.js";
-import userReplies from "./users/replies.js";
-import userInbox from "./users/inbox.js";
-import userOutbox from "./users/outbox.js";
-import userTimeline from "./users/timeline.js";
-import idGet from "./id/index.js";
-import outboxGet from "./outbox/get.js";
-import outboxPost from "./outbox/post.js";
-import inboxGet from "./inbox/get.js";
-import test from "./test.js";
-// Post Routes
+import getCollection from "./getCollection.js";
+import getItem from "./getItem.js";
+import getMembers from "./getMembers.js";
+import getServerOutbox from "./getServerOutbox.js";
+// Route Methods
+
+// // Post Routes
 import login from "./login/index.js";
-import auth from "./auth/get.js";
-import inboxPost from "./inbox/post.js";
+import activityPost from "./inbox/post.js";
 import fileGet from "./files/get.js";
 import filePost from "./files/post.js";
 import preview from "./utils/preview.js";
@@ -61,66 +27,276 @@ import setupGet from "./setup/get.js";
 import setupPost from "./setup/post.js";
 import publicKey from "./well-known/publicKey.js";
 import jwks from "./well-known/jwks.js";
+import getCircleFeed from "./getCircleFeed.js";
+import getUserTimeline from "./getUserTimeline.js";
+import getUserPublicKey from "./getUserPublicKey.js";
 
-const CONFIG_FLAG = path.join(process.cwd(), ".configured");
-
-const routes = {
-  get: {
-    "/auth": auth,
-
-    "/": outboxGet,
-    "/activities": activities,
-    "/activities/:id": activityById,
-    "/circles": circles,
-    "/circles/:id": circleById,
-    "/circles/:id/members": circleByIdMembers,
-    "/bookmarks": bookmarks,
-    "/bookmarks/:id": bookmarksById,
-    "/events": events,
-    "/events/:id": eventsById,
-    "/groups": groups,
-    "/groups/:id": groupById,
-    "/groups/:id/posts": groupByIdPosts,
-    "/groups/:id/bookmarks": groupByIdBookmarks,
-    "/groups/:id/members": groupByIdMembers,
-    "/pages": pages,
-    "/pages/:id": pageById,
-    "/posts": posts,
-    "/posts/:id": postById,
-    "/posts/:id/replies": postRepliesById,
-    "/posts/:id/reacts": postReactsById,
-    "/users": users,
-    "/users/:id": userById,
-    "/users/:id/activities": userActivities,
-    "/users/:id/circles": userCircles,
-    "/users/:id/bookmarks": userBookmarks,
-    "/users/:id/groups": userGroups,
-    "/users/:id/posts": userPosts,
-    "/users/:id/replies": userReplies,
-    "/users/:id/reacts": userReacts,
-    "/users/:id/inbox": userInbox,
-    "/users/:id/outbox": userOutbox,
-    "/users/:id/timeline": userTimeline,
-    "/id/:id": idGet,
-    "/inbox": function () {},
-    "/outbox": outboxGet,
-    "/inbox": inboxGet,
-    "/test": test,
-    "/files/:id": fileGet,
-    "/utils/preview": preview,
-    "/setup": setupGet,
-    "/.well-known/public-key": publicKey,
-    "/.well-known/jwks.json": jwks,
+const routes = [
+  // Basic collections
+  {
+    method: "get",
+    path: "/activities",
+    collection: "activities",
+    handler: getCollection,
   },
-  post: {
-    "/login": login,
-    "/logout": function () {},
-    "/inbox": inboxPost,
-    "/outbox": outboxPost,
-    "/files": filePost,
-    "/setup": setupPost,
+  {
+    method: "get",
+    path: "/activities/:id",
+    collection: "activities",
+    handler: getItem,
   },
-};
+
+  {
+    method: "get",
+    path: "/bookmarks",
+    collection: "bookmarks",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/bookmarks/:id",
+    collection: "bookmarks",
+    handler: getItem,
+  },
+
+  {
+    method: "get",
+    path: "/circles",
+    collection: "circles",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/circles/:id",
+    collection: "circles",
+    handler: getItem,
+  },
+  {
+    method: "get",
+    path: "/circles/:id/posts",
+    collection: "circles",
+    handler: getCircleFeed,
+  },
+  {
+    method: "get",
+    path: "/circles/:id/members",
+    collection: "circles",
+    handler: getMembers,
+  },
+
+  {
+    method: "get",
+    path: "/events",
+    collection: "events",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/events/:id",
+    collection: "events",
+    handler: getItem,
+  },
+  {
+    method: "get",
+    path: "/events/:id/members",
+    collection: "events",
+    handler: getMembers,
+  },
+
+  {
+    method: "get",
+    path: "/groups",
+    collection: "groups",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/groups/:id",
+    collection: "groups",
+    handler: getItem,
+  },
+  {
+    method: "get",
+    path: "/groups/:id/bookmarks",
+    parent: "groups",
+    collection: "bookmarks",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/groups/:id/posts",
+    parent: "groups",
+    collection: "posts",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/groups/:id/members",
+    collection: "groups",
+    handler: getMembers,
+  },
+
+  {
+    method: "get",
+    path: "/pages",
+    collection: "pages",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/pages/:id",
+    collection: "pages",
+    handler: getItem,
+  },
+
+  {
+    method: "get",
+    path: "/posts",
+    collection: "posts",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/posts/:id",
+    collection: "posts",
+    handler: getItem,
+  },
+  {
+    method: "get",
+    path: "/posts/:id/replies",
+    parent: "posts",
+    collection: "replies",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/posts/:id/reacts",
+    parent: "posts",
+    collection: "reacts",
+    handler: getCollection,
+  },
+
+  {
+    method: "get",
+    path: "/users",
+    collection: "users",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/users/:id",
+    collection: "users",
+    handler: getItem,
+  },
+  {
+    method: "get",
+    path: "/users/:id/public-key",
+    handler: getUserPublicKey,
+  },
+  {
+    method: "get",
+    path: "/users/:id/inbox",
+    handler: getUserTimeline,
+  },
+  {
+    method: "get",
+    path: "/users/:id/activities",
+    parent: "users",
+    collection: "activities",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/users/:id/bookmarks",
+    parent: "users",
+    collection: "bookmarks",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/users/:id/circles",
+    parent: "users",
+    collection: "circles",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/users/:id/groups",
+    parent: "users",
+    collection: "groups",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/users/:id/posts",
+    parent: "users",
+    collection: "posts",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/users/:id/outbox",
+    parent: "users",
+    collection: "posts",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/users/:id/reacts",
+    parent: "users",
+    collection: "reacts",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/users/:id/replies",
+    parent: "users",
+    collection: "replies",
+    handler: getCollection,
+  },
+  {
+    method: "get",
+    path: "/",
+    handler: getServerOutbox,
+  },
+  {
+    method: "get",
+    path: "/outbox",
+    handler: getServerOutbox,
+  },
+  {
+    method: "get",
+    path: "/.well-known/public-key",
+    handler: publicKey,
+  },
+  {
+    method: "get",
+    path: "/.well-known/jwks.json",
+    handler: jwks,
+  },
+  {
+    method: "get",
+    path: "/utils/preview",
+    handler: preview,
+    auth: true,
+  },
+  // POST Routes
+  {
+    method: "post",
+    path: "/login",
+    handler: login,
+  },
+  {
+    method: "post",
+    path: "/inbox",
+    handler: activityPost,
+  },
+  {
+    method: "post",
+    path: "/.well-known/inbox",
+    handler: activityPost,
+  },
+];
 
 const router = express.Router();
 
@@ -141,109 +317,123 @@ const logger = winston.createLogger({
   ],
 });
 
-// This checks to see if the server has been configured
-if (!fs.existsSync(CONFIG_FLAG)) {
-  logger.info("Running setup");
-  router.use((req, res, next) => {
-    console.log(req.path);
-    if (req.path != "/setup" && req.method === "GET") {
-      return res.redirect("/setup");
-    } else {
-      return req.method === "GET" ? setupGet(req, res) : setupPost(req, res);
-    }
-  });
-} else {
-  // This serves our Swagger UI
-  router.get("/openapi.yaml", (req, res) => {
-    const yamlPath = path.join(process.cwd(), "openapi.yaml");
-    const yamlContent = fs.readFileSync(yamlPath, "utf8");
-    res.type("text/yaml").send(yamlContent);
-  });
+// This serves our Swagger UI
+router.get("/openapi.yaml", (req, res) => {
+  const yamlPath = path.join(process.cwd(), "openapi.yaml");
+  const yamlContent = fs.readFileSync(yamlPath, "utf8");
+  res.type("text/yaml").send(yamlContent);
+});
 
-  const openapiDocument = yaml.load(
-    fs.readFileSync(path.join(process.cwd(), "openapi.yaml"), "utf8")
-  );
+const openapiDocument = yaml.load(
+  fs.readFileSync(path.join(process.cwd(), "openapi.yaml"), "utf8")
+);
 
-  router.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
+router.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
 
-  router.use(async (req, res, next) => {
-    res.header("Access-Control-Allow-Credentials", true);
-    res.header("Access-Control-Allow-Origin", "*");
-    res.header("Access-Control-Allow-Methods", "GET,HEAD,POST,OPTIONS");
-    res.header("Access-Control-Allow-Headers", "*");
+router.use(async (req, res, next) => {
+  res.header("Access-Control-Allow-Credentials", true);
+  res.header("Access-Control-Allow-Origin", "*");
+  res.header("Access-Control-Allow-Methods", "GET,HEAD,POST,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "*");
 
-    req.server = {
-      id: Kowloon.settings.actorId,
-      version: Kowloon.settings.version,
-      profile: Kowloon.settings.profile,
-      publicKey: `https://${Kowloon.settings.domain}/.well-known/public-key`,
-    };
+  req.server = {
+    id: Kowloon.settings.actorId,
+    version: Kowloon.settings.version,
+    profile: Kowloon.settings.profile,
+    publicKey: `https://${Kowloon.settings.domain}/.well-known/public-key`,
+    jwks: `https://${Kowloon.settings.domain}/.well-known/jwks.json`,
+    inbox: `https://${Kowloon.settings.domain}/inbox`,
+    outbox: `https://${Kowloon.settings.domain}/outbox`,
+  };
 
-    if (req.header("Authorization")) {
-      const authHeader = req.header("Authorization") || "";
-      const token = authHeader.startsWith("Bearer ")
-        ? authHeader.slice(7).trim()
-        : null;
+  if (req.header("Authorization")) {
+    const authHeader = req.header("Authorization") || "";
+    const token = authHeader.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : null;
 
-      if (token) {
-        try {
-          const decoded = jwt.decode(token, {
-            complete: true,
+    if (token) {
+      try {
+        const decoded = jwt.decode(token, {
+          complete: true,
+        });
+        const kid = decoded.header.kid;
+        const user = decoded.payload.user;
+        const loggedIn = decoded.payload.loggedIn;
+        const iat = decoded.payload.iat;
+        const issuer =
+          decoded.payload.iss || `https://${Kowloon.settings.domain}`;
+        let verified = {};
+        if (user.id.endsWith(Kowloon.settings.actorId)) {
+          verified = jwt.verify(token, Kowloon.settings.publicKey, {
+            algorithms: ["RS256"],
+            issuer: `https://${Kowloon.settings.domain}`,
           });
+        } else {
+          const JWKS = createRemoteJWKSet(
+            new URL(`${issuer}/.well-known/jwks.json`)
+          );
 
-          const kid = decoded.header.kid;
-          const user = decoded.payload.user;
-          const loggedIn = decoded.payload.loggedIn;
-          const iat = decoded.payload.iat;
-          const issuer =
-            decoded.payload.iss || `https://${Kowloon.settings.domain}`;
-          let verified = {};
-          if (user.id.includes(Kowloon.settings.domain)) {
-            verified = jwt.verify(token, Kowloon.settings.publicKey, {
-              algorithms: ["RS256"],
-              issuer: `https://${Kowloon.settings.domain}`,
-            });
-          } else {
-            const JWKS = createRemoteJWKSet(
-              new URL(`${issuer}/.well-known/jwks.json`)
-            );
-
-            const remote = await jwtVerify(token, JWKS, {
-              algorithms: ["RS256"],
-              issuer,
-            });
-            verified = remote.payload;
-          }
-
-          if (verified.user.id == decoded.payload.user.id) {
-            req.user = verified.user;
-
-            // This returns whatever local groups and circles the user is a member of, regardless of whether they are local or remote
-            req.user.memberships = await Kowloon.getUserMemberships(
-              req.user.id
-            );
-          }
-        } catch (err) {
-          console.log(err);
-          return res.status(401).json({ error: "Unauthorized" });
+          const remote = await jwtVerify(token, JWKS, {
+            algorithms: ["RS256"],
+            issuer,
+          });
+          verified = remote.payload;
         }
+
+        if (verified.user.id == decoded.payload.user.id) {
+          req.user = verified.user;
+
+          // This returns whatever local groups and circles the user is a member of, regardless of whether they are local or remote
+          req.user.memberships = await Kowloon.getUserMemberships(req.user.id);
+        }
+      } catch (err) {
+        console.log(err);
+        return res.status(401).json({ error: "Unauthorized" });
       }
     }
+  }
 
-    let logline = `${req.method} ${req.url}`;
-    if (req.user) logline += ` | User: ${req.user.id}`;
-    if (req.server) logline += ` | Server: ${req.server.id}`;
+  let logline = `${req.method} ${req.url}`;
+  if (req.user) logline += ` | User: ${req.user.id}`;
+  if (req.server) logline += ` | Server: ${req.server.id}`;
 
-    logger.info(logline);
+  logger.info(logline);
 
-    for (const [url, route] of Object.entries(routes.get)) {
-      router.get(`${url}`, route);
+  const requireAuth = (req, res, next) => {
+    // your auth logic here
+    if (req.user) return next();
+    return res.status(401).json({
+      error:
+        "Unauthorized. You must be a logged-in member of this server to view this.",
+    });
+  };
+
+  routes.forEach(({ method, path, collection, parent, handler, auth }) => {
+    const middleware = [];
+
+    if (auth) middleware.push(requireAuth);
+
+    if (collection) {
+      middleware.push((req, res, next) => {
+        req.collection = collection;
+        next();
+      });
     }
 
-    for (const [url, route] of Object.entries(routes.post)) {
-      router.post(`${url}`, route);
+    if (parent) {
+      middleware.push((req, res, next) => {
+        req.parent = parent;
+        req.parentId = req.params.id;
+        next();
+      });
     }
-    next();
+
+    middleware.push(handler);
+    router[method](path, ...middleware);
   });
-}
+
+  next();
+});
+// }
 export default router;

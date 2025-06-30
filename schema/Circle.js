@@ -10,14 +10,14 @@ const CircleSchema = new Schema(
     name: { type: String, default: undefined },
     actorId: { type: String, required: true },
     actor: { type: Object, default: undefined },
-
+    server: { type: String, default: undefined },
     summary: { type: String, default: undefined },
     icon: { type: String, default: undefined },
     members: {
       type: [
         {
           id: { type: String, required: true },
-          serverId: { type: String, default: undefined },
+          server: { type: String, default: undefined },
           type: { type: String, default: "kowloon" },
           name: { type: String, default: undefined },
           inbox: { type: String, default: undefined },
@@ -40,6 +40,7 @@ const CircleSchema = new Schema(
     deletedAt: { type: Date, default: null },
     deletedBy: { type: String, default: null },
     url: { type: String, default: undefined },
+    lastFetchedAt: { type: Date, default: null },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
@@ -55,9 +56,11 @@ CircleSchema.pre("save", async function (next) {
     const domain = (await Settings.findOne({ name: "domain" })).value;
     this.title = this.title && this.title.trim();
     this.id = this.id || `circle:${this._id}@${domain}`;
-    this.url = this.url || `//${domain}/circles/${this.id}`;
+    this.url = this.url || `https://${domain}/circles/${this.id}`;
     this.memberCount = this.members.length;
     this.icon = this.icon || `https://${domain}/images/circle.png`;
+    this.server =
+      this.server || (await Settings.findOne({ name: "actorId" })).value;
   }
   next();
 });

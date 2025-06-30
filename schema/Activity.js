@@ -7,6 +7,7 @@ const ActivitySchema = new Schema(
     id: { type: String, key: true }, // This is different from the _id, this is the global UUID of the activity.
     actor: { type: Object, default: undefined },
     actorId: { type: String, required: true }, // The actor ID of the activity's author. Required.
+    server: { type: String, default: undefined }, // The server of the activity's author. This is used to determine the server of the activity.
     type: { type: String, default: "Create" },
     object: { type: Object, default: undefined }, // The object of the Activity.
     objectType: { type: String, default: undefined }, // This should be the same as the collection name, i.e. Post, React, Circle, etc.
@@ -52,6 +53,8 @@ ActivitySchema.pre("save", async function (next) {
   const domain = (await Settings.findOne({ name: "domain" })).value;
   this.id = this.id || `activity:${this._id}@${domain}`;
   this.url = this.url || `https://${domain}/activities/${this.id}`;
+  this.server =
+    this.server || (await Settings.findOne({ name: "actorId" })).value;
   next();
 });
 

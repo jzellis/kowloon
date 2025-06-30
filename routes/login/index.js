@@ -7,5 +7,5 @@ export default async function (req, res, next) {
   };
   response = await Kowloon.login(req.body.username, req.body.password);
 
-  res.status(status).json(response);
+  res.status(status).send(response);
 }

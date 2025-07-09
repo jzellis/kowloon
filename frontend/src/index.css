@@ -73,6 +73,11 @@ html {
   /* @apply max-h-screen overflow-hidden; */
 }
 
+.Timeline {
+  @apply w-3/5 mx-auto;
+  /* @apply grid grid-cols-2 gap-4; */
+}
+
 .post.Article {
   color: #194f4f;
   background: #fff;

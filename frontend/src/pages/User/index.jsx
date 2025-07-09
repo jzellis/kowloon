@@ -1,43 +1,44 @@
+import Kowloon from "../../lib/KowloonClient";
 import { useParams } from "react-router-dom"
-import { useState, useEffect, use } from "react";
+import { useState, useEffect,} from "react";
 import { NavLink } from "react-router-dom";
-import Kowloon from "../../lib/Kowloon";
 import "./index.css";
 import { useSelector, useDispatch } from "react-redux";
-import { setPosts } from "../../store/timeline";
+import { setPosts, setTimelineView } from "../../store/timeline";
 import Timeline from "../../components/Timeline";
 
 import { FaLocationDot, FaLink, FaTransgender  } from "react-icons/fa6";
 import CircleList from "../../components/CircleList";
+import { use } from "react";
 const User = () => {
 
-  let {id} = useParams();
-  let [user, setUser] = useState(null);
-  const posts = useSelector(state => state.timeline.posts);
+  let { id } = useParams();
+  let [user, setUser] = useState({});
+  let [posts, setPosts] = useState([]);
   let [activeTab, setActiveTab] = useState("posts");
-  let [circles, setCircles] = useState(null);
   const dispatch = useDispatch();
 
+
+  const getUser = async (id) => {
+    let response = await Kowloon.getUser(id);
+    console.log(response.user);
+    setUser(response.user);
+  }
+
+  const getPosts = async (id) => {
+    let response = await Kowloon.getUserPosts(id);
+    console.log(response.user);
+    setPosts(response.items);
+  }
+
   useEffect(() => {
-    const getUser = async (id) => {
-      let req = await Kowloon.getUser(id);
-      setUser(req.user);
-      if(req.user?.profile) document.title = `${req.user?.profile.name} (${req.user?.id}) | Kowloon`;
-      req = await Kowloon.getUserCircles(id);
-      setCircles(req.items);
-
-    }
-
-    const getPosts = async (id) => {
-      let req = await Kowloon.getUserPosts(id);
-      dispatch(setPosts(req.items));
-    }
     getUser(id);
     getPosts(id);
   }, []);
 
   return (
     <>
+      {user && user.id && (
       <div className="user-profile w-2/3 mx-auto h-screen mt-8">
       <div className="w-full grid grid-cols-12 gap-4">
         <div className="col-span-2">
@@ -78,6 +79,7 @@ const User = () => {
           {activeTab === "circles" && <CircleList title={`${user?.profile?.name}'s Public Circles`} circles={circles} />}
         </div>
         </div>
+        )}
       </>
     )
   }

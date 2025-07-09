@@ -48,7 +48,7 @@ export default async function (activity) {
     switch (parsedId.type) {
       case "User":
         activity.actor = await User.findOne({ id: activity.actorId }).select(
-          "-_id id profile publicKey"
+          "-_id id profile publicKey type url inbox outbox"
         );
         break;
       case "Server":

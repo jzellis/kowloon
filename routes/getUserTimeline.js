@@ -1,5 +1,5 @@
 import Kowloon from "../Kowloon.js";
-import { Circle, User, UserFeed, CachedPosts } from "../schema/index.js";
+import { Circle, User, UserFeed, TimelineCache } from "../schema/index.js";
 
 export default async function (req, res, next) {
   let status = 200;
@@ -33,7 +33,7 @@ export default async function (req, res, next) {
       .sort(sort)
       .lean();
 
-    let items = await CachedPosts.find({
+    let items = await TimelineCache.find({
       id: { $in: feed.map((p) => p.postId) },
     })
       .select("-_id -__v")

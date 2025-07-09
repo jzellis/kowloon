@@ -1,4 +1,3 @@
-import Kowloon from "./Kowloon.js";
 import express from "express";
 import cookieParser from "cookie-parser";
 import nocache from "nocache";
@@ -6,7 +5,6 @@ import cors from "cors";
 import http from "http";
 import path, { dirname } from "path";
 import { fileURLToPath } from "url";
-import bodyParser from "body-parser";
 import routes from "./routes/routes.js";
 import fs from "fs";
 import schedule from "node-schedule";
@@ -23,16 +21,10 @@ app.use(
   })
 );
 app.use(cookieParser());
-// app.use(bodyParser.json({ limit: "100mb" }));
 
 app.use(nocache());
-app.use(routes);
 
-// app.use("/", express.static(path.join(__dirname + "/frontend/dist")));
-// app.use(
-//   "/static",
-//   express.static(path.join(__dirname + "/frontend/build/assets"))
-// );
+app.use(routes);
 
 var port = normalizePort(process.env.PORT || "3000");
 app.set("port", port);
@@ -50,6 +42,7 @@ var server = http.createServer(
  */
 
 server.listen(port);
+// server.on("upgrade", viteProxy.upgrade);
 server.on("error", onError);
 server.on("listening", onListening);
 

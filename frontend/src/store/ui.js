@@ -10,7 +10,7 @@ export const uiSlice = createSlice({
       src: "",
       description: "",
     },
-    currentPage: "/",
+    currentUrl: "/",
   },
   reducers: {
     togglePostEditor: (state) => {
@@ -37,8 +37,11 @@ export const uiSlice = createSlice({
       let u = action.payload;
       state.currentMedia = { ...state.currentMedia, ...u };
     },
-    setCurrentPage: (state, action) => {
-      state.currentPage = action.payload;
+    setcurrentUrl: (state, action) => {
+      state.currentUrl = action.payload;
+    },
+    setCurrentTimelinePage: (state, action) => {
+      state.currentTimelinePage = action.payload;
     },
   },
 });
@@ -52,7 +55,8 @@ export const {
   showImageModal,
   hideImageModal,
   setCurrentMedia,
-  setCurrentPage,
+  setcurrentUrl,
+  setCurrentTimelinePage,
 } = uiSlice.actions;
 
 export default uiSlice.reducer;

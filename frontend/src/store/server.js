@@ -1,26 +1,50 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { set } from "mongoose";
 
 export const serverSlice = createSlice({
   name: "server",
   initialState: {
-    server: {},
-    circles: [],
-    timestamp: null,
-    signature: "",
+    id: "",
+    domain: "",
+    profile: {},
+    publicKey: "",
+    jwks: "",
+    inbox: "",
+    outbox: "",
     pages: [],
   },
   reducers: {
     setServer: (state, action) => {
-      state.server = action.payload;
+      const { id, domain, profile, publicKey, jwks, inbox, outbox } =
+        action.payload;
+      state.id = id;
+      state.domain = domain;
+      state.profile = profile;
+      state.publicKey = publicKey;
+      state.jwks = jwks;
+      state.inbox = inbox;
+      state.outbox = outbox;
     },
-    setServerCircles: (state, action) => {
-      state.circles = action.payload;
+    setId: (state, action) => {
+      state.id = action.payload;
     },
-    setTimestamp: (state, action) => {
-      state.timestamp = action.payload;
+    setDomain: (state, action) => {
+      state.domain = action.payload;
     },
-    setSignature: (state, action) => {
-      state.signature = action.payload;
+    setProfile: (state, action) => {
+      state.profile = action.payload;
+    },
+    setPublicKey: (state, action) => {
+      state.publicKey = action.payload;
+    },
+    setJwks: (state, action) => {
+      state.jwks = action.payload;
+    },
+    setInbox: (state, action) => {
+      state.inbox = action.payload;
+    },
+    setOutbox: (state, action) => {
+      state.outbox = action.payload;
     },
     setPages: (state, action) => {
       state.pages = action.payload;
@@ -31,9 +55,13 @@ export const serverSlice = createSlice({
 // Action creators are generated for each case reducer function
 export const {
   setServer,
-  setServerCircles,
-  setTimestamp,
-  setSignature,
+  setId,
+  setDomain,
+  setProfile,
+  setPublicKey,
+  setJwks,
+  setInbox,
+  setOutbox,
   setPages,
 } = serverSlice.actions;
 

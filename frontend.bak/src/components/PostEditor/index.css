@@ -1,0 +1,67 @@
+@import "tailwindcss";
+.tiptap {
+  p {
+    @apply mb-[1.25em];
+  }
+  blockquote {
+    @apply border-l-2 border-gray-400 pl-4 mb-[1.25em];
+  }
+
+  h1 {
+    @apply text-3xl;
+  }
+
+  h2 {
+    @apply text-2xl;
+  }
+
+  h3 {
+    @apply text-xl;
+  }
+
+  a {
+    @apply decoration-dotted underline;
+  }
+}
+
+#postEditor .modal-box {
+  background: #fffdf6;
+}
+
+.btn-note {
+  color: white;
+  background-color: #ffb233;
+  border: #ff9f00;
+}
+
+.btn-note:hover {
+  background-color: #ff9f00;
+}
+
+.btn-article {
+  color: white;
+  background-color: #59adad;
+}
+.btn-article:hover {
+  background-color: #309898;
+}
+
+.btn-link {
+  color: white;
+  background-color: #f6824b;
+  border: #f4631e;
+}
+
+.btn-link:hover {
+  background-color: #f4631e;
+}
+
+.btn-media {
+  color: white;
+  background-color: #d53636;
+  border: #cb0404;
+}
+
+.btn-media:hover {
+  background-color: #cb0404;
+}

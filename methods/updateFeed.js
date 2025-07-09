@@ -1,4 +1,10 @@
-import { User, Circle, Post, CachedPosts, UserFeed } from "../schema/index.js";
+import {
+  User,
+  Circle,
+  Post,
+  TimelineCache,
+  UserFeed,
+} from "../schema/index.js";
 import getSettings from "./getSettings.js";
 import Parser from "rss-parser";
 import { getLinkPreview } from "link-preview-js";
@@ -15,11 +21,13 @@ export default async function (actorId, circleId) {
 
   let cachedPosts = [];
   let userFeed = [];
+  let parser = new Parser();
 
   await Promise.all(
     circle.members.map(async (m) => {
       switch (m.type) {
         case "kowloon":
+          // This retrieves all the posts from a user via API call, even for local users. This needs to be fixed to retrieve local posts locally from the db.
           const url = `${m.outbox}`;
           const headers = {
             "Content-Type": "application/activity+json",
@@ -100,7 +108,7 @@ export default async function (actorId, circleId) {
   }));
 
   try {
-    await CachedPosts.bulkWrite(postOps);
+    await TimelineCache.bulkWrite(postOps);
   } catch (e) {
     console.log(e);
   }
@@ -113,7 +121,7 @@ export default async function (actorId, circleId) {
   user.feedRefreshedAt = new Date();
   await user.save();
 
-  return await CachedPosts.find({ id: { $in: cachedPosts.map((p) => p.id) } })
+  return await TimelineCache.find({ id: { $in: cachedPosts.map((p) => p.id) } })
     .select("-_id -__v")
     .lean();
 }

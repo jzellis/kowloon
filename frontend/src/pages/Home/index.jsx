@@ -1,28 +1,32 @@
-import Kowloon from "../../lib/Kowloon";
 import { useState, useEffect } from "react"
 import { useSelector, useDispatch } from "react-redux";
-import { setPosts } from "../../store/timeline";
+import Kowloon from "../../lib/KowloonClient";
+import { setTimelineView } from "../../store/timeline";
 import Timeline from "../../components/Timeline";
+import TimelineFilter from "../../components/TimelineFilter";
 const Home = () => {
-
-// const [posts, setPosts] = useState([]);
-  const user = useSelector(state => state.user.user);
-  const posts = useSelector(state => state.timeline.posts);
   const dispatch = useDispatch();
-useEffect(() => {
-const getPublicTimeline = async () => {
-  let res = await Kowloon.getPosts();
-  dispatch(setPosts(res.items));
-}
-getPublicTimeline();
-}, []);
+  const [posts, setPosts] = useState(JSON.parse(localStorage.getItem("posts")) || []);
+  const user = useSelector(state => state.user.user);
+  const server = useSelector(state => state.server);
+
+  useEffect(() => {
+
+    const getServerOutbox = async () => {
+      let request = await Kowloon.getServerOutbox();
+      if (request.items) {
+        localStorage.setItem("posts", JSON.stringify(request.items));
+        setPosts(request.items);
+      }
+    }
+    getServerOutbox();
+  }, []);
 
   return (
-    <>
-      <div className="pr-[33%] mx-auto relative bottom-0 max-h-screen overflow-x-hidden overflow-y-auto px-8 mt-8">
-        <Timeline showCirclesFilter={true} title={`${user ? "Public/Server" : "Public"} Posts`} posts={posts} />
-        </div>
-      </>
+    <div className="w-full mx-auto">
+      <TimelineFilter />
+      {posts && <Timeline posts={posts} title={`${server.profile.name} Posts`} />}
+      </div>
     )
   }
   

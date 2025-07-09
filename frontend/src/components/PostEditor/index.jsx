@@ -21,7 +21,7 @@ const PostEditor = (props) => {
 
     let user = useSelector((state) => state.user.user);
     let circles = useSelector((state) => state.user.circles);
-    let server = useSelector((state) => state.server.server);
+    let server = useSelector((state) => state.server);
     let postEditorOpen = useSelector((state) => state.ui.showPostEditor);
     let dispatch = useDispatch();
 
@@ -330,7 +330,7 @@ const PostEditor = (props) => {
                         }
                     }}>
                         <option value="@public">Public</option>
-                        <option value={server.id}>Server</option>
+                        <option value={server?.id}>Server</option>
                         {circles.filter(c => ![user.blocked,user.muted].includes(c.id)).map((c, i) => {
                             return (
                                 <option key={i} value={c.id}>{c.name}</option>

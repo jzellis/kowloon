@@ -4,32 +4,42 @@ export const userSlice = createSlice({
   name: "user",
   initialState: {
     user: {},
+    token: "",
     circles: [],
-    groups: [],
-    timestamp: null,
-    signature: "",
   },
   reducers: {
-    setTimestamp: (state, action) => {
-      state.timestamp = action.payload;
-    },
-    setSignature: (state, action) => {
-      state.signature = action.payload;
-    },
     setUser: (state, action) => {
       state.user = action.payload;
     },
+    setToken: (state, action) => {
+      state.token = action.payload;
+    },
+    clearUser: (state) => {
+      state.user = {};
+      state.token = "";
+    },
+    updateUser: (state, action) => {
+      const updatedUser = { ...state.user, ...action.payload };
+      state.user = updatedUser;
+    },
+    resetUser: (state) => {
+      state.user = {};
+      state.token = "";
+    },
     setCircles: (state, action) => {
       state.circles = action.payload;
-    },
-    setGroups: (state, action) => {
-      state.groups = action.payload;
     },
   },
 });
 
 // Action creators are generated for each case reducer function
-export const { setUser, setTimestamp, setSignature, setCircles, setGroups } =
-  userSlice.actions;
+export const {
+  setUser,
+  setToken,
+  clearUser,
+  updateUser,
+  resetUser,
+  setCircles,
+} = userSlice.actions;
 
 export default userSlice.reducer;

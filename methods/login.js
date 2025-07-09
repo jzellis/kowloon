@@ -17,6 +17,11 @@ export default async function (username, password = "") {
   user.lastLogin = new Date();
   await user.save();
   const token = await generateToken(user.id);
+  user = await User.findOne({ id: user.id })
+    .select(
+      "id username type profile prefs following blocked url inbox outbox muted publicKey -_id"
+    )
+    .lean();
 
-  return token;
+  return { user, token: token };
 }

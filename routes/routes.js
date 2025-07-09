@@ -8,7 +8,7 @@ import fs from "fs";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 import swaggerUi, { setup } from "swagger-ui-express";
 import jwt from "jsonwebtoken";
-
+import { createProxyMiddleware } from "http-proxy-middleware";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
 import getCollection from "./getCollection.js";
@@ -30,6 +30,7 @@ import jwks from "./well-known/jwks.js";
 import getCircleFeed from "./getCircleFeed.js";
 import getUserTimeline from "./getUserTimeline.js";
 import getUserPublicKey from "./getUserPublicKey.js";
+import getPages from "./getPages.js";
 
 const routes = [
   // Basic collections
@@ -140,7 +141,7 @@ const routes = [
     method: "get",
     path: "/pages",
     collection: "pages",
-    handler: getCollection,
+    handler: getPages,
   },
   {
     method: "get",
@@ -240,20 +241,7 @@ const routes = [
     collection: "posts",
     handler: getCollection,
   },
-  {
-    method: "get",
-    path: "/users/:id/reacts",
-    parent: "users",
-    collection: "reacts",
-    handler: getCollection,
-  },
-  {
-    method: "get",
-    path: "/users/:id/replies",
-    parent: "users",
-    collection: "replies",
-    handler: getCollection,
-  },
+
   {
     method: "get",
     path: "/",
@@ -300,6 +288,12 @@ const routes = [
 
 const router = express.Router();
 
+const isDev = process.env.NODE_ENV !== "production";
+
+if (!isDev) {
+  app.use(express.static("frontend/"));
+}
+
 const logger = winston.createLogger({
   // Log only if level is less than (meaning more severe) or equal to this
   level: "info",
@@ -338,6 +332,7 @@ router.use(async (req, res, next) => {
 
   req.server = {
     id: Kowloon.settings.actorId,
+    domain: req.hostname,
     version: Kowloon.settings.version,
     profile: Kowloon.settings.profile,
     publicKey: `https://${Kowloon.settings.domain}/.well-known/public-key`,
@@ -429,7 +424,17 @@ router.use(async (req, res, next) => {
       });
     }
 
-    middleware.push(handler);
+    // This handles content negotiation at request time
+    middleware.push((req, res, next) => {
+      if (req.headers.accept?.includes("application/json")) {
+        return handler(req, res, next);
+      } else {
+        // Let React Router take over via Vite proxy or index.html
+        next("route"); // skip remaining middleware and let fallback take over
+      }
+    });
+
+    // Register the route for GET/POST/etc
     router[method](path, ...middleware);
   });
 

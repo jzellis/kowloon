@@ -16,7 +16,12 @@ const UserFeedSchema = new Schema(
     canReact: { type: Boolean, default: false },
     canShare: { type: Boolean, default: false },
   },
-  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+    collection: "UserFeed",
+  }
 );
 
 const UserFeed = mongoose.model("UserFeed", UserFeedSchema);

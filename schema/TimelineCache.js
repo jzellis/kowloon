@@ -29,7 +29,12 @@ const CachedRemoteSchema = new Schema(
     deletedBy: { type: String, default: null }, // I`f the activity is deleted, who deleted it (usually the user unless an admin does it)
     signature: Buffer, // The creator's public signature for verification
   },
-  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+    collection: "TimelineCache",
+  }
 );
 
 CachedRemoteSchema.index({
@@ -59,5 +64,5 @@ CachedRemoteSchema.pre("updateOne", async function (next) {
   next();
 });
 
-const CachedPosts = mongoose.model("CachedPosts", CachedRemoteSchema);
-export default CachedPosts;
+const TimelineCache = mongoose.model("TimelineCache", CachedRemoteSchema);
+export default TimelineCache;

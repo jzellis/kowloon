@@ -1,23 +1,38 @@
 import { useSelector, useDispatch } from "react-redux"
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { setPages } from "../../store/server";
+import Kowloon from "../../lib/KowloonClient";
 import PageTree from "../PageTree";
 import CircleList from "../CircleList";
 const Sidebar = () => {
     
-    const server = useSelector((state) => state.server.server);
+    const server = useSelector((state) => state.server);
     const pages = useSelector((state) => state.server.pages);
-    const circles = useSelector((state) => state.server.circles);
+    // const circles = useSelector((state) => state.server.circles);
+
+    const dispatch = useDispatch();
     
+useEffect(() => {
+    const getPages = async () => {
+        let pages = JSON.parse(localStorage.getItem("pages"));
+        if (!pages) {
+            let pageRequest = await Kowloon.getPages();
+            if (pageRequest.items) {
+             pages = pageRequest.items;   
+            }
+        }
+        dispatch(setPages(pages));
+    }
+
+    getPages();
+}, [])
     
     return (<>
-        <div className="relative bottom-0 max-h-screen overflow-x-hidden overflow-y-auto p-8 pb-40 no-scrollbar">
-            <div className="description mb-8 card shadow-lg rounded-lg"><div className="card-body" dangerouslySetInnerHTML={{ __html: server?.profile?.description }}></div></div>
-            <h2 className="font-bold text-xl mb-8">Pages <a  href="/pages"className="text-sm font-normal">Show All</a></h2>
-            <PageTree items={pages} />
-            <div className="mt-8">
-            <h2 className="font-bold text-xl mb-8">Circles <a  href="/circles"className="text-sm font-normal">Show All</a></h2>
-                <CircleList title={""} circles={circles.slice(0, 5)} />
-                </div>
+        <div id="sidebar-left">
+            <h2 className="text-xl font-bold mb-[2rem]">{server?.profile?.name}</h2>
+            <div className="mb-[2rem]" dangerouslySetInnerHTML={{ __html: server?.profile?.description }}></div>
+            {!pages && <>Loading Pages...</>}
+            {pages?.length > 0 && <PageTree items={pages} />}
         </div>
     </>)
 }

@@ -3,7 +3,7 @@ import { FaCaretRight, FaCaretDown } from "react-icons/fa";
 import { useSelector } from "react-redux";
 const PageTree = ({ items, level=0 }) => {
   return (
-    <ul className="h-auto mb-0">
+    <ul className={`h-auto mb-0 ${level > 0 ? "subMenu" : "pageMenu"}`}>
       {items.map(page => (
         <PageNode key={page.id} page={page} level={level} />
       ))}
@@ -14,16 +14,16 @@ const PageTree = ({ items, level=0 }) => {
 const menuTextSize = ["text-base", "text-sm", "text-xs"];
 
 const PageNode = ({ page, level }) => {
-    const currentPage = useSelector((state) => state.ui.currentPage);
+    const currentUrl = useSelector((state) => state.ui.currentUrl);
   const [isOpen, setIsOpen] = useState(false);
     const hasItems = page.items && page.items.length > 0;
     
     useEffect(() => {
-        if (page.items.map(p => `/pages/${p.slug}`).includes(currentPage)) setIsOpen(true);
+        if (page.items.map(p => `/pages/${p.slug}`).includes(currentUrl)) setIsOpen(true);
 
     }, page.items);
   return (
-      <li className={`${!page.parentFolder ? "mb-0" : "ml-8"} `}>
+      <li className={`${page.parentFolder ? " submenu" : ""}`}>
           
           {/* {page.image && (
               <span class={`w-[${2 - level}em] h-[${2 - level}em] overflow-hidden relative inline-block align-middle rounded bg-gray-400`}>
@@ -41,7 +41,7 @@ const PageNode = ({ page, level }) => {
               {isOpen ? <FaCaretDown className="inline" /> : <FaCaretRight className="inline text-gray-400" />}
           </span> : <span className="mr-6"></span>}
 
-          <a href={`/pages/${page.slug}`} className={`${level <= menuTextSize.length ? menuTextSize[level] : menuTextSize[menuTextSize.length - 1]} hover:font-bold ${currentPage === `/pages/${page.slug}` && "font-bold"}`}>
+          <a href={`/pages/${page.slug}`} className={`${level <= menuTextSize.length ? menuTextSize[level] : menuTextSize[menuTextSize.length - 1]} hover:font-bold ${currentUrl === `/pages/${page.slug}` && "font-bold"}`}>
               {page.title}</a>
 
           {hasItems && isOpen && (

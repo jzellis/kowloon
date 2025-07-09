@@ -1,0 +1,5 @@
+@import "tailwindcss";
+
+.reply p {
+  @apply mb-4;
+}

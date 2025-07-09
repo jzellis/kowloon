@@ -5,7 +5,9 @@ export default async function (req, res, next) {
   let response = {
     queryTime: Date.now() - qStart,
   };
+  console.log("Body: ", req.body);
+
   response = await Kowloon.login(req.body.username, req.body.password);
 
-  res.status(status).send(response);
+  res.status(status).json(response);
 }

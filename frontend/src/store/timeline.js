@@ -1,4 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
+import { set } from "mongoose";
 
 export const timelineSlice = createSlice({
   name: "timeline",
@@ -8,10 +9,11 @@ export const timelineSlice = createSlice({
     articles: true,
     links: true,
     media: true,
-    filteredByCircle: false,
+    circle: null,
     showTimelineControls: false,
     page: 1,
     posts: [],
+    timelineView: "getServerOutbox",
   },
   reducers: {
     showNotes: (state) => {
@@ -50,9 +52,6 @@ export const timelineSlice = createSlice({
     toggleMedia: (state) => {
       state.media = !state.media;
     },
-    setFilteredByCircle: (state, action) => {
-      state.filteredByCircle = action.payload;
-    },
     toggleTimelineControls: (state) => {
       state.showTimelineControls = !state.showTimelineControls;
     },
@@ -68,12 +67,18 @@ export const timelineSlice = createSlice({
     setPosts: (state, action) => {
       state.posts = action.payload;
     },
+    setCircle: (state, action) => {
+      state.circle = action.payload;
+    },
+    setTimelineView: (state, action) => {
+      state.timelineView = action.payload;
+    },
     reset: (state) => {
       state.notes = true;
       state.articles = true;
       state.links = true;
       state.media = true;
-      state.filteredByCircle = false;
+      state.circle = null;
       state.page = 1;
       state.posts = [];
     },
@@ -94,12 +99,13 @@ export const {
   showMedia,
   hideMedia,
   toggleMedia,
-  setFilteredByCircle,
   toggleTimelineControls,
   setPage,
   incrementPage,
   decrementPage,
   setPosts,
+  setCircle,
+  setTimelineView,
   reset,
 } = timelineSlice.actions;
 

@@ -803,20 +803,6 @@ components:
           type: string
         summary:
           type: string
-        flaggedAt:
-          type: string
-          format: date-time
-        flaggedBy:
-          type: string
-        flaggedReason:
-          type: string
-        deletedAt:
-          type: string
-          format: date-time
-        deletedBy:
-          type: string
-        url:
-          type: string
       required:
         - actorId
 

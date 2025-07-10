@@ -14,6 +14,6 @@ export default async function (url, body, actorId) {
     }
   } catch (e) {
     console.log(e);
-    return new Error(e);
+    throw new Error(e);
   }
 }

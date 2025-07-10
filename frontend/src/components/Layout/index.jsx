@@ -9,7 +9,7 @@ const Layout = () => {
 
     const user = useSelector((state) => state.user.user);
     return (<>
-        <PostEditor />
+        {/* {user && user.id && <PostEditor />} */}
         <div className="w-full">
                   <PageTracker />
             <div id="header"><Header /></div>

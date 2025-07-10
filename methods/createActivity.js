@@ -4,42 +4,14 @@ import { Activity, Outbox, User } from "../schema/index.js";
 import ActivityParser from "./ActivityParser/index.js";
 import getSettings from "./getSettings.js";
 import parseId from "./parseId.js";
-
-const validateActivity = function (activity) {
-  switch (true) {
-    case !activity.to:
-      return new Error("No recipients provided");
-      break;
-    case !activity.replyTo:
-      return new Error("No replyTo provided");
-      break;
-    case !activity.reactTo:
-      return new Error("No reactTo provided");
-      break;
-    case !activity.type:
-      return new Error("No activity type provided");
-      break;
-    case !activity.actorId && !activity.actor:
-      return new Error("No actor or actor ID provided");
-      break;
-    case !ActivityParser[activity.type]:
-      return new Error(
-        "Invalid activity type. Valid activity types are: " +
-          Object.keys(ActivityParser).join(", ")
-      );
-      break;
-    default:
-      return activity;
-      break;
-  }
-};
+import validateActivity from "./validateActivity.js";
 
 export default async function (activity) {
-  let settings = await getSettings();
+  const settings = await getSettings();
   try {
     activity = validateActivity(activity);
     if (!ActivityParser[activity.type])
-      return new Error(
+      throw new Error(
         `Invalid activity type "${
           activity.type
         }". Valid activity types are: ${Object.keys(ActivityParser).join(", ")}`
@@ -77,10 +49,13 @@ export default async function (activity) {
         },
         { new: true, upsert: true }
       );
+    } else {
+      console.log("Error: " + activity.error);
     }
+
     return activity;
   } catch (e) {
     console.log(e);
-    return new Error(e);
+    throw new Error(e);
   }
 }

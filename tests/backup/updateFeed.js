@@ -1,4 +1,4 @@
-import Kowloon from "../Kowloon.js";
+import Kowloon from "../../Kowloon.js";
 
 let items = await Kowloon.updateFeed("@admin@kowloon.social");
 console.log(items);

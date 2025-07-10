@@ -31,6 +31,7 @@ import getCircleFeed from "./getCircleFeed.js";
 import getUserTimeline from "./getUserTimeline.js";
 import getUserPublicKey from "./getUserPublicKey.js";
 import getPages from "./getPages.js";
+import upload from "./well-known/upload.js";
 
 const routes = [
   // Basic collections
@@ -38,12 +39,14 @@ const routes = [
     method: "get",
     path: "/activities",
     collection: "activities",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
     method: "get",
     path: "/activities/:id",
     collection: "activities",
+    type: "Activity",
     handler: getItem,
   },
 
@@ -51,12 +54,14 @@ const routes = [
     method: "get",
     path: "/bookmarks",
     collection: "bookmarks",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
     method: "get",
     path: "/bookmarks/:id",
     collection: "bookmarks",
+    type: "Bookmark",
     handler: getItem,
   },
 
@@ -64,24 +69,30 @@ const routes = [
     method: "get",
     path: "/circles",
     collection: "circles",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
     method: "get",
     path: "/circles/:id",
     collection: "circles",
+    type: "Circle",
     handler: getItem,
   },
   {
     method: "get",
     path: "/circles/:id/posts",
     collection: "circles",
+    type: "OrderedCollection",
+
     handler: getCircleFeed,
   },
   {
     method: "get",
     path: "/circles/:id/members",
     collection: "circles",
+    type: "OrderedCollection",
+
     handler: getMembers,
   },
 
@@ -89,18 +100,22 @@ const routes = [
     method: "get",
     path: "/events",
     collection: "events",
+    type: "OrderedCollection",
+
     handler: getCollection,
   },
   {
     method: "get",
     path: "/events/:id",
     collection: "events",
+    type: "Event",
     handler: getItem,
   },
   {
     method: "get",
     path: "/events/:id/members",
     collection: "events",
+    type: "OrderedCollection",
     handler: getMembers,
   },
 
@@ -108,12 +123,14 @@ const routes = [
     method: "get",
     path: "/groups",
     collection: "groups",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
     method: "get",
     path: "/groups/:id",
     collection: "groups",
+    type: "Group",
     handler: getItem,
   },
   {
@@ -121,6 +138,7 @@ const routes = [
     path: "/groups/:id/bookmarks",
     parent: "groups",
     collection: "bookmarks",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
@@ -128,12 +146,14 @@ const routes = [
     path: "/groups/:id/posts",
     parent: "groups",
     collection: "posts",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
     method: "get",
     path: "/groups/:id/members",
     collection: "groups",
+    type: "OrderedCollection",
     handler: getMembers,
   },
 
@@ -141,12 +161,14 @@ const routes = [
     method: "get",
     path: "/pages",
     collection: "pages",
+    type: "OrderedCollection",
     handler: getPages,
   },
   {
     method: "get",
     path: "/pages/:id",
     collection: "pages",
+    type: "Page",
     handler: getItem,
   },
 
@@ -154,12 +176,14 @@ const routes = [
     method: "get",
     path: "/posts",
     collection: "posts",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
     method: "get",
     path: "/posts/:id",
     collection: "posts",
+    type: "Post",
     handler: getItem,
   },
   {
@@ -167,6 +191,7 @@ const routes = [
     path: "/posts/:id/replies",
     parent: "posts",
     collection: "replies",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
@@ -174,6 +199,7 @@ const routes = [
     path: "/posts/:id/reacts",
     parent: "posts",
     collection: "reacts",
+    type: "OrderedCollection",
     handler: getCollection,
   },
 
@@ -181,12 +207,14 @@ const routes = [
     method: "get",
     path: "/users",
     collection: "users",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
     method: "get",
     path: "/users/:id",
     collection: "users",
+    type: "User",
     handler: getItem,
   },
   {
@@ -204,6 +232,7 @@ const routes = [
     path: "/users/:id/activities",
     parent: "users",
     collection: "activities",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
@@ -211,6 +240,7 @@ const routes = [
     path: "/users/:id/bookmarks",
     parent: "users",
     collection: "bookmarks",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
@@ -218,6 +248,7 @@ const routes = [
     path: "/users/:id/circles",
     parent: "users",
     collection: "circles",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
@@ -225,6 +256,7 @@ const routes = [
     path: "/users/:id/groups",
     parent: "users",
     collection: "groups",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
@@ -232,6 +264,7 @@ const routes = [
     path: "/users/:id/posts",
     parent: "users",
     collection: "posts",
+    type: "OrderedCollection",
     handler: getCollection,
   },
   {
@@ -239,6 +272,7 @@ const routes = [
     path: "/users/:id/outbox",
     parent: "users",
     collection: "posts",
+    type: "OrderedCollection",
     handler: getCollection,
   },
 
@@ -246,11 +280,13 @@ const routes = [
     method: "get",
     path: "/",
     handler: getServerOutbox,
+    type: "OrderedCollection",
   },
   {
     method: "get",
     path: "/outbox",
     handler: getServerOutbox,
+    type: "OrderedCollection",
   },
   {
     method: "get",
@@ -261,6 +297,11 @@ const routes = [
     method: "get",
     path: "/.well-known/jwks.json",
     handler: jwks,
+  },
+  {
+    method: "post",
+    path: "/upload",
+    handler: upload,
   },
   {
     method: "get",
@@ -278,11 +319,13 @@ const routes = [
     method: "post",
     path: "/inbox",
     handler: activityPost,
+    type: "OrderedCollection",
   },
   {
     method: "post",
     path: "/.well-known/inbox",
     handler: activityPost,
+    type: "OrderedCollection",
   },
 ];
 
@@ -404,39 +447,43 @@ router.use(async (req, res, next) => {
     });
   };
 
-  routes.forEach(({ method, path, collection, parent, handler, auth }) => {
-    const middleware = [];
+  routes.forEach(
+    ({ method, path, collection, type, parent, handler, auth }) => {
+      const middleware = [];
 
-    if (auth) middleware.push(requireAuth);
+      if (auth) middleware.push(requireAuth);
 
-    if (collection) {
-      middleware.push((req, res, next) => {
-        req.collection = collection;
-        next();
-      });
-    }
-
-    if (parent) {
-      middleware.push((req, res, next) => {
-        req.parent = parent;
-        req.parentId = req.params.id;
-        next();
-      });
-    }
-
-    // This handles content negotiation at request time
-    middleware.push((req, res, next) => {
-      if (req.headers.accept?.includes("application/json")) {
-        return handler(req, res, next);
-      } else {
-        // Let React Router take over via Vite proxy or index.html
-        next("route"); // skip remaining middleware and let fallback take over
+      if (collection) {
+        middleware.push((req, res, next) => {
+          req.collection = collection;
+          req.type = type || null;
+          next();
+        });
       }
-    });
 
-    // Register the route for GET/POST/etc
-    router[method](path, ...middleware);
-  });
+      if (parent) {
+        middleware.push((req, res, next) => {
+          req.parent = parent;
+          req.parentId = req.params.id;
+          req.type = type || null;
+          next();
+        });
+      }
+
+      // This handles content negotiation at request time
+      middleware.push((req, res, next) => {
+        if (req.headers.accept?.includes("application/json")) {
+          return handler(req, res, next);
+        } else {
+          // Let React Router take over via Vite proxy or index.html
+          next("route"); // skip remaining middleware and let fallback take over
+        }
+      });
+
+      // Register the route for GET/POST/etc
+      router[method](path, ...middleware);
+    }
+  );
 
   next();
 });

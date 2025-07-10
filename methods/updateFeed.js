@@ -16,7 +16,7 @@ export default async function (actorId, circleId) {
   const token = await generateToken(actorId);
   const circle = await Circle.findOne({ id: circleId });
   if (!circle) {
-    return new Error("Circle not found");
+    throw new Error("Circle not found");
   }
 
   let cachedPosts = [];

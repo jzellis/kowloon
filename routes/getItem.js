@@ -93,21 +93,15 @@ export default async function (req, res, next) {
     .select(select)
     .lean();
   if (item) {
-    if (req.collection == "users")
-      summary = `${Kowloon.settings.profile.name} | ${
-        String(req.collection).charAt(0).toUpperCase() +
-        String(req.collection).slice(1)
-      } | ${item.profile.name} (${req.params.id})`;
-
     response = {
       server: req.server,
+      type: req.type,
+      status,
       "@context": "https://www.w3.org/ns/activitystreams",
-      type: item.objectType,
-      summary,
       url: `${req.protocol}://${req.hostname}${req.originalUrl}`,
-      timestamp: Date.now(),
+      timestamp: new Date().toISOString(),
     };
-    response[endpoints[req.collection].type.toLowerCase()] = item;
+    response.data = item;
   } else {
     response.error = `${endpoints[req.collection].type} not found`;
   }

@@ -32,7 +32,7 @@ class KowloonClient {
     try {
       return await (await fetch(endpoint, { method: "GET", headers })).json();
     } catch (e) {
-      return new Error(e.message);
+      throw new Error(e.message);
     }
   };
 
@@ -60,7 +60,7 @@ class KowloonClient {
         })
       ).json();
     } catch (e) {
-      return new Error(e.message);
+      throw new Error(e.message);
     }
   };
 
@@ -79,7 +79,7 @@ class KowloonClient {
       this.token = token;
       return { user, token };
     } catch (e) {
-      return new Error(e.message);
+      throw new Error(e.message);
     }
   };
 

@@ -29,7 +29,7 @@ export default async function (limit = 0, skip = 0) {
         }
         await item.save();
       } else {
-        return new Error("Invalid activity type");
+        throw new Error("Invalid activity type");
       }
     })
   );

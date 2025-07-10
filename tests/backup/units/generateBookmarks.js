@@ -1,6 +1,6 @@
 import { faker } from "@faker-js/faker";
-import { Settings, User, Post } from "../../schema/index.js";
-import Kowloon from "../../Kowloon.js";
+import { Settings, User, Post } from "../../../schema/index.js";
+import Kowloon from "../../../Kowloon.js";
 export default async function (numBookmarks) {
   let baseUrl = `https://${
     (await Settings.findOne({ name: "domain" })).value

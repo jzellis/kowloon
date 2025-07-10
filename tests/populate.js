@@ -1,51 +1,36 @@
+// Fixed populate.js for Kowloon with proper user creation and improved visibility
 import Kowloon from "../Kowloon.js";
 import { faker } from "@faker-js/faker";
 import { Group, User, Circle, Post, Page } from "../schema/index.js";
-let scriptStartTime = Date.now();
+
 const coinToss = () => Math.random() < 0.5;
+const getRandomItems = (arr, x) =>
+  arr.sort(() => 0.5 - Math.random()).slice(0, x);
+const scriptStartTime = Date.now();
 
 await Kowloon.__nukeDb();
 await User.deleteMany({ id: { $ne: "@admin@kowloon.social" } });
 
-const getRandomItems = (arr, x) => {
-  const result = arr.slice(); // copy the array
-  let i = result.length;
-  let temp, j;
+const NUM_USERS = 100;
+const NUM_GROUPS = 30;
+const NUM_CIRCLES = 30;
+const NUM_POSTS = 100;
+const NUM_PAGES = 50;
+const NUM_REPLIES = 5;
+const NUM_REACTS = 5;
 
-  while (i-- > result.length - x) {
-    j = Math.floor(Math.random() * (i + 1));
-    temp = result[i];
-    result[i] = result[j];
-    result[j] = temp;
-  }
+let users = [],
+  groups = [],
+  circles = [],
+  posts = [],
+  pages = [];
 
-  return result.slice(result.length - x);
-};
+console.log("Creating users...");
+for (let i = 0; i < NUM_USERS; i++) {
+  const gender = faker.person.sex();
+  const name = faker.person.fullName({ gender });
+  const username = name.replace(/\s+/g, "").toLowerCase().substring(0, 32);
 
-const postTypes = ["Note", "Article", "Link", "Media"];
-
-let numPosts = 100;
-let numGroups = 100;
-let numCircles = 100;
-let numUsers = 100;
-let numEvents = 100;
-let numPages = 50;
-let numRepliesPerPost = 5;
-let numReactsPerPost = 5;
-
-let posts = [];
-let circles = [];
-let groups = [];
-let users = [];
-let events = [];
-let pages = [];
-
-let startTime = Date.now();
-for (let i = 0; i < numUsers; i++) {
-  let gender = faker.person.sex();
-
-  let name = faker.person.fullName({ gender });
-  let username = name.replace(" ", "").toLowerCase().substring(0, 32);
   await Kowloon.createActivity({
     actorId: Kowloon.settings.actorId,
     type: "Create",
@@ -68,179 +53,144 @@ for (let i = 0; i < numUsers; i++) {
         }`,
         location: {
           type: "Point",
-          name: `${faker.location.city()}, ${faker.location.country()}`, //faker.location.city(),
+          name: `${faker.location.city()}, ${faker.location.country()}`,
           latitude: faker.location.latitude(),
           longitude: faker.location.longitude(),
         },
         pronouns: {
           subject: gender === "male" ? "he" : "she",
+          object: gender === "male" ? "him" : "her",
           possAdj: gender === "male" ? "his" : "her",
           possPro: gender === "male" ? "his" : "hers",
-          object: gender === "male" ? "him" : "her",
           reflexive: gender === "male" ? "himself" : "herself",
         },
       },
-      to: "@public",
-      replyTo: "@public",
-      reactTo: "@public",
     },
   });
-  process.stdout.write(`\rCreating users... ${i + 1} of ${numUsers}`);
+  process.stdout.write(`\rCreated ${i + 1} of ${NUM_USERS} users`);
 }
-process.stdout.write(`Created ${numUsers} in ${Date.now() - startTime}ms\n`);
-
 users = await User.find().lean();
+console.log(`\nCreated ${users.length} users.`);
 
-startTime = Date.now();
-for (let i = 0; i < numGroups; i++) {
-  let actorId = users[Math.floor(Math.random() * users.length)].id;
-  try {
-    await Kowloon.createActivity({
-      actorId,
-      type: "Create",
-      objectType: "Group",
-      to: "@public",
-      replyTo: "@public",
-      reactTo: "@public",
-      object: {
-        actorId,
-        type: "Group",
-        name: faker.company.name(),
-        description: faker.lorem.sentences({ min: 2, max: 5 }),
-        icon: faker.image.avatar(),
-        urls: [faker.internet.url()],
-        location: {
-          type: "Point",
-          name: faker.location.city(),
-          latitude: faker.location.latitude(),
-          longitude: faker.location.longitude(),
-        },
-        to: "@public",
-        replyTo: "@public",
-        reactTo: "@public",
-        to: "@public",
-        replyTo: "@public",
-        reactTo: "@public",
-      },
-    });
-  } catch (e) {
-    console.log(e);
-  }
-  process.stdout.write(`\rCreating groups... ${i + 1} of ${numGroups}`);
-}
-process.stdout.write(`Created ${numGroups} in ${Date.now() - startTime}ms\n`);
-
-groups = await Group.find().lean();
-
-startTime = Date.now();
-for (let i = 0; i < numCircles; i++) {
-  let actorId = users[Math.floor(Math.random() * users.length)].id;
-  let members = getRandomItems(users, Math.floor(Math.random() * 10)).map(
-    (i) => {
-      return {
-        id: i.id,
-        serverId: Kowloon.settings.actorId,
-        name: i.profile.name,
-        inbox: i.inbox,
-        outbox: i.outbox,
-        icon: i.profile.icon,
-        url: i.url,
-      };
-    }
-  );
+console.log("Creating groups...");
+for (let i = 0; i < NUM_GROUPS; i++) {
+  const creator = faker.helpers.arrayElement(users);
   await Kowloon.createActivity({
-    actorId: Kowloon.settings.actorId,
+    actorId: creator.id,
+    type: "Create",
+    objectType: "Group",
+    to: "@public",
+    object: {
+      actorId: creator.id,
+      type: "Group",
+      name: faker.company.name(),
+      description: faker.lorem.sentences(3),
+      icon: faker.image.avatar(),
+      urls: [faker.internet.url()],
+      location: {
+        type: "Point",
+        name: faker.location.city(),
+        latitude: faker.location.latitude(),
+        longitude: faker.location.longitude(),
+      },
+    },
+  });
+  process.stdout.write(`\rCreated ${i + 1} of ${NUM_GROUPS} groups`);
+}
+groups = await Group.find().lean();
+console.log(`\nCreated ${groups.length} groups.`);
+
+console.log("Creating circles...");
+for (let i = 0; i < NUM_CIRCLES; i++) {
+  const creator = faker.helpers.arrayElement(users);
+  const members = getRandomItems(
+    users,
+    faker.number.int({ min: 3, max: 10 })
+  ).map((u) => ({
+    id: u.id,
+    serverId: Kowloon.settings.actorId,
+    name: u.profile.name,
+    inbox: u.inbox,
+    outbox: u.outbox,
+    icon: u.profile.icon,
+    url: u.url,
+  }));
+
+  await Kowloon.createActivity({
+    actorId: creator.id,
     type: "Create",
     objectType: "Circle",
     to: "@public",
-    replyTo: "@public",
-    reactTo: "@public",
     object: {
-      actorId,
+      actorId: creator.id,
       type: "Circle",
       name: faker.company.name(),
-      description: faker.lorem.sentences({ min: 2, max: 5 }),
+      description: faker.lorem.sentences(2),
       icon: faker.image.avatar(),
-      to: "@public",
-      replyTo: "@public",
-      reactTo: "@public",
       members,
     },
   });
-  process.stdout.write(`\rCreating circles... ${i + 1} of ${numCircles}`);
+  process.stdout.write(`\rCreated ${i + 1} of ${NUM_CIRCLES} circles`);
 }
-process.stdout.write(`Created ${numCircles} in ${Date.now() - startTime}ms\n`);
-
 circles = await Circle.find().lean();
+console.log(`\nCreated ${circles.length} circles.`);
 
-startTime = Date.now();
-for (let i = 0; i < numPosts; i++) {
-  let actorId = users[Math.floor(Math.random() * users.length)].id;
+console.log("Creating posts with diverse visibility...");
+for (let i = 0; i < NUM_POSTS; i++) {
+  const actor = faker.helpers.arrayElement(users);
+  const type = faker.helpers.arrayElement(["Note", "Article", "Link", "Media"]);
 
-  let post = {
-    actorId,
-    to: "@public",
-    replyTo: "@public",
-    reactTo: "@public",
-    objectType: "Post",
-    type: postTypes[Math.floor(Math.random() * postTypes.length)],
+  let to = "@public";
+  const roll = Math.random();
+  if (roll < 0.3) {
+    const userGroups = groups.filter((g) => g.actorId === actor.id);
+    if (userGroups.length) to = faker.helpers.arrayElement(userGroups).id;
+  } else if (roll < 0.6) {
+    const userCircles = circles.filter((c) => c.actorId === actor.id);
+    if (userCircles.length) to = faker.helpers.arrayElement(userCircles).id;
+  }
+
+  const post = {
+    actorId: actor.id,
+    type,
+    to,
+    replyTo: to,
+    reactTo: to,
     source: {
       mediaType: "text/html",
-      content: `<p>${faker.lorem.sentences({ min: 2, max: 5 })}</p>`,
+      content: `<p>${faker.lorem.paragraphs(2, "</p><p>")}</p>`,
     },
   };
 
-  if (Math.random() < 0.2) {
-    let group = groups[Math.floor(Math.random() * groups.length)].id;
-    post.to = group;
-    post.replyTo = group;
-    post.reactTo = group;
-  }
-
-  if (post.type != "Note") {
-    post.title = faker.lorem.sentence();
-    post.source.content = `<p>${faker.lorem.paragraphs(
-      {
-        min: 2,
-        max: 5,
-      },
-      "</p><p>"
-    )}</p>`;
-  }
-  if (post.type == "Link") post.href = faker.internet.url();
-  if (["Media", "Link"].includes(post.type)) post.image = faker.image.url();
-  if (post.type === "Article" && coinToss()) post.image = faker.image.url();
-  if (post.type === "Media") {
-    let url = faker.image.url();
-    post.attachments = [];
-    for (let p = 0; p < Math.floor(Math.random() * 8) + 2; p++) {
-      post.attachments.push({
+  if (type !== "Note") post.title = faker.lorem.sentence();
+  if (type === "Link") post.href = faker.internet.url();
+  if (["Media", "Link"].includes(type)) post.image = faker.image.url();
+  if (type === "Media") {
+    post.attachments = Array.from(
+      { length: faker.number.int({ min: 2, max: 5 }) },
+      () => ({
         title: faker.lorem.sentence(),
-        description: faker.lorem.sentences({ min: 1, max: 5 }),
-        url: url,
+        description: faker.lorem.sentences(2),
+        url: faker.image.url(),
         mimeType: "image/jpeg",
         size: 100000,
-      });
-    }
+      })
+    );
   }
+
   await Kowloon.createActivity({
-    actorId,
+    actorId: actor.id,
     type: "Create",
     objectType: "Post",
-    to: post.to,
-    replyTo: post.to,
-    reactTo: post.to,
+    to,
+    replyTo: to,
+    reactTo: to,
     object: post,
   });
-  process.stdout.write(`\rCreating posts... ${i + 1} of ${numPosts}`);
+  process.stdout.write(`\rCreated ${i + 1} of ${NUM_POSTS} posts`);
 }
-process.stdout.write(`Created ${numPosts} in ${Date.now() - startTime}ms\n`);
 
-posts = await Post.find().lean();
-
-startTime = Date.now();
-
-for (let i = 0; i < numPages / 2; i++) {
+for (let i = 0; i < NUM_PAGES / 2; i++) {
   let activity = await Kowloon.createActivity({
     actorId: "@admin@kowloon.social",
     type: "Create",
@@ -264,13 +214,13 @@ for (let i = 0; i < numPages / 2; i++) {
       },
     },
   });
-  process.stdout.write(`\rCreating pages... ${i + 1} of ${numPages}`);
+  process.stdout.write(`\rCreating pages... ${i + 1} of ${NUM_PAGES}`);
   if (activity.error) console.log("Error: ", activity.error);
 }
 
 pages = await Page.find().lean();
 
-for (let i = 0; i < numPages / 2; i++) {
+for (let i = 0; i < NUM_PAGES / 2; i++) {
   let activity = await Kowloon.createActivity({
     actorId: "@admin@kowloon.social",
     type: "Create",
@@ -297,94 +247,10 @@ for (let i = 0; i < numPages / 2; i++) {
       },
     },
   });
-  process.stdout.write(`\rCreating pages... ${i + 1} of ${numPages}`);
+  process.stdout.write(`\rCreating pages... ${i + 1} of ${NUM_PAGES}`);
   if (activity.error) console.log("Error: ", activity.error);
 }
-process.stdout.write(`Created ${numPages} in ${Date.now() - startTime}ms\n`);
+process.stdout.write(`Created ${NUM_PAGES}\n`);
 
-await Promise.all(
-  posts.map(async (post) => {
-    for (let i = 0; i < numRepliesPerPost; i++) {
-      let activity = await Kowloon.createActivity({
-        actorId: "@admin@kowloon.social",
-        type: "Reply",
-        objectType: "Reply",
-        target: post.id,
-        to: post.to,
-        replyTo: post.replyTo,
-        reactTo: post.reactTo,
-        object: {
-          actorId: "@admin@kowloon.social",
-          target: post.id,
-          to: post.to,
-          replyTo: post.replyTo,
-          reactTo: post.reactTo,
-          source: {
-            mediaType: "text/html",
-            content: `<p>${faker.lorem.paragraphs(
-              { min: 5, max: 10 },
-              "</p><p>"
-            )}</p>`,
-          },
-        },
-      });
-      process.stdout.write(
-        `\rCreating replies... ${i + 1} of ${numRepliesPerPost * numPosts}`
-      );
-      if (activity.error) console.log("Error: ", activity.error);
-    }
-    for (let i = 0; i < numReactsPerPost; i++) {
-      let react =
-        Kowloon.settings.likeEmojis[
-          Math.floor(Math.random() * Kowloon.settings.likeEmojis.length)
-        ];
-      let activity = await Kowloon.createActivity({
-        actorId: "@admin@kowloon.social",
-        type: "React",
-        objectType: "React",
-        target: post.id,
-        to: post.to,
-        replyTo: post.replyTo,
-        reactTo: post.reactTo,
-        object: {
-          actorId: "@admin@kowloon.social",
-          type: "React",
-          target: post.id,
-          emoji: react.emoji,
-          name: react.name,
-          to: post.to,
-          replyTo: post.replyTo,
-          reactTo: post.reactTo,
-        },
-      });
-      process.stdout.write(
-        `\rCreating reacts... ${i + 1} of ${numReactsPerPost * numPosts}`
-      );
-      if (activity.error) console.log("Error: ", activity.error);
-    }
-  })
-);
-
-let adminCircleMembers = users.map((i) => {
-  return {
-    id: i.id,
-    serverId: Kowloon.settings.actorId,
-    name: i.profile.name,
-    inbox: i.inbox,
-    outbox: i.outbox,
-    icon: i.profile.icon,
-    url: i.url,
-  };
-});
-
-let adminUser = await User.findOne({ id: "@admin@kowloon.social" });
-let adminFollowingCircle = await Circle.findOne({ id: adminUser.following });
-adminFollowingCircle.members = [
-  ...adminFollowingCircle.members,
-  ...adminCircleMembers,
-];
-adminFollowingCircle.memberCount = adminFollowingCircle.members.length;
-await adminFollowingCircle.save();
-
-console.log(`Done in ${(Date.now() - scriptStartTime) / 1000} seconds`);
+console.log("\n✅ Sample data populated.");
 process.exit(0);

@@ -13,6 +13,6 @@ export default async function (url, actorId) {
         : await res.text();
     }
   } catch (e) {
-    return new Error(e);
+    throw new Error(e);
   }
 }

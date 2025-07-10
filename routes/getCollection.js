@@ -76,7 +76,10 @@ const endpoints = {
 export default async function (req, res, next) {
   let status = 200;
   let qStart = Date.now();
-  let response = { server: req.server };
+  let response = {
+    server: req.server,
+    type: req.type,
+  };
   let page = req.query.page || 1;
   let pageSize = req.query.num || 20;
   let sort = {};
@@ -170,14 +173,24 @@ export default async function (req, res, next) {
   }
   response = {
     server: req.server,
+    type: req.type,
+    status,
     "@context": "https://www.w3.org/ns/activitystreams",
-    type: "OrderedCollection",
-    summary,
-    totalItems,
-    totalPages: Math.ceil(totalItems / (page * pageSize ? pageSize : 20)),
-    items,
+    data: {
+      summary,
+      totalItems,
+      totalPages: Math.ceil(totalItems / (page * pageSize ? pageSize : 20)),
+      currentPage: page,
+      firstItem: (page - 1) * pageSize + 1,
+      lastItem: Math.min(page * pageSize, totalItems),
+      count: items.length,
+      nextPage: page + 1,
+      prevPage: page - 1,
+      hasMore: totalItems > page * pageSize,
+      items,
+    },
     url: `${req.protocol}://${req.hostname}${req.originalUrl}`,
-    timestamp: Date.now(),
+    timestamp: new Date().toISOString(),
   };
   response.queryTime = Date.now() - qStart;
   res.status(status).json(response);

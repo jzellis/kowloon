@@ -10,8 +10,8 @@ import {
 } from "../../schema/index.js";
 import indefinite from "indefinite";
 export default async function (activity) {
-  if (!activity.object) return new Error("No object provided");
-  if (!activity.objectType) return new Error("No object type provided");
+  if (!activity.object) throw new Error("No object provided");
+  if (!activity.objectType) throw new Error("No object type provided");
   activity.summary = `${activity.actor?.profile?.name} (${
     activity.actor?.id
   }) created ${indefinite(activity.objectType)}`;

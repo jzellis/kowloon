@@ -1,8 +1,8 @@
 import getObjectById from "../getObjectById.js";
 import indefinite from "indefinite";
 export default async function (activity) {
-  if (!activity.target) return new Error("No target provided");
-  if (!activity.object) return new Error("No object provided");
+  if (!activity.target) throw new Error("No target provided");
+  if (!activity.object) throw new Error("No object provided");
 
   let user = activity.actor;
   let item = await getObjectById(activity.target);

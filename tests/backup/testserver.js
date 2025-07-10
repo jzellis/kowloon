@@ -1,4 +1,4 @@
-import Kowloon from "../Kowloon.js";
+import Kowloon from "../../Kowloon.js";
 
 let { id, timestamp, signature } = await Kowloon.createServerSignature();
 

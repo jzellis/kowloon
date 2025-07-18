@@ -189,7 +189,7 @@ if (locationName) {
 }
 console.log(defaultSettings);
 
-let env = `MONGODB_URI="${dbUrl}"
+let env = `MONGO_URI="${dbUrl}"
 JWT_KEY="${jwtKey}"
 PORT=${port}`;
 try {

@@ -150,3 +150,5 @@ node_modules
 ./ssl/*
 *.nnb
 minio-s3-credentials.json
+.configured
+.env

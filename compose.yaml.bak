@@ -22,7 +22,7 @@ services:
       context: .
     environment:
       NODE_ENV: production
-      MONGODB_URI: mongodb://mongoCont:27017/kowloon
+      MONGO_URI: mongodb://mongoCont:27017/kowloon
       KOWLOON_DOMAIN: kowloon.social
       KOWLOON_ADMIN_USERNAME: admin
       KOWLOON_ADMIN_PASSWORD: admin"

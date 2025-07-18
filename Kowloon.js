@@ -25,41 +25,19 @@ const Kowloon = {
     // if (fs.existsSync(CONFIG_FLAG)) {
     console.log("Establishing Kowloon database connection...");
     try {
-      const db = await mongoose.connect(process.env.MONGODB_URI);
+      const db = await mongoose.connect(process.env.MONGO_URI);
       this.connection.isConnected = db.connections[0].readyState === 1;
       console.log("Kowloon database connection established");
     } catch (e) {
       console.error(e);
       process.exit(0);
     }
-    if ((await Settings.countDocuments()) === 0) await setup(); //
+    // if ((await Settings.countDocuments()) === 0) await setup(); //
     let settings = await Settings.find();
     settings.forEach(async (setting) => {
       this.settings[setting.name] = setting.value;
     });
     console.log("Kowloon settings loaded");
-
-    console.log("Checking for S3 bucket...");
-    const s3 = new S3Client({
-      endpoint: process.env.S3_ENDPOINT,
-      region: process.env.S3_REGION || "us-east-1",
-      credentials: {
-        accessKeyId: process.env.S3_ACCESS_KEY,
-        secretAccessKey: process.env.S3_ACCESS_SECRET_KEY,
-      },
-      forcePathStyle: true, // S3 compatibility
-    });
-
-    try {
-      await s3.send(new HeadBucketCommand({ Bucket: process.env.S3_BUCKET }));
-      console.log("S3 bucket exists");
-    } catch (error) {
-      if (error.name === "NotFound")
-        await s3.send(
-          new CreateBucketCommand({ Bucket: process.env.S3_BUCKET })
-        );
-      console.log("S3 bucket created");
-    }
 
     // This loads all methods from the "methods" folder
     const methodsDir = `${dirname(fileURLToPath(import.meta.url))}/methods`;
@@ -99,8 +77,6 @@ const Kowloon = {
   }),
   reservedUsernames: ["admin", "kowloon", "public"],
 };
-
-// This checks for the S3 bucket and creates it if it doesn't exist.
 
 await Kowloon.init();
 

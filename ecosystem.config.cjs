@@ -5,6 +5,9 @@ module.exports = {
       script: "./index.js",
       watch: ["./"],
       ignore_watch: [
+        ".configured",
+        ".env",
+        "nginx",
         ".git",
         "public",
         "node_modules",

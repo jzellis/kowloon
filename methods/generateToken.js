@@ -15,6 +15,21 @@ export default async function (actorId) {
   let muted = (
     await Circle.findOne({ id: user.muted }).select("members")
   ).members.map((m) => m.id);
+
+  let data = {
+    user: {
+      id: user.id,
+      username: user.username,
+      profile: user.profile,
+      muted: muted,
+      blocked: blocked,
+      following: user.following,
+      lastLogin: user.lastLogin,
+      feedRefreshedAt: user.feedRefreshedAt,
+    },
+    loggedIn: user.lastLogin,
+  };
+  console.log("Token data: ", data);
   let token = jwt.sign(
     {
       user: {

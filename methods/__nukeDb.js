@@ -16,7 +16,6 @@ import {
   Page,
   Event,
 } from "../schema/index.js";
-import setup from "./setup.js";
 
 export default async function () {
   await Settings.deleteMany({});
@@ -33,6 +32,5 @@ export default async function () {
   await File.deleteMany({});
   await Inbox.deleteMany({});
   await Outbox.deleteMany({});
-  await setup();
   return true;
 }

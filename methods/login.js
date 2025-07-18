@@ -16,6 +16,7 @@ export default async function (username, password = "") {
   }
   user.lastLogin = new Date();
   await user.save();
+  console.log("User Id: ", user.id)
   const token = await generateToken(user.id);
   user = await User.findOne({ id: user.id })
     .select(

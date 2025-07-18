@@ -23,8 +23,7 @@ import activityPost from "./inbox/post.js";
 import fileGet from "./files/get.js";
 import filePost from "./files/post.js";
 import preview from "./utils/preview.js";
-import setupGet from "./setup/get.js";
-import setupPost from "./setup/post.js";
+import setupPost from "./setup/index.js";
 import publicKey from "./well-known/publicKey.js";
 import jwks from "./well-known/jwks.js";
 import getCircleFeed from "./getCircleFeed.js";
@@ -484,6 +483,13 @@ router.use(async (req, res, next) => {
       router[method](path, ...middleware);
     }
   );
+
+  router.get("/setup", (req, res) => {
+    res.sendFile(path.join(__dirname, "./setup/page.html"));
+  });
+  router.post("/setup", express.urlencoded({ extended: true }), (req, res) => {
+    setupPost(req, res);
+  });
 
   next();
 });

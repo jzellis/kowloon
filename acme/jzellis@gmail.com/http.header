@@ -1,0 +1,10 @@
+HTTP/2 400 
+server: nginx
+date: Mon, 14 Jul 2025 14:47:32 GMT
+content-type: application/problem+json
+content-length: 144
+boulder-requester: 2528350941
+cache-control: public, max-age=0, no-cache
+link: <https://acme-v02.api.letsencrypt.org/directory>;rel="index"
+replay-nonce: a-xDzxYJ50OC8mnS5WQo3xpwG51TcJsvqjGoGNwYmzOV9pt6Tfs
+

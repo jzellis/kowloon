@@ -1,0 +1,63 @@
+version: "3"
+
+services:
+  mongo:
+    image: mongo:7
+    restart: always
+    volumes:
+      - mongo_data:/data/db
+
+  reverse-proxy:
+    image: nginxproxy/nginx-proxy
+    container_name: reverse-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./certs:/etc/nginx/certs:ro
+      - ./nginx/html:/usr/share/nginx/html
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    networks:
+      - web
+
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: acme-companion
+    environment:
+      - DEFAULT_EMAIL=jzellis@gmail.com
+    volumes_from:
+      - reverse-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./certs:/etc/nginx/certs
+      - ./acme:/etc/acme.sh
+    depends_on:
+      - reverse-proxy
+    networks:
+      - web
+
+  kowloon:
+    build: .
+    expose:
+      - "3000"
+    env_file:
+      - .env
+    environment:
+      - VIRTUAL_HOST=kowloon.social
+      - LETSENCRYPT_HOST=kowloon.social
+      - LETSENCRYPT_EMAIL=jzellis@gmail.com
+    volumes:
+      - /var/lib/kowloon/uploads:/var/lib/kowloon/uploads
+    depends_on:
+      - mongo
+    networks:
+      - web
+
+volumes:
+  mongo_data:
+
+networks:
+  web:
+    name: web
+    driver: bridge

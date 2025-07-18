@@ -44,8 +44,8 @@ services:
     env_file:
       - .env
     environment:
-      - VIRTUAL_HOST=kowloon.social
-      - LETSENCRYPT_HOST=kowloon.social
+      - VIRTUAL_HOST=kwln.social
+      - LETSENCRYPT_HOST=kwln.social
       - LETSENCRYPT_EMAIL=jzellis@gmail.com
     volumes:
       - /var/lib/kowloon/uploads:/var/lib/kowloon/uploads

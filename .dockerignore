@@ -32,3 +32,6 @@
 **/dist
 LICENSE
 README.md
+node_modules
+.env
+.DS_Store

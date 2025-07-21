@@ -152,3 +152,4 @@ node_modules
 minio-s3-credentials.json
 .configured
 .env
+setup.tmp

@@ -13,7 +13,7 @@ import {
   CreateBucketCommand,
   HeadBucketCommand,
 } from "@aws-sdk/client-s3";
-import { Settings } from "./schema/index.js";
+import { Settings, User } from "./schema/index.js";
 import processOutbox from "./methods/processOutbox.js";
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Remove this in production
 console.log("configured exists: ", fs.existsSync(CONFIG_FLAG));
@@ -32,7 +32,14 @@ const Kowloon = {
       console.error(e);
       process.exit(0);
     }
-    // if ((await Settings.countDocuments()) === 0) await setup(); //
+
+    if (
+      (await User.countDocuments()) === 0 &&
+      (await Settings.countDocuments()) === 0
+    ) {
+      console.log("Creating default settings...");
+      await setup();
+    }
     let settings = await Settings.find();
     settings.forEach(async (setting) => {
       this.settings[setting.name] = setting.value;

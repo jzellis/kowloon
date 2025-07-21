@@ -1,63 +1,42 @@
-version: "3"
-
 services:
   mongo:
     image: mongo:7
-    restart: always
-    volumes:
-      - mongo_data:/data/db
-
-  reverse-proxy:
-    image: nginxproxy/nginx-proxy
-    container_name: reverse-proxy
+    restart: unless-stopped
+    command: ["mongod", "--auth", "--bind_ip_all"]
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - /var/run/docker.sock:/tmp/docker.sock:ro
-      - ./certs:/etc/nginx/certs:ro
-      - ./nginx/html:/usr/share/nginx/html
-      - ./nginx/conf.d:/etc/nginx/conf.d
-    networks:
-      - web
-
-  acme-companion:
-    image: nginxproxy/acme-companion
-    container_name: acme-companion
+      - "27017:27017"      # <-- this line publishes it to your host
     environment:
-      - DEFAULT_EMAIL=jzellis@gmail.com
-    volumes_from:
-      - reverse-proxy
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: secret
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./certs:/etc/nginx/certs
-      - ./acme:/etc/acme.sh
-    depends_on:
-      - reverse-proxy
-    networks:
-      - web
+      - mongo-data:/data/db
+
+  minio:
+    image: minio/minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    volumes:
+      - minio-data:/data
 
   kowloon:
     build: .
-    expose:
-      - "3000"
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
     env_file:
       - .env
-    environment:
-      - VIRTUAL_HOST=kwln.social
-      - LETSENCRYPT_HOST=kwln.social
-      - LETSENCRYPT_EMAIL=jzellis@gmail.com
-    volumes:
-      - /var/lib/kowloon/uploads:/var/lib/kowloon/uploads
     depends_on:
       - mongo
-    networks:
-      - web
+      - minio
+    volumes:
+      - ./init:/init
 
 volumes:
-  mongo_data:
-
-networks:
-  web:
-    name: web
-    driver: bridge
+  mongo-data:
+  minio-data:

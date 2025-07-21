@@ -1,12 +1,13 @@
 {
-  "name": "kwln",
+  "name": "kowloon",
   "type": "module",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
-    "start": "node server.js",
-    "test": "jest"
+    "start": "node index.js",
+    "test": "jest",
+    "setup": "node setup.js"
   },
   "author": "Joshua Ellis",
   "license": "ISC",

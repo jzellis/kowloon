@@ -333,7 +333,7 @@ const router = express.Router();
 const isDev = process.env.NODE_ENV !== "production";
 
 if (!isDev) {
-  app.use(express.static("frontend/"));
+  router.use(express.static("frontend/"));
 }
 
 const logger = winston.createLogger({

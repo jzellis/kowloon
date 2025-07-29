@@ -153,3 +153,4 @@ minio-s3-credentials.json
 .configured
 .env
 setup.tmp
+./frontend.bak

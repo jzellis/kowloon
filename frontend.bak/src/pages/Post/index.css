@@ -1,9 +1,0 @@
-@import "tailwindcss";
-@plugin "daisyui";
-
-.page {
-  @apply pb-40;
-  p {
-    @apply hyphens-auto;
-  }
-}

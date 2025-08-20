@@ -53,7 +53,6 @@ const UserSchema = new Schema(
     replyTo: { type: String, default: "" },
     reactTo: { type: String, default: "" },
     url: { type: String, default: undefined },
-    isAdmin: { type: Boolean, default: false },
     active: { type: Boolean, default: true },
     flaggedAt: { type: Date, default: null },
     flaggedBy: { type: String, default: null },

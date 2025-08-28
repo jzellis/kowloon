@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
-const CachedRemoteSchema = new Schema(
+const TimelineCacheSchema = new Schema(
   {
     id: { type: String, key: true },
     objectType: { type: String, default: "Post" },
@@ -37,32 +37,32 @@ const CachedRemoteSchema = new Schema(
   }
 );
 
-CachedRemoteSchema.index({
+TimelineCacheSchema.index({
   title: "text",
   source: "text",
   "source.content": "text",
   "location.name": "text",
 });
 
-CachedRemoteSchema.virtual("reacts", {
+TimelineCacheSchema.virtual("reacts", {
   ref: "React",
   localField: "id",
   foreignField: "target",
 });
 
-CachedRemoteSchema.virtual("replies", {
+TimelineCacheSchema.virtual("replies", {
   ref: "Reply",
   localField: "id",
   foreignField: "target",
 });
 
-CachedRemoteSchema.pre("save", async function (next) {
+TimelineCacheSchema.pre("save", async function (next) {
   next();
 });
 
-CachedRemoteSchema.pre("updateOne", async function (next) {
+TimelineCacheSchema.pre("updateOne", async function (next) {
   next();
 });
 
-const TimelineCache = mongoose.model("TimelineCache", CachedRemoteSchema);
+const TimelineCache = mongoose.model("TimelineCache", TimelineCacheSchema);
 export default TimelineCache;

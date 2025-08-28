@@ -36,7 +36,7 @@ const server = http.createServer(
   app
 );
 
-server.listen(port, "0.0.0.0");
+server.listen(port || 3001, "0.0.0.0");
 server.on("error", onError);
 server.on("listening", onListening);
 

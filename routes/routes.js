@@ -471,12 +471,13 @@ router.use(async (req, res, next) => {
 
       // This handles content negotiation at request time
       middleware.push((req, res, next) => {
-        if (req.headers.accept?.includes("application/json")) {
-          return handler(req, res, next);
-        } else {
-          // Let React Router take over via Vite proxy or index.html
-          next("route"); // skip remaining middleware and let fallback take over
-        }
+        return handler(req, res, next);
+        // if (req.headers.accept?.includes("application/json")) {
+        //   return handler(req, res, next);
+        // } else {
+        //   // Let React Router take over via Vite proxy or index.html
+        //   next("route"); // skip remaining middleware and let fallback take over
+        // }
       });
 
       // Register the route for GET/POST/etc

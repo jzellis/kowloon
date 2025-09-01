@@ -24,7 +24,7 @@ module.exports = {
       path: "/home/jzellis/kowloon",
       ssh_options: "StrictHostKeyChecking=no",
       "post-deploy":
-        "pnpm install --no-frozen-lockfile && pm2 startOrReload ecosystem.config.cjs --env dev2",
+        "/home/jzellis/.nvm/versions/node/v24.7.0/bin/pnpm install --no-frozen-lockfile && /home/jzellis/.nvm/versions/node/v24.7.0/bin/pm2 startOrReload ecosystem.config.cjs --env dev2",
     },
   },
 };

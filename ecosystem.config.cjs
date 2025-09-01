@@ -19,8 +19,9 @@ module.exports = {
       ref: "origin/main",
       repo: "git@github.com:jzellis/kowloon.git",
       path: "/home/jzellis/kowloon",
+      // ecosystem.config.js (deploy target for dev1)
       "post-deploy":
-        "export PATH=$(npm bin -g):$PATH && pnpm i --frozen-lockfile && pnpm build && pm2 startOrReload ecosystem.config.js --env dev1",
+        "export PATH=/home/jzellis/.nvm/versions/node/v24.7.0/bin:$PATH && pnpm install --frozen-lockfile && npm run --if-present build && pm2 startOrReload ecosystem.config.js --env dev1",
     },
     dev2: {
       user: "jzellis",

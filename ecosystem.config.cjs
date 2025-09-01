@@ -21,7 +21,7 @@ module.exports = {
       path: "/home/jzellis/kowloon",
       // ecosystem.config.js (deploy target for dev1)
       "post-deploy":
-        "export PATH=/home/jzellis/.nvm/versions/node/v24.7.0/bin:$PATH && pnpm install --frozen-lockfile && npm run --if-present build && pm2 startOrReload ecosystem.config.cjs --env dev1",
+        'bash -lc \'NVM_BIN=$(ls -d $HOME/.nvm/versions/node/*/bin 2>/dev/null | tail -1); [ -n "$NVM_BIN" ] && export PATH="$NVM_BIN:$PATH"; pnpm install --no-frozen-lockfile; npm run --if-present build; pm2 startOrReload ecosystem.config.cjs --env dev2\'',
     },
     dev2: {
       user: "jzellis",

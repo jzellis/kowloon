@@ -13,7 +13,7 @@ import Inbox from "./Inbox.js";
 import Invite from "./Invite.js";
 import Outbox from "./Outbox.js";
 import File from "./File.js";
-import TimelineCache from "./TimelineCache.js";
+import FeedItem from "./FeedItem.js";
 import UserFeed from "./UserFeed.js";
 
 export {
@@ -32,6 +32,6 @@ export {
   Invite,
   Outbox,
   File,
-  TimelineCache,
+  FeedItem,
   UserFeed,
 };

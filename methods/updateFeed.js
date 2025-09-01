@@ -1,10 +1,4 @@
-import {
-  User,
-  Circle,
-  Post,
-  TimelineCache,
-  UserFeed,
-} from "../schema/index.js";
+import { User, Circle, Post, FeedItem, UserFeed } from "../schema/index.js";
 import getSettings from "./getSettings.js";
 import Parser from "rss-parser";
 import { getLinkPreview } from "link-preview-js";
@@ -108,7 +102,7 @@ export default async function (actorId, circleId) {
   }));
 
   try {
-    await TimelineCache.bulkWrite(postOps);
+    await FeedItem.bulkWrite(postOps);
   } catch (e) {
     console.log(e);
   }
@@ -121,7 +115,7 @@ export default async function (actorId, circleId) {
   user.feedRefreshedAt = new Date();
   await user.save();
 
-  return await TimelineCache.find({ id: { $in: cachedPosts.map((p) => p.id) } })
+  return await FeedItem.find({ id: { $in: cachedPosts.map((p) => p.id) } })
     .select("-_id -__v")
     .lean();
 }

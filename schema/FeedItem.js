@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 
-const TimelineCacheSchema = new Schema(
+const FeedItemSchema = new Schema(
   {
     id: { type: String, key: true },
     objectType: { type: String, default: "Post" },
@@ -33,36 +33,36 @@ const TimelineCacheSchema = new Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-    collection: "TimelineCache",
+    collection: "FeedItem",
   }
 );
 
-TimelineCacheSchema.index({
+FeedItemSchema.index({
   title: "text",
   source: "text",
   "source.content": "text",
   "location.name": "text",
 });
 
-TimelineCacheSchema.virtual("reacts", {
+FeedItemSchema.virtual("reacts", {
   ref: "React",
   localField: "id",
   foreignField: "target",
 });
 
-TimelineCacheSchema.virtual("replies", {
+FeedItemSchema.virtual("replies", {
   ref: "Reply",
   localField: "id",
   foreignField: "target",
 });
 
-TimelineCacheSchema.pre("save", async function (next) {
+FeedItemSchema.pre("save", async function (next) {
   next();
 });
 
-TimelineCacheSchema.pre("updateOne", async function (next) {
+FeedItemSchema.pre("updateOne", async function (next) {
   next();
 });
 
-const TimelineCache = mongoose.model("TimelineCache", TimelineCacheSchema);
-export default TimelineCache;
+const FeedItem = mongoose.model("FeedItem", FeedItemSchema);
+export default FeedItem;

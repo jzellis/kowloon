@@ -4,7 +4,6 @@ import fs from "fs";
 import path, { dirname } from "path";
 const __dirname = process.cwd();
 const CONFIG_FLAG = path.join(process.cwd(), ".configured");
-// dotenv.config({ path: `${dirname(fileURLToPath(import.meta.url))}/.env` });
 if (!process.env.DOCKERIZED) {
   dotenv.config({ path: `${dirname(fileURLToPath(import.meta.url))}/.env` });
 }
@@ -12,7 +11,7 @@ import mongoose from "mongoose";
 import winston from "winston";
 import setup from "./methods/setup.js";
 import { Settings, User } from "./schema/index.js";
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Remove this in production
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Remove this in production, this is only for dev
 console.log("configured exists: ", fs.existsSync(CONFIG_FLAG));
 
 const Kowloon = {

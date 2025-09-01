@@ -1,21 +1,35 @@
+// ecosystem.config.js
 module.exports = {
   apps: [
     {
-      name: "kowloon",
-      script: "./index.js",
-      watch: ["./"],
-      ignore_watch: [
-        ".configured",
-        ".env",
-        "nginx",
-        ".git",
-        "public",
-        "node_modules",
-        "logs",
-        "frontend",
-        "uploads",
-        "images",
-      ],
+      name: "kowloon-app",
+      script: "node ./index.js", // or your entry
+      env: { NODE_ENV: "development" },
+      env_dev1: { PORT: 4001, INSTANCE: "dev1" },
+      env_dev2: { PORT: 4002, INSTANCE: "dev2" },
+      // For hot-ish reload on file change (dev only). You can remove if you’ll rely on deploy restarts.
+      watch: false, // keep false; we’ll reload on deploy to avoid CPU churn
     },
   ],
+
+  deploy: {
+    dev1: {
+      user: "jzellis",
+      host: "kowloon.network",
+      ref: "origin/main",
+      repo: "git@github.com:jzellis/kowloon.git",
+      path: "/home/jzellis/kowloon",
+      "post-deploy":
+        "pnpm i --frozen-lockfile && pnpm build && pm2 startOrReload ecosystem.config.cjs --env dev1",
+    },
+    dev2: {
+      user: "jzellis",
+      host: "kwln.social",
+      ref: "origin/main",
+      repo: "git@github.com:jzellis/kowloon.git",
+      path: "/home/jzellis/kowloon",
+      "post-deploy":
+        "pnpm i --frozen-lockfile && pnpm build && pm2 startOrReload ecosystem.config.cjs --env dev2",
+    },
+  },
 };

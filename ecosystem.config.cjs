@@ -6,7 +6,7 @@ module.exports = {
   deploy: {
     dev1: {
       user: "jzellis",
-      host: "dev1.example.com",
+      host: "kowloon.network",
       port: 22,
       ref: "origin/main",
       repo: "git@github.com:jzellis/kowloon.git",
@@ -17,7 +17,7 @@ module.exports = {
     },
     dev2: {
       user: "jzellis",
-      host: "dev2.example.com",
+      host: "kwln.social",
       port: 22,
       ref: "origin/main",
       repo: "git@github.com:jzellis/kowloon.git",

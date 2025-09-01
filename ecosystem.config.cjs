@@ -20,7 +20,7 @@ module.exports = {
       repo: "git@github.com:jzellis/kowloon.git",
       path: "/home/jzellis/kowloon",
       "post-deploy":
-        "pnpm i --frozen-lockfile && pnpm build && pm2 startOrReload ecosystem.config.cjs --env dev1",
+        "export PATH=$(npm bin -g):$PATH && pnpm i --frozen-lockfile && pnpm build && pm2 startOrReload ecosystem.config.js --env dev1",
     },
     dev2: {
       user: "jzellis",
@@ -29,7 +29,7 @@ module.exports = {
       repo: "git@github.com:jzellis/kowloon.git",
       path: "/home/jzellis/kowloon",
       "post-deploy":
-        "pnpm i --frozen-lockfile && pnpm build && pm2 startOrReload ecosystem.config.cjs --env dev2",
+        "export PATH=$(npm bin -g):$PATH && pnpm i --frozen-lockfile && pnpm build && pm2 startOrReload ecosystem.config.js --env dev1",
     },
   },
 };

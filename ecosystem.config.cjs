@@ -1,7 +1,12 @@
 // ecosystem.config.cjs
 module.exports = {
   apps: [
-    { name: "kowloon", script: "node index.js", watch: false, time: true },
+    {
+      name: "kowloon",
+      script: "/home/jzellis/.nvm/versions/node/v24.7.0/bin/node index.js",
+      watch: false,
+      time: true,
+    },
   ],
   deploy: {
     dev1: {

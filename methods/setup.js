@@ -7,11 +7,17 @@ import createActivity from "./createActivity.js";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import * as dotenv from "dotenv";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const initFile = "setup.tmp";
 const initDir = path.dirname(initFile);
+
+const domain = process.env.DOMAIN;
+const siteTitle = process.env.SITE_TITLE;
+const adminEmail = process.env.ADMIN_EMAIL;
+const adminPassword = process.env.ADMIN_PASSWORD;
 
 export default async function () {
   try {

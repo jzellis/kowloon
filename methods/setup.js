@@ -15,11 +15,6 @@ const initDir = path.dirname(initFile);
 
 export default async function () {
   try {
-    await fs.access(initFile, fs.constants.F_OK);
-    const raw = await fs.readFile(initFile, "utf-8");
-    const setup = JSON.parse(raw);
-    const { siteTitle, domain, adminEmail, adminPassword } = setup;
-
     let defaultSettings = {
       actorId: `@${domain}`,
       profile: {

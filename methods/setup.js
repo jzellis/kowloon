@@ -1,18 +1,18 @@
 // This initiates and sets up a server if it's not already set up
 
 import { User, Settings } from "../schema/index.js";
-import crypto from "crypto";
-import getSettings from "./getSettings.js";
-import createActivity from "./createActivity.js";
+import * as dotenv from "dotenv";
+
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
-import * as dotenv from "dotenv";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const initFile = "setup.tmp";
 const initDir = path.dirname(initFile);
+dotenv.config();
+console.log("Process.env: ", process.env.DOMAIN);
 
 const domain = process.env.DOMAIN;
 const siteTitle = process.env.SITE_TITLE;

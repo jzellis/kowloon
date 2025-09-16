@@ -361,9 +361,7 @@ const logger = winston.createLogger({
   // Use timestamp and printf to create a standard log format
   format: winston.format.combine(
     winston.format.timestamp(),
-    winston.format.printf(
-      (info) => `${info.timestamp} ${info.level}: ${info.message}`
-    )
+    winston.format.printf((info) => `${info.level}: ${info.message}`)
   ),
   // Log to the console and a file
   transports: [
@@ -449,8 +447,9 @@ router.use(async (req, res, next) => {
       }
     }
   }
+  let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
 
-  let logline = `${req.method} ${req.url}`;
+  let logline = `${req.method} - ${ip} - ${req.url}`;
   if (req.user) logline += ` | User: ${req.user.id}`;
   if (req.server) logline += ` | Server: ${req.server.id}`;
 

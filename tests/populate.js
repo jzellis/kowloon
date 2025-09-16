@@ -9,7 +9,7 @@ const getRandomItems = (arr, x) =>
 const scriptStartTime = Date.now();
 
 await Kowloon.__nukeDb();
-await User.deleteMany({ id: { $ne: "@admin@kowloon.social" } });
+await User.deleteMany({ id: { $ne: "@admin@kwln.org" } });
 
 const NUM_USERS = 100;
 const NUM_GROUPS = 30;
@@ -192,14 +192,14 @@ for (let i = 0; i < NUM_POSTS; i++) {
 
 for (let i = 0; i < NUM_PAGES / 2; i++) {
   let activity = await Kowloon.createActivity({
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     type: "Create",
     objectType: coinToss() ? "Folder" : "Page",
     to: "@public",
     replyTo: "@public",
     reactTo: "@public",
     object: {
-      actorId: "@admin@kowloon.social",
+      actorId: "@admin@kwln.org",
       to: "@public",
       replyTo: "@public",
       reactTo: "@public",
@@ -222,14 +222,14 @@ pages = await Page.find().lean();
 
 for (let i = 0; i < NUM_PAGES / 2; i++) {
   let activity = await Kowloon.createActivity({
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     type: "Create",
     objectType: "Page",
     to: "@public",
     replyTo: "@public",
     reactTo: "@public",
     object: {
-      actorId: "@admin@kowloon.social",
+      actorId: "@admin@kwln.org",
       to: "@public",
       replyTo: "@public",
       reactTo: "@public",

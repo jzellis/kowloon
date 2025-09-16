@@ -2,7 +2,7 @@ import Kowloon from "../../Kowloon.js";
 
 await Kowloon.__nukeDb();
 
-const outboxUrl = "http://kowloon.social/api/outbox";
+const outboxUrl = "http://kwln.org/api/outbox";
 
 const headers = {
   Accept: "application/json",
@@ -15,11 +15,11 @@ let adminUserActivity = {
   object: {
     username: "admin",
     password: "admin",
-    email: "admin@kowloon.social",
+    email: "admin@kwln.org",
     profile: {
       name: "Admin",
       description: "I'm the admin",
-      urls: ["http://kowloon.social"],
+      urls: ["http://kwln.org"],
       location: {
         type: "Point",
         name: "London, UK",
@@ -33,7 +33,7 @@ let adminUserActivity = {
 let publicActivity = {
   type: "Create",
   objectType: "Post",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   object: {
     type: "Note",
     source: {
@@ -47,7 +47,7 @@ let publicActivity = {
 let serverActivity = {
   type: "Create",
   objectType: "Post",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   object: {
     type: "Note",
 
@@ -63,7 +63,7 @@ let replyActivity = {
   type: "Create",
   objectType: "Reply",
   target: "",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   object: {
     source: {
       content: "This is a reply",
@@ -74,7 +74,7 @@ let replyActivity = {
 let likeActivity = {
   type: "React",
   target: "",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   object: {
     type: {
       name: "Heart",
@@ -86,7 +86,7 @@ let likeActivity = {
 let updatePostActivity = {
   type: "Update",
   objectType: "Post",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   target: null,
   object: {
     source: {
@@ -101,7 +101,7 @@ let updateReactActivity = {
   type: "Update",
   objectType: "React",
   target: "",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   object: {
     type: {
       name: "Puke",
@@ -113,12 +113,12 @@ let updateReactActivity = {
 let updateUserActivity = {
   type: "Update",
   objectType: "User",
-  target: "@admin@kowloon.social",
-  actorId: "@admin@kowloon.social",
+  target: "@admin@kwln.org",
+  actorId: "@admin@kwln.org",
   object: {
     profile: {
       description: "This is my updated description",
-      urls: ["https://kowloon.social", "https://www.zenarchery.com"],
+      urls: ["https://kwln.org", "https://www.zenarchery.com"],
     },
   },
 };
@@ -148,19 +148,19 @@ let circleAddActivity = {
   type: "Add",
   objectType: "Circle",
   target: "",
-  actorId: "@bob@kowloon.social",
-  object: { actorId: "@admin@kowloon.social" },
+  actorId: "@bob@kwln.org",
+  object: { actorId: "@admin@kwln.org" },
 };
 
 let groupCreateActivity = {
   type: "Create",
   objectType: "Group",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   object: {
     name: "Test Group",
     summary: "This is a test group",
     approval: true,
-    members: ["@bob@kowloon.social"],
+    members: ["@bob@kwln.org"],
   },
   to: ["@public"],
 };
@@ -168,7 +168,7 @@ let groupCreateActivity = {
 let groupPostActivity = {
   type: "Create",
   objectType: "Post",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   object: {
     type: "Note",
     source: {
@@ -185,7 +185,7 @@ let bookmarkActivity = {
     target: "",
     href: "https://www.google.com",
     title: "Google",
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     summary: "This is a bookmark",
     to: ["@public"],
   },
@@ -194,7 +194,7 @@ let bookmarkActivity = {
 let circlePostActivity = {
   type: "Create",
   objectType: "Post",
-  actorId: "@bob@kowloon.social",
+  actorId: "@bob@kwln.org",
   object: {
     type: "Note",
     source: {
@@ -207,14 +207,14 @@ let circlePostActivity = {
 
 let followActivity = {
   type: "Follow",
-  target: "https://kowloon.social/api/users/admin/posts",
-  actorId: "@admin@kowloon.social",
+  target: "https://kwln.org/api/users/admin/posts",
+  actorId: "@admin@kwln.org",
 };
 
 let followActivity2 = {
   type: "Follow",
   target: "https://theguardian.com/rss",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
 };
 
 /* Do the tests ------------------------------------------------------------ */
@@ -228,7 +228,7 @@ let adminCreateResponse = await (
 ).json();
 
 let login = await (
-  await fetch("http://kowloon.social/api/login", {
+  await fetch("http://kwln.org/api/login", {
     method: "POST",
     headers,
     body: JSON.stringify({

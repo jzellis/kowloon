@@ -13,7 +13,7 @@ let headers = {
 };
 
 let response,
-  request = await fetch("https://kowloon.social/outbox", { headers });
+  request = await fetch("https://kwln.org/outbox", { headers });
 if (request.ok === true) response = await request.json();
 console.log(response);
 process.exit(0);

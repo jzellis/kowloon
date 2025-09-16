@@ -4,13 +4,13 @@ import { User } from "../../schema/index.js";
 
 let postActivity = await Kowloon.createActivity({
   type: "Create",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   to: "@public",
   replyTo: Kowloon.settings.actorId,
   reactTo: Kowloon.settings.actorId,
   objectType: "Post",
   object: {
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     type: "Article",
     title: `Welcome to ${Kowloon.settings.profile.name}!`,
     source: {
@@ -24,13 +24,13 @@ let postActivity = await Kowloon.createActivity({
 });
 let pageActivity = await Kowloon.createActivity({
   type: "Create",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   to: "@public",
   replyTo: Kowloon.settings.actorId,
   reactTo: Kowloon.settings.actorId,
   objectType: "Page",
   object: {
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     type: "Page",
     title: `About ${Kowloon.settings.profile.name}!`,
     source: {
@@ -45,14 +45,14 @@ let pageActivity = await Kowloon.createActivity({
 
 let subpageActivity = await Kowloon.createActivity({
   type: "Create",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   to: "@public",
   replyTo: Kowloon.settings.actorId,
   reactTo: Kowloon.settings.actorId,
   objectType: "Page",
   object: {
     parentFolder: pageActivity.objectId,
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     type: "Page",
     title: `Subpage For About Page For ${Kowloon.settings.profile.name}!`,
     source: {
@@ -67,13 +67,13 @@ let subpageActivity = await Kowloon.createActivity({
 
 let eventActivity = await Kowloon.createActivity({
   type: "Create",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   to: "@public",
   replyTo: Kowloon.settings.actorId,
   reactTo: Kowloon.settings.actorId,
   objectType: "Event",
   object: {
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     type: "Event",
     title: `${Kowloon.settings.profile.name} Launch Party!`,
     startTime: new Date(Date.now() + 24 * 60 * 60 * 1000),
@@ -98,7 +98,7 @@ console.log(eventActivity);
 
 let replyActivity = await Kowloon.createActivity({
   type: "Reply",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   to: postActivity.to,
   replyTo: postActivity.replyTo,
   reactTo: postActivity.reactTo,
@@ -107,7 +107,7 @@ let replyActivity = await Kowloon.createActivity({
   object: {
     target: postActivity.object.id,
     targetActorId: postActivity.object.actorId,
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     source: {
       mediaType: "text/html",
       content: `<p>This is a reply to the first post</p>`,
@@ -125,7 +125,7 @@ let react =
 
 let reactActivity = await Kowloon.createActivity({
   type: "React",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   to: postActivity.to,
   replyTo: postActivity.replyTo,
   reactTo: postActivity.reactTo,
@@ -134,7 +134,7 @@ let reactActivity = await Kowloon.createActivity({
   object: {
     target: postActivity.object.id,
     targetActorId: postActivity.object.actorId,
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     emoji: react.emoji,
     name: react.name,
     to: postActivity.to,
@@ -158,16 +158,16 @@ let seconduser = await User.create({
 
 let blockActivity = await Kowloon.createActivity({
   type: "Block",
-  actorId: "@admin@kowloon.social",
-  target: "@bob@kowloon.social",
+  actorId: "@admin@kwln.org",
+  target: "@bob@kwln.org",
   to: "@public",
-  replyTo: "@admin@kowloon.social",
-  reactTo: "@admin@kowloon.social",
+  replyTo: "@admin@kwln.org",
+  reactTo: "@admin@kwln.org",
 });
 
 let blockedReplyActivity = await Kowloon.createActivity({
   type: "Reply",
-  actorId: "@bob@kowloon.social",
+  actorId: "@bob@kwln.org",
   to: replyActivity.to,
   replyTo: replyActivity.replyTo,
   reactTo: replyActivity.reactTo,
@@ -176,7 +176,7 @@ let blockedReplyActivity = await Kowloon.createActivity({
   object: {
     target: replyActivity.object.id,
     targetActorId: replyActivity.actorId,
-    actorId: "@bob@kowloon.social",
+    actorId: "@bob@kwln.org",
     source: {
       mediaType: "text/html",
       content: `<p>This is a blocked reply to the first post</p>`,
@@ -190,68 +190,68 @@ let blockedReplyActivity = await Kowloon.createActivity({
 
 let unBlockActivity = await Kowloon.createActivity({
   type: "Unblock",
-  actorId: "@admin@kowloon.social",
-  target: "@bob@kowloon.social",
+  actorId: "@admin@kwln.org",
+  target: "@bob@kwln.org",
   to: "@public",
-  replyTo: "@admin@kowloon.social",
-  reactTo: "@admin@kowloon.social",
+  replyTo: "@admin@kwln.org",
+  reactTo: "@admin@kwln.org",
 });
 
 let createCircleActivity = await Kowloon.createActivity({
   type: "Create",
   objectType: "Circle",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   to: "@public",
-  replyTo: "@admin@kowloon.social",
-  reactTo: "@admin@kowloon.social",
+  replyTo: "@admin@kwln.org",
+  reactTo: "@admin@kwln.org",
   object: {
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     name: "Admin's Friends",
     description: "All my homies",
     to: "@public",
-    replyTo: "@admin@kowloon.social",
-    reactTo: "@admin@kowloon.social",
+    replyTo: "@admin@kwln.org",
+    reactTo: "@admin@kwln.org",
   },
 });
 
 let followActivity = await Kowloon.createActivity({
   type: "Follow",
-  actorId: "@admin@kowloon.social",
-  object: "@bob@kowloon.social",
+  actorId: "@admin@kwln.org",
+  object: "@bob@kwln.org",
   target: createCircleActivity.object.id,
   to: "@public",
-  replyTo: "@admin@kowloon.social",
-  reactTo: "@admin@kowloon.social",
+  replyTo: "@admin@kwln.org",
+  reactTo: "@admin@kwln.org",
 });
 
-let admin = await User.findOne({ id: "@admin@kowloon.social" });
+let admin = await User.findOne({ id: "@admin@kwln.org" });
 
 let unfollowActivity = await Kowloon.createActivity({
   type: "Unfollow",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   target: createCircleActivity.object.id,
-  object: "@bob@kowloon.social",
+  object: "@bob@kwln.org",
   to: "@public",
-  replyTo: "@admin@kowloon.social",
-  reactTo: "@admin@kowloon.social",
+  replyTo: "@admin@kwln.org",
+  reactTo: "@admin@kwln.org",
 });
 
 let deleteActivity = await Kowloon.createActivity({
   type: "Delete",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   target: createCircleActivity.object.id,
   to: "@public",
-  replyTo: "@admin@kowloon.social",
-  reactTo: "@admin@kowloon.social",
+  replyTo: "@admin@kwln.org",
+  reactTo: "@admin@kwln.org",
 });
 
 let updateActivity = await Kowloon.createActivity({
   type: "Update",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   target: postActivity.object.id,
   to: "@public",
-  replyTo: "@admin@kowloon.social",
-  reactTo: "@admin@kowloon.social",
+  replyTo: "@admin@kwln.org",
+  reactTo: "@admin@kwln.org",
   object: {
     source: {
       content: "<p>This content has been updated, yo.</p>",
@@ -262,9 +262,9 @@ let updateActivity = await Kowloon.createActivity({
 let createGroupActivity = await Kowloon.createActivity({
   type: "Create",
   objectType: "Group",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   object: {
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
 
     name: "My First Group",
     description: "This is my very first group",
@@ -280,41 +280,41 @@ let createGroupActivity = await Kowloon.createActivity({
 
 let joinGroupActivity = await Kowloon.createActivity({
   type: "Join",
-  actorId: "@bob@kowloon.social",
+  actorId: "@bob@kwln.org",
   target: createGroupActivity.object.id,
-  to: "@bob@kowloon.social",
-  replyTo: "@bob@kowloon.social",
-  reactTo: "@bob@kowloon.social",
+  to: "@bob@kwln.org",
+  replyTo: "@bob@kwln.org",
+  reactTo: "@bob@kwln.org",
 });
 
 let inviteGroupActivity = await Kowloon.createActivity({
   type: "Invite",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   target: createGroupActivity.object.id,
-  object: "@bob@kowloon.social",
+  object: "@bob@kwln.org",
   to: "@public",
-  replyTo: "@admin@kowloon.social",
-  reactTo: "@admin@kowloon.social",
+  replyTo: "@admin@kwln.org",
+  reactTo: "@admin@kwln.org",
 });
 
 let rejectGroupActivity = await Kowloon.createActivity({
   type: "Reject",
-  actorId: "@bob@kowloon.social",
+  actorId: "@bob@kwln.org",
   target: createGroupActivity.object.id,
   to: "@public",
-  replyTo: "@admin@kowloon.social",
-  reactTo: "@admin@kowloon.social",
+  replyTo: "@admin@kwln.org",
+  reactTo: "@admin@kwln.org",
 });
 
 let createGroupPostActivity = await Kowloon.createActivity({
   type: "Create",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   to: createGroupActivity.object.id,
   replyTo: createGroupActivity.object.id,
   reactTo: createGroupActivity.object.id,
   objectType: "Post",
   object: {
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     type: "Note",
     source: {
       mediaType: "text/html",
@@ -328,13 +328,13 @@ let createGroupPostActivity = await Kowloon.createActivity({
 
 let createBookmarkFolderActivity = await Kowloon.createActivity({
   type: "Create",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   to: "@public",
   replyTo: "@public",
   reactTo: "@public",
   objectType: "Bookmark",
   object: {
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     type: "Folder",
     title: "Search Engines",
     to: "@public",
@@ -345,13 +345,13 @@ let createBookmarkFolderActivity = await Kowloon.createActivity({
 
 let createBookmarkActivity = await Kowloon.createActivity({
   type: "Create",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   to: "@public",
   replyTo: "@public",
   reactTo: "@public",
   objectType: "Bookmark",
   object: {
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     type: "Bookmark",
     title: "Google",
     parentFolder: createBookmarkFolderActivity.objectId,
@@ -364,13 +364,13 @@ let createBookmarkActivity = await Kowloon.createActivity({
 
 let createGroupBookmarkActivity = await Kowloon.createActivity({
   type: "Create",
-  actorId: "@admin@kowloon.social",
+  actorId: "@admin@kwln.org",
   to: createGroupActivity.object.id,
   replyTo: createGroupActivity.object.id,
   reactTo: createGroupActivity.object.id,
   objectType: "Bookmark",
   object: {
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     type: "Bookmark",
     title: "Google",
     parentFolder: createBookmarkFolderActivity.objectId,

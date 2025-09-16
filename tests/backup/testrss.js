@@ -16,7 +16,7 @@ await Promise.all(
     items.push({
       id: `post:${i.link}`,
       actorId: `feed:${url}`,
-      to: ["@admin@kowloon.social"],
+      to: ["@admin@kwln.org"],
       title: i.title,
       url: i.link,
       createdAt: i.pubDate,

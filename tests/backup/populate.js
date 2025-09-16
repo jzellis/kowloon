@@ -5,7 +5,7 @@ let scriptStartTime = Date.now();
 const coinToss = () => Math.random() < 0.5;
 
 await Kowloon.__nukeDb();
-await User.deleteMany({ id: { $ne: "@admin@kowloon.social" } });
+await User.deleteMany({ id: { $ne: "@admin@kwln.org" } });
 
 const getRandomItems = (arr, x) => {
   const result = arr.slice(); // copy the array
@@ -242,14 +242,14 @@ startTime = Date.now();
 
 for (let i = 0; i < numPages / 2; i++) {
   let activity = await Kowloon.createActivity({
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     type: "Create",
     objectType: coinToss() ? "Folder" : "Page",
     to: "@public",
     replyTo: "@public",
     reactTo: "@public",
     object: {
-      actorId: "@admin@kowloon.social",
+      actorId: "@admin@kwln.org",
       to: "@public",
       replyTo: "@public",
       reactTo: "@public",
@@ -272,14 +272,14 @@ pages = await Page.find().lean();
 
 for (let i = 0; i < numPages / 2; i++) {
   let activity = await Kowloon.createActivity({
-    actorId: "@admin@kowloon.social",
+    actorId: "@admin@kwln.org",
     type: "Create",
     objectType: "Page",
     to: "@public",
     replyTo: "@public",
     reactTo: "@public",
     object: {
-      actorId: "@admin@kowloon.social",
+      actorId: "@admin@kwln.org",
       to: "@public",
       replyTo: "@public",
       reactTo: "@public",
@@ -306,7 +306,7 @@ await Promise.all(
   posts.map(async (post) => {
     for (let i = 0; i < numRepliesPerPost; i++) {
       let activity = await Kowloon.createActivity({
-        actorId: "@admin@kowloon.social",
+        actorId: "@admin@kwln.org",
         type: "Reply",
         objectType: "Reply",
         target: post.id,
@@ -314,7 +314,7 @@ await Promise.all(
         replyTo: post.replyTo,
         reactTo: post.reactTo,
         object: {
-          actorId: "@admin@kowloon.social",
+          actorId: "@admin@kwln.org",
           target: post.id,
           to: post.to,
           replyTo: post.replyTo,
@@ -339,7 +339,7 @@ await Promise.all(
           Math.floor(Math.random() * Kowloon.settings.likeEmojis.length)
         ];
       let activity = await Kowloon.createActivity({
-        actorId: "@admin@kowloon.social",
+        actorId: "@admin@kwln.org",
         type: "React",
         objectType: "React",
         target: post.id,
@@ -347,7 +347,7 @@ await Promise.all(
         replyTo: post.replyTo,
         reactTo: post.reactTo,
         object: {
-          actorId: "@admin@kowloon.social",
+          actorId: "@admin@kwln.org",
           type: "React",
           target: post.id,
           emoji: react.emoji,
@@ -377,7 +377,7 @@ let adminCircleMembers = users.map((i) => {
   };
 });
 
-let adminUser = await User.findOne({ id: "@admin@kowloon.social" });
+let adminUser = await User.findOne({ id: "@admin@kwln.org" });
 let adminFollowingCircle = await Circle.findOne({ id: adminUser.following });
 adminFollowingCircle.members = [
   ...adminFollowingCircle.members,

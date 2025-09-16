@@ -22,7 +22,7 @@ export default async function (numPosts) {
   for (let i = 0; i < numPosts; i++) {
     let postActivity = activityTemplate;
     // let actorId = users[Math.floor(Math.random() * users.length)].id;
-    let actorId = "@admin@kowloon.social";
+    let actorId = "@admin@kwln.org";
     postActivity.actorId = actorId;
     let postType = postTypes[Math.floor(Math.random() * postTypes.length)];
     let group = groups[Math.floor(Math.random() * groups.length)];

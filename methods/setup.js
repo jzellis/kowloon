@@ -35,7 +35,7 @@ export default async function () {
           longitude: "114.190278",
         },
         icon: "/images/icons/server.png",
-        urls: [`https://${process.env.KOWLOON_DOMAIN}`],
+        urls: [`https://${domain}`],
       },
       domain: domain,
       registrationIsOpen: false,
@@ -80,6 +80,7 @@ export default async function () {
         },
       ],
       adminEmail: adminEmail,
+      adminUsers: [`@admin@${domain}`],
       emailServer: {
         protocol: "smtp",
         host: "localhost",
@@ -109,9 +110,7 @@ export default async function () {
         icon: "",
         location: {
           name: "Kowloon Walled City, Hong Kong",
-          type: "Place",
-          latitude: "22.332222",
-          longitude: "114.190278",
+          coordinates: ["114.190278", "22.332222"],
         },
       },
       to: "@public",

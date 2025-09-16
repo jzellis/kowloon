@@ -70,14 +70,14 @@ let envFile = ".env",
         emoji: "🤮",
       },
     ],
-    adminEmail: "admin@kowloon.social",
+    adminEmail: "admin@kwln.org",
     emailServer: {
       protocol: "smtp",
       host: "localhost",
       username: "test",
       password: "test",
     },
-    icon: "https://kowloon.social/icons/server.png",
+    icon: "https://kwln.org/icons/server.png",
   };
 console.log(chalk.yellow.bold("\n\nWelcome to Kowloon!"));
 console.log(

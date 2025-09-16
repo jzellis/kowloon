@@ -31,6 +31,7 @@ import getUserTimeline from "./getUserTimeline.js";
 import getUserPublicKey from "./getUserPublicKey.js";
 import getPages from "./getPages.js";
 import upload from "./well-known/upload.js";
+import createUser from "./createUser.js";
 
 const routes = [
   // Basic collections
@@ -297,11 +298,7 @@ const routes = [
     path: "/.well-known/jwks.json",
     handler: jwks,
   },
-  {
-    method: "post",
-    path: "/upload",
-    handler: upload,
-  },
+
   {
     method: "get",
     path: "/utils/preview",
@@ -309,6 +306,11 @@ const routes = [
     auth: true,
   },
   // POST Routes
+  {
+    method: "post",
+    path: "/upload",
+    handler: upload,
+  },
   {
     method: "post",
     path: "/login",
@@ -325,6 +327,23 @@ const routes = [
     path: "/.well-known/inbox",
     handler: activityPost,
     type: "OrderedCollection",
+  },
+  {
+    method: "post",
+    path: "/users",
+    handler: createUser,
+    type: "User",
+  },
+  {
+    method: "get",
+    path: "/.well-known/acme-challenge/*",
+    handler: (req, res, next) => {
+      res
+        .status(200)
+        .send(
+          "v7TkDYjeR3sn6Xza1IvWWJUBjIiq9PNWFLq-RoZLHRw.e9Me90iABMzNUNmt8PPrbpdW_ArmWICldlqcZtTwmEA"
+        );
+    },
   },
 ];
 

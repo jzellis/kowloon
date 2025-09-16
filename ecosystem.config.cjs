@@ -3,8 +3,8 @@ module.exports = {
   apps: [
     {
       name: "kowloon",
-      script: "/home/jzellis/.nvm/versions/node/v24.7.0/bin/node index.js",
-      watch: false,
+      script: "index.js",
+      watch: true,
       time: true,
     },
   ],

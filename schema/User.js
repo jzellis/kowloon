@@ -3,87 +3,105 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
+import GeoPointSchema from "./subschema/GeoPoint.js";
+import ProfileSchema from "./subschema/Profile.js";
 import { Settings, Circle, Group } from "./index.js";
 
-const UserSchema = new Schema(
-  {
-    id: { type: String, key: true },
-    server: { type: String, default: undefined }, // The server of the actor
-    objectType: { type: String, default: "User" },
-    type: { type: String, default: "Person" },
-    username: { type: String, default: undefined, unique: true },
-    password: { type: String, default: undefined },
-    email: { type: String, default: undefined },
-    profile: {
-      type: Object,
-      default: {
-        name: { type: String, default: undefined },
-        subtitle: { type: String, default: undefined },
-        description: { type: String, default: undefined },
-        urls: { type: [Object], default: [] },
-        pronouns: { type: Object, default: undefined },
-        icon: { type: String, default: undefined },
-        location: { type: Object, default: undefined },
-      },
+const UserSchemaDef = {
+  // Prefer explicit actorId if you reference it elsewhere
+  id: { type: String, unique: true }, // e.g., https://kwln.org/users/alice
+  server: { type: String },
+  objectType: { type: String, default: "User" },
+  type: { type: String, default: "Person" },
+  username: { type: String, unique: true, required: true },
+  password: { type: String },
+  email: { type: String, unique: true, sparse: true },
+  profile: { type: ProfileSchema, default: {} },
+
+  prefs: {
+    defaultPostType: { type: String, default: "Note" },
+    defaultTo: { type: String, default: "@public" },
+    defaultReplyTo: { type: String, default: "@public" },
+    defaultReactTo: { type: String, default: "@public" },
+    defaultPostView: {
+      type: [String],
+      default: ["Note", "Article", "Media", "Link"],
     },
-    prefs: {
-      type: Object,
-      default: {
-        defaultPostType: "Note",
-        defaultTo: "@public",
-        defaultReplyTo: "@public",
-        defaultReactTo: "@public",
-        defaultPostView: ["Note", "Article", "Media", "Link"],
-        defaultCircleView: "",
-        defaultEditorType: "html", // html or markdown
-        lang: "en",
-        theme: "light",
-      },
-    },
-    inbox: { type: String },
-    outbox: { type: String },
-    following: { type: String, default: "" },
-    // followers: { type: String, default: "" },
-    blocked: { type: String, default: "" },
-    muted: { type: String, default: "" },
-    lastLogin: Date,
-    publicKey: String,
-    privateKey: String,
-    to: { type: String, default: "" },
-    replyTo: { type: String, default: "" },
-    reactTo: { type: String, default: "" },
-    url: { type: String, default: undefined },
-    active: { type: Boolean, default: true },
-    flaggedAt: { type: Date, default: null },
-    flaggedBy: { type: String, default: null },
-    flaggedReason: { type: String, default: null },
-    deletedAt: { type: Date, default: undefined },
-    lastLogin: Date,
-    feedRefreshedAt: Date,
+    defaultCircleView: { type: String, default: "" },
+    defaultEditorType: { type: String, default: "html" },
+    lang: { type: String, default: "en" },
+    theme: { type: String, default: "light" },
   },
-  { toJSON: { virtuals: true }, toObject: { virtuals: true }, timestamps: true }
+
+  inbox: { type: String },
+  outbox: { type: String },
+  following: { type: String, default: "" }, // if these are IDs/URIs
+  allFollowing: { type: String, default: "" },
+  blocked: { type: String, default: "" },
+  muted: { type: String, default: "" },
+
+  lastLogin: { type: Date },
+  publicKey: { type: String },
+  privateKey: { type: String },
+  to: { type: String, default: "" },
+  replyTo: { type: String, default: "" },
+  reactTo: { type: String, default: "" },
+  url: { type: String },
+  active: { type: Boolean, default: true },
+  flaggedAt: { type: Date, default: null },
+  flaggedBy: { type: String, default: null },
+  flaggedReason: { type: String, default: null },
+  deletedAt: { type: Date },
+  feedRefreshedAt: { type: Date },
+};
+
+// if (process.env.NODE_ENV === "development") {
+const MetaSchema = new mongoose.Schema(
+  {
+    seed: { type: String, index: true },
+    runId: { type: String, index: true },
+    externalId: { type: String, index: true },
+  },
+  { _id: false }
 );
 
+UserSchemaDef.meta = { type: MetaSchema };
+// }
+
+const UserSchema = new mongoose.Schema(UserSchemaDef, {
+  toJSON: { virtuals: true },
+  toObject: { virtuals: true },
+  timestamps: true,
+});
+
+// Text index
 UserSchema.index({
   username: "text",
   email: "text",
   "profile.name": "text",
   "profile.description": "text",
-  "profile.location": "2dsphere",
-  "location.name": "text",
+  "profile.location.name": "text",
 });
 
+// Dev-only meta indexes
+if (process.env.NODE_ENV === "development") {
+  UserSchema.index({ "meta.seed": 1 });
+  UserSchema.index({ "meta.externalId": 1 }, { unique: true, sparse: true });
+}
+
+// If Circle documents reference user by actorId:
 UserSchema.virtual("circles", {
   ref: "Circle",
-  localField: "actorId",
-  foreignField: "id",
+  localField: "id",
+  foreignField: "ownerActorId",
   justOne: false,
 });
 
+// If Group membership is stored differently, align local/foreign fields accordingly
 UserSchema.virtual("groups", {
   ref: "Group",
-  localField: "members",
-  foreignField: "id",
+  localField: "id",
+  foreignField: "members", // or "memberActorIds"
   justOne: false,
 });
 
@@ -131,6 +149,29 @@ UserSchema.pre("save", async function (next) {
       ],
     });
     this.following = followingCircle.id;
+
+    let allFollowingCircle = await Circle.create({
+      name: `${this.id} | Following`,
+      actorId: this.id,
+      description: `${this.profile.name} (@${this.username}) | All Following`,
+      to: this.id,
+      replyTo: this.id,
+      reactTo: this.id,
+      members: [
+        {
+          id: this.id,
+          serverId: this.server,
+          type: "kowloon",
+          name: this.profile.name,
+          inbox: this.inbox,
+          outbox: this.outbox,
+          icon: this.profile.icon,
+          url: this.url,
+        },
+      ],
+    });
+    this.allFollowing = allFollowingCircle.id;
+
     let blockedCircle = await Circle.create({
       name: `${this.id} | Blocked`,
       actorId: this.id,

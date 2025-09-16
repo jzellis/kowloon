@@ -66,7 +66,7 @@ useful source of information to my friend's biographers.
   for (let i = 0; i < numPosts; i++) {
     let postActivity = activityTemplate;
     let actorId = users[Math.floor(Math.random() * users.length)].id;
-    // let actorId = "@admin@kowloon.social";
+    // let actorId = "@admin@kwln.org";
     postActivity.actorId = actorId;
     let postType = postTypes[Math.floor(Math.random() * postTypes.length)];
     postActivity.object = {
@@ -96,11 +96,11 @@ useful source of information to my friend's biographers.
   for (let i = 0; i < numPosts; i++) {
     let postActivity = activityTemplate;
     // let actorId = users[Math.floor(Math.random() * users.length)].id;
-    let actorId = "@admin@kowloon.social";
+    let actorId = "@admin@kwln.org";
     postActivity.actorId = actorId;
     let postType = postTypes[Math.floor(Math.random() * postTypes.length)];
     postActivity.object = {
-      to: ["@admin@kowloon.social"],
+      to: ["@admin@kwln.org"],
 
       type: postType,
       source: {

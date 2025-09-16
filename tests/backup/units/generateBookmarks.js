@@ -13,7 +13,7 @@ export default async function (numBookmarks) {
   // Generate folders
 
   for (let i = 0; i < 10; i++) {
-    let actorId = "@admin@kowloon.social";
+    let actorId = "@admin@kwln.org";
     let bookmarkActivity = {
       to: ["@public"],
       actorId: actorId,
@@ -60,7 +60,7 @@ export default async function (numBookmarks) {
       object: {
         type: "Bookmark",
         to: ["@public"],
-        cc: ["@admin@kowloon.social"],
+        cc: ["@admin@kwln.org"],
         actorId: actorId,
         title: faker.lorem.sentence(),
         href: faker.internet.url(),

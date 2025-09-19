@@ -6,6 +6,7 @@ import * as dotenv from "dotenv";
 import fs from "fs/promises";
 import path from "path";
 import { fileURLToPath } from "url";
+import crypto from "crypto";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -21,6 +22,12 @@ const adminPassword = process.env.ADMIN_PASSWORD;
 
 export default async function () {
   try {
+    const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
+      modulusLength: 2048, // Adjust the key length as per your requirements
+      publicKeyEncoding: { type: "spki", format: "pem" },
+      privateKeyEncoding: { type: "pkcs8", format: "pem" },
+    });
+
     let defaultSettings = {
       actorId: `@${domain}`,
       profile: {
@@ -87,6 +94,8 @@ export default async function () {
         username: "test",
         password: "test",
       },
+      publicKey: publicKey,
+      privateKey: privateKey,
       createdAt: new Date(Date.now()),
       updatedAt: new Date(Date.now()),
     };

@@ -1,3 +1,4 @@
+// routes.js (refactored)
 import Kowloon from "../Kowloon.js";
 import express from "express";
 import winston from "winston";
@@ -6,18 +7,15 @@ import path, { dirname } from "path";
 import { fileURLToPath } from "url";
 import fs from "fs";
 const __dirname = dirname(fileURLToPath(import.meta.url));
-import swaggerUi, { setup } from "swagger-ui-express";
+import swaggerUi from "swagger-ui-express";
 import jwt from "jsonwebtoken";
-import { createProxyMiddleware } from "http-proxy-middleware";
 import { createRemoteJWKSet, jwtVerify } from "jose";
 
+// Route Methods
 import getCollection from "./getCollection.js";
 import getItem from "./getItem.js";
 import getMembers from "./getMembers.js";
 import getServerOutbox from "./getServerOutbox.js";
-// Route Methods
-
-// // Post Routes
 import login from "./login/index.js";
 import activityPost from "./inbox/post.js";
 import fileGet from "./files/get.js";
@@ -33,8 +31,8 @@ import getPages from "./getPages.js";
 import upload from "./well-known/upload.js";
 import createUser from "./createUser.js";
 
+// ---------------------- ROUTE TABLE ----------------------
 const routes = [
-  // Basic collections
   {
     method: "get",
     path: "/activities",
@@ -49,7 +47,6 @@ const routes = [
     type: "Activity",
     handler: getItem,
   },
-
   {
     method: "get",
     path: "/bookmarks",
@@ -64,7 +61,6 @@ const routes = [
     type: "Bookmark",
     handler: getItem,
   },
-
   {
     method: "get",
     path: "/circles",
@@ -84,7 +80,6 @@ const routes = [
     path: "/circles/:id/posts",
     collection: "circles",
     type: "OrderedCollection",
-
     handler: getCircleFeed,
   },
   {
@@ -92,16 +87,13 @@ const routes = [
     path: "/circles/:id/members",
     collection: "circles",
     type: "OrderedCollection",
-
     handler: getMembers,
   },
-
   {
     method: "get",
     path: "/events",
     collection: "events",
     type: "OrderedCollection",
-
     handler: getCollection,
   },
   {
@@ -118,7 +110,6 @@ const routes = [
     type: "OrderedCollection",
     handler: getMembers,
   },
-
   {
     method: "get",
     path: "/groups",
@@ -156,7 +147,6 @@ const routes = [
     type: "OrderedCollection",
     handler: getMembers,
   },
-
   {
     method: "get",
     path: "/pages",
@@ -171,7 +161,6 @@ const routes = [
     type: "Page",
     handler: getItem,
   },
-
   {
     method: "get",
     path: "/posts",
@@ -202,7 +191,6 @@ const routes = [
     type: "OrderedCollection",
     handler: getCollection,
   },
-
   {
     method: "get",
     path: "/users",
@@ -217,16 +205,8 @@ const routes = [
     type: "User",
     handler: getItem,
   },
-  {
-    method: "get",
-    path: "/users/:id/public-key",
-    handler: getUserPublicKey,
-  },
-  {
-    method: "get",
-    path: "/users/:id/inbox",
-    handler: getUserTimeline,
-  },
+  { method: "get", path: "/users/:id/public-key", handler: getUserPublicKey },
+  { method: "get", path: "/users/:id/inbox", handler: getUserTimeline },
   {
     method: "get",
     path: "/users/:id/activities",
@@ -275,7 +255,6 @@ const routes = [
     type: "OrderedCollection",
     handler: getCollection,
   },
-
   {
     method: "get",
     path: "/",
@@ -288,34 +267,12 @@ const routes = [
     handler: getServerOutbox,
     type: "OrderedCollection",
   },
-  {
-    method: "get",
-    path: "/.well-known/public-key",
-    handler: publicKey,
-  },
-  {
-    method: "get",
-    path: "/.well-known/jwks.json",
-    handler: jwks,
-  },
+  { method: "get", path: "/.well-known/public-key", handler: publicKey },
+  { method: "get", path: "/.well-known/jwks.json", handler: jwks },
+  { method: "get", path: "/utils/preview", handler: preview, auth: true },
 
-  {
-    method: "get",
-    path: "/utils/preview",
-    handler: preview,
-    auth: true,
-  },
-  // POST Routes
-  {
-    method: "post",
-    path: "/upload",
-    handler: upload,
-  },
-  {
-    method: "post",
-    path: "/login",
-    handler: login,
-  },
+  { method: "post", path: "/upload", handler: upload },
+  { method: "post", path: "/login", handler: login },
   {
     method: "post",
     path: "/inbox",
@@ -328,16 +285,12 @@ const routes = [
     handler: activityPost,
     type: "OrderedCollection",
   },
-  {
-    method: "post",
-    path: "/users",
-    handler: createUser,
-    type: "User",
-  },
+  { method: "post", path: "/users", handler: createUser, type: "User" },
+
   {
     method: "get",
     path: "/.well-known/acme-challenge/*",
-    handler: (req, res, next) => {
+    handler: (req, res) => {
       res
         .status(200)
         .send(
@@ -347,48 +300,44 @@ const routes = [
   },
 ];
 
+// ---------------------- ROUTER ----------------------
 const router = express.Router();
-
 const isDev = process.env.NODE_ENV !== "production";
 
 if (!isDev) {
   router.use(express.static("frontend/"));
 }
 
+// Logging
 const logger = winston.createLogger({
-  // Log only if level is less than (meaning more severe) or equal to this
   level: "info",
-  // Use timestamp and printf to create a standard log format
   format: winston.format.combine(
     winston.format.timestamp(),
     winston.format.printf((info) => `${info.level}: ${info.message}`)
   ),
-  // Log to the console and a file
-  transports: [
-    new winston.transports.Console(),
-    // new winston.transports.File({ filename: "logs/server.log" }),
-  ],
+  transports: [new winston.transports.Console()],
 });
 
-// This serves our Swagger UI
+// Swagger/OpenAPI
 router.get("/openapi.yaml", (req, res) => {
   const yamlPath = path.join(process.cwd(), "openapi.yaml");
-  const yamlContent = fs.readFileSync(yamlPath, "utf8");
-  res.type("text/yaml").send(yamlContent);
+  res.type("text/yaml").send(fs.readFileSync(yamlPath, "utf8"));
 });
-
 const openapiDocument = yaml.load(
   fs.readFileSync(path.join(process.cwd(), "openapi.yaml"), "utf8")
 );
-
 router.use("/docs", swaggerUi.serve, swaggerUi.setup(openapiDocument));
 
+// ---------------------- MIDDLEWARE ----------------------
 router.use(async (req, res, next) => {
-  res.header("Access-Control-Allow-Credentials", true);
-  res.header("Access-Control-Allow-Origin", "*");
+  // CORS
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Origin", req.get("Origin") || "*");
   res.header("Access-Control-Allow-Methods", "GET,HEAD,POST,OPTIONS");
   res.header("Access-Control-Allow-Headers", "*");
+  if (req.method === "OPTIONS") return res.sendStatus(204);
 
+  // req.server
   req.server = {
     id: Kowloon.settings.actorId,
     domain: req.hostname,
@@ -400,117 +349,88 @@ router.use(async (req, res, next) => {
     outbox: `https://${Kowloon.settings.domain}/outbox`,
   };
 
-  if (req.header("Authorization")) {
-    const authHeader = req.header("Authorization") || "";
-    const token = authHeader.startsWith("Bearer ")
-      ? authHeader.slice(7).trim()
-      : null;
+  // Authorization
+  if (req.header("Authorization")?.startsWith("Bearer ")) {
+    const token = req.header("Authorization").slice(7).trim();
+    try {
+      const decoded = jwt.decode(token, { complete: true });
+      const user = decoded.payload.user;
+      const issuer =
+        decoded.payload.iss || `https://${Kowloon.settings.domain}`;
+      let verified;
 
-    if (token) {
-      try {
-        const decoded = jwt.decode(token, {
-          complete: true,
+      if (user.id.endsWith(Kowloon.settings.actorId)) {
+        verified = jwt.verify(token, Kowloon.settings.publicKey, {
+          algorithms: ["RS256"],
+          issuer: `https://${Kowloon.settings.domain}`,
         });
-        const kid = decoded.header.kid;
-        const user = decoded.payload.user;
-        const loggedIn = decoded.payload.loggedIn;
-        const iat = decoded.payload.iat;
-        const issuer =
-          decoded.payload.iss || `https://${Kowloon.settings.domain}`;
-        let verified = {};
-        if (user.id.endsWith(Kowloon.settings.actorId)) {
-          verified = jwt.verify(token, Kowloon.settings.publicKey, {
-            algorithms: ["RS256"],
-            issuer: `https://${Kowloon.settings.domain}`,
-          });
-        } else {
-          const JWKS = createRemoteJWKSet(
-            new URL(`${issuer}/.well-known/jwks.json`)
-          );
-
-          const remote = await jwtVerify(token, JWKS, {
-            algorithms: ["RS256"],
-            issuer,
-          });
-          verified = remote.payload;
-        }
-
-        if (verified.user.id == decoded.payload.user.id) {
-          req.user = verified.user;
-
-          // This returns whatever local groups and circles the user is a member of, regardless of whether they are local or remote
-          req.user.memberships = await Kowloon.getUserMemberships(req.user.id);
-        }
-      } catch (err) {
-        console.log(err);
-        return res.status(401).json({ error: "Unauthorized" });
+      } else {
+        const JWKS = createRemoteJWKSet(
+          new URL(`${issuer}/.well-known/jwks.json`)
+        );
+        const remote = await jwtVerify(token, JWKS, {
+          algorithms: ["RS256"],
+          issuer,
+        });
+        verified = remote.payload;
       }
+
+      if (verified.user.id === user.id) {
+        req.user = verified.user;
+        req.user.memberships = await Kowloon.getUserMemberships(req.user.id);
+      }
+    } catch (err) {
+      console.error(err);
+      return res.status(401).json({ error: "Unauthorized" });
     }
   }
-  let ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
 
+  // Logging
+  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
   let logline = `${req.method} - ${ip} - ${req.url}`;
   if (req.user) logline += ` | User: ${req.user.id}`;
   if (req.server) logline += ` | Server: ${req.server.id}`;
-
   logger.info(logline);
-
-  const requireAuth = (req, res, next) => {
-    // your auth logic here
-    if (req.user) return next();
-    return res.status(401).json({
-      error:
-        "Unauthorized. You must be a logged-in member of this server to view this.",
-    });
-  };
-
-  routes.forEach(
-    ({ method, path, collection, type, parent, handler, auth }) => {
-      const middleware = [];
-
-      if (auth) middleware.push(requireAuth);
-
-      if (collection) {
-        middleware.push((req, res, next) => {
-          req.collection = collection;
-          req.type = type || null;
-          next();
-        });
-      }
-
-      if (parent) {
-        middleware.push((req, res, next) => {
-          req.parent = parent;
-          req.parentId = req.params.id;
-          req.type = type || null;
-          next();
-        });
-      }
-
-      // This handles content negotiation at request time
-      middleware.push((req, res, next) => {
-        return handler(req, res, next);
-        // if (req.headers.accept?.includes("application/json")) {
-        //   return handler(req, res, next);
-        // } else {
-        //   // Let React Router take over via Vite proxy or index.html
-        //   next("route"); // skip remaining middleware and let fallback take over
-        // }
-      });
-
-      // Register the route for GET/POST/etc
-      router[method](path, ...middleware);
-    }
-  );
-
-  router.get("/setup", (req, res) => {
-    res.sendFile(path.join(__dirname, "./setup/page.html"));
-  });
-  router.post("/setup", express.urlencoded({ extended: true }), (req, res) => {
-    setupPost(req, res);
-  });
 
   next();
 });
-// }
+
+// ---------------------- ROUTE REGISTRATION ----------------------
+function requireAuth(req, res, next) {
+  if (req.user) return next();
+  return res.status(401).json({ error: "Unauthorized" });
+}
+
+routes.forEach(({ method, path, collection, type, parent, handler, auth }) => {
+  const middleware = [];
+  if (auth) middleware.push(requireAuth);
+
+  if (collection) {
+    middleware.push((req, res, next) => {
+      req.collection = collection;
+      req.type = type || null;
+      next();
+    });
+  }
+  if (parent) {
+    middleware.push((req, res, next) => {
+      req.parent = parent;
+      req.parentId = req.params.id;
+      req.type = type || null;
+      next();
+    });
+  }
+
+  middleware.push((req, res, next) => handler(req, res, next));
+  router[method](path, ...middleware);
+});
+
+// Setup wizard
+router.get("/setup", (req, res) => {
+  res.sendFile(path.join(__dirname, "./setup/page.html"));
+});
+router.post("/setup", express.urlencoded({ extended: true }), (req, res) => {
+  setupPost(req, res);
+});
+
 export default router;

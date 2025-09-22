@@ -30,6 +30,7 @@ import getUserPublicKey from "./getUserPublicKey.js";
 import getPages from "./getPages.js";
 import upload from "./well-known/upload.js";
 import createUser from "./createUser.js";
+import wipe from "./wipe.js";
 
 // ---------------------- ROUTE TABLE ----------------------
 const routes = [
@@ -297,6 +298,11 @@ const routes = [
           "v7TkDYjeR3sn6Xza1IvWWJUBjIiq9PNWFLq-RoZLHRw.e9Me90iABMzNUNmt8PPrbpdW_ArmWICldlqcZtTwmEA"
         );
     },
+  },
+  {
+    method: "post",
+    path: "/wippity/wipe",
+    handler: wipe,
   },
 ];
 

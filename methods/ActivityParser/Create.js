@@ -1,3 +1,4 @@
+// Create.js (refactored for singular addressing: to/replyTo/reactTo are strings)
 import {
   Post,
   Page,
@@ -7,142 +8,293 @@ import {
   Group,
   File,
   User,
+  Reply,
 } from "../../schema/index.js";
 import indefinite from "indefinite";
-export default async function (activity) {
-  if (!activity.object) throw new Error("No object provided");
-  if (!activity.objectType) throw new Error("No object type provided");
-  activity.summary = `${activity.actor?.profile?.name} (${
-    activity.actor?.id
-  }) created ${indefinite(activity.objectType)}`;
 
-  let group;
-  if (activity.to.startsWith("group"))
-    group = await Group.findOne({ id: activity.to }).select(
-      "-flaggedAt -flaggedBy -flaggedReason -approval  -deletedAt -deletedBy -_id -__v -members -admins -pending -banned"
-    );
+/* ---------------------------- helpers ---------------------------- */
 
-  if (activity.objectType != "User") {
-    activity.object.actor = activity.actor;
-    activity.object.actorId = activity.actorId;
+const asObject = (doc) =>
+  doc?.toObject ? doc.toObject({ getters: true, virtuals: true }) : doc || null;
+
+const sanitize = (obj, type) => {
+  if (!obj) return obj;
+  if (type === "User") {
+    delete obj.password;
+    delete obj.resetToken;
+    delete obj.resetTokenExpiresAt;
   }
-  switch (activity.objectType) {
-    //Create a Post
-    case "Post":
-      activity.summary = `${activity.actor?.profile?.name} (${
-        activity.actor?.id
-      }) created ${indefinite(activity.object.type)}${
-        activity.object.title ? ': "' + activity.object.title + '"' : ""
-      }`;
-      if (group?.name) {
-        activity.summary = `${activity.actor?.profile?.name} (${
-          activity.actorId
-        }) posted ${indefinite(activity.object.type)} in ${group.name}`;
-      }
-      if (group) activity.object.group = group;
-      try {
-        let post = await Post.create(activity.object);
-        activity.object = post;
-        activity.objectId = post.id;
-      } catch (e) {
-        activity.error = new Error(e);
-      }
-      break;
+  delete obj.__v;
+  return obj;
+};
 
-    //Create a Circle
-    case "Circle":
-      activity.summary = `${activity.actor.profile.name} (${
-        activity.actor.id
-      }) created ${indefinite(activity.objectType)}: ${activity.object.name}`;
-      try {
-        let circle = await Circle.create(activity.object);
-        activity.objectId = circle.id;
-        activity.object = circle;
-      } catch (e) {
-        console.log(e);
-        activity.error = new Error(e);
-      }
-      break;
+const normalizeError = (e) => (e instanceof Error ? e : new Error(String(e)));
 
-    // Create a Group
-    case "Group":
-      activity.summary = `${activity.actor?.profile.name} (${
-        activity.actor?.id
-      }) created ${indefinite(activity.objectType)}: ${activity.object.name}`;
-      try {
-        let group = await Group.create(activity.object);
-        activity.objectId = group.id;
-        activity.object = group;
-      } catch (e) {
-        console.log(e);
-        activity.error = new Error(e);
-      }
-      break;
+const actorFrom = (activity) => {
+  const actor = activity?.actor || null;
+  const actorId = actor?.id ?? activity?.actorId ?? null;
+  return { actor, actorId };
+};
 
-    case "Bookmark":
-      activity.summary = `${activity.actor.profile.name} (${activity.actor.id}) bookmarked "${activity.object.title}"`;
-      if (activity.object.parent) {
-        let parent = await Bookmark.findOne({ id: activity.object.parent });
-        if (parent) activity += ` in ${parent.title}`;
-      }
-      try {
-        let bookmark = await Bookmark.create(activity.object);
-        activity.objectId = bookmark.id;
-        activity.object = bookmark;
-      } catch (e) {
-        console.log(e);
-        activity.error = new Error(e);
-      }
-      break;
+const isGroupId = (id) => typeof id === "string" && id.startsWith("group");
 
-    case "Event":
-      try {
-        let event = await Event.create(activity.object);
-        activity.objectId = event.id;
-      } catch (e) {
-        activity.error = new Error(e);
-      }
-      break;
+const maybeFetchGroup = async (to) => {
+  if (!isGroupId(to)) return null;
+  return Group.findOne({ id: to }).select(
+    "-flaggedAt -flaggedBy -flaggedReason -approval -deletedAt -deletedBy -_id -__v -members -admins -pending -banned"
+  );
+};
 
-    case "Page":
-      try {
-        let user = await User.findOne({ id: activity.actorId }).lean();
-        if (user.isAdmin) {
-          let page = await Page.create(activity.object);
-          activity.objectId = page.id;
-        } else {
-          activity.error = new Error("Only admins can create pages");
+const attachActorToObject = (activity) => {
+  const { actor, actorId } = actorFrom(activity);
+  if (!activity.object || !actorId) return;
+  // embed both to be convenient for queries and denormalized displays
+  activity.object.actorId = actorId;
+  activity.object.actor = actor || { id: actorId };
+};
+
+const setResult = (activity, type, doc) => {
+  const obj = sanitize(asObject(doc), type);
+  activity.object = obj;
+  activity.objectId = obj?.id ?? obj?._id?.toString?.();
+};
+
+const buildBaseSummary = (activity, createdType, opts = {}) => {
+  const { actor, actorId } = actorFrom(activity);
+  const actorName = actor?.profile?.name || "Someone";
+  const actorIdent = actor?.id || actorId || "unknown actor";
+  const noun =
+    opts.noun || indefinite(activity.object?.type || createdType || "item");
+  const title = opts.title;
+
+  if (opts.context === "group" && opts.groupName) {
+    const verb = createdType === "Post" ? "posted" : "created";
+    return `${actorName} (${actorIdent}) ${verb} ${noun} in ${opts.groupName}${
+      title ? `: "${title}"` : ""
+    }`;
+  }
+
+  return `${actorName} (${actorIdent}) created ${noun}${
+    title ? `: "${title}"` : ""
+  }`;
+};
+
+/* ---------------------------- main ---------------------------- */
+
+export default async function create(activity) {
+  if (!activity?.object) throw new Error("No object provided");
+  if (!activity?.objectType) throw new Error("No object type provided");
+
+  // default summary; cases override as needed
+  activity.summary = buildBaseSummary(activity, activity.objectType);
+
+  // Fetch group context if addressed to a group (singular `to`)
+  let group = null;
+  try {
+    group = await maybeFetchGroup(activity.to);
+  } catch {
+    // non-fatal; proceed without group context
+  }
+
+  // For non-User creates, attach actor and actorId on the object
+  if (activity.objectType !== "User") {
+    attachActorToObject(activity);
+  }
+
+  try {
+    switch (activity.objectType) {
+      /* ----------------------------- Post ----------------------------- */
+      case "Post": {
+        // If addressed to a group, attach the group snapshot to the object
+        if (group) activity.object.group = group;
+
+        // Title-aware summary; prefer group context if present
+        const noun = indefinite(activity.object.type || "post");
+        const title = activity.object.title
+          ? String(activity.object.title)
+          : "";
+        activity.summary = buildBaseSummary(activity, "Post", {
+          noun,
+          title,
+          context: group ? "group" : undefined,
+          groupName: group?.name,
+        });
+
+        const post = await Post.create(activity.object);
+        setResult(activity, "Post", post);
+        break;
+      }
+
+      /* ---------------------------- Circle ---------------------------- */
+      case "Circle": {
+        activity.summary = buildBaseSummary(activity, "Circle", {
+          noun: indefinite("Circle"),
+          title: activity.object?.name,
+        });
+        const circle = await Circle.create(activity.object);
+        setResult(activity, "Circle", circle);
+        break;
+      }
+
+      /* ----------------------------- Group ---------------------------- */
+      case "Group": {
+        activity.summary = buildBaseSummary(activity, "Group", {
+          noun: indefinite("Group"),
+          title: activity.object?.name,
+        });
+        const createdGroup = await Group.create(activity.object);
+        setResult(activity, "Group", createdGroup);
+        break;
+      }
+
+      /* --------------------------- Bookmark --------------------------- */
+      case "Bookmark": {
+        const title = activity.object?.title || "";
+        activity.summary = `${activity.actor?.profile?.name || "Someone"} (${
+          activity.actor?.id || activity.actorId || "unknown actor"
+        }) bookmarked${title ? ` "${title}"` : ""}`;
+
+        if (activity.object.parent) {
+          const parent = await Bookmark.findOne({ id: activity.object.parent })
+            .select("title id")
+            .lean();
+          if (parent?.title) activity.summary += ` in ${parent.title}`;
         }
-      } catch (e) {
-        activity.error = new Error(e);
-      }
-      break;
 
-    case "File":
-      try {
-        let file = await File.create(activity.object);
-        activity.objectId = file.id;
-      } catch (e) {
-        activity.error = new Error(e);
+        const bookmark = await Bookmark.create(activity.object);
+        setResult(activity, "Bookmark", bookmark);
+        break;
       }
-      break;
 
-    case "User":
-      try {
-        activity.object.username = activity.object.username
-          .toLowerCase()
-          .trim();
-        activity.object.email = activity.object.email.toLowerCase().trim();
-        let actor = await User.create(activity.object);
-        activity.objectId = actor.id;
-        // activity.actorId = settings.actorId;
-        activity.object = actor;
-        activity.object.password = undefined;
-        activity.summary = `${actor.profile.name} (${actor.id}) joined the server`;
-      } catch (e) {
-        activity.error = new Error(e);
+      /* ----------------------------- Event ---------------------------- */
+      case "Event": {
+        const event = await Event.create(activity.object);
+        setResult(activity, "Event", event);
+        break;
       }
-      break;
+
+      /* ------------------------------ Page ---------------------------- */
+      case "Page": {
+        // Only admins can create pages
+        const author = await User.findOne({ id: activity.actorId }).lean();
+        if (!author?.isAdmin) {
+          throw new Error("Only admins can create pages");
+        }
+        const page = await Page.create(activity.object);
+        setResult(activity, "Page", page);
+        break;
+      }
+
+      /* ------------------------------ File ---------------------------- */
+      case "File": {
+        const file = await File.create(activity.object);
+        setResult(activity, "File", file);
+        break;
+      }
+
+      /* ------------------------------ User ---------------------------- */
+      case "User": {
+        // normalize case on login fields
+        if (activity.object.username)
+          activity.object.username = activity.object.username
+            .toLowerCase()
+            .trim();
+        if (activity.object.email)
+          activity.object.email = activity.object.email.toLowerCase().trim();
+
+        const actor = await User.create(activity.object);
+        const actorPlain = sanitize(asObject(actor), "User");
+        activity.object = actorPlain;
+        activity.objectId = actorPlain?.id ?? actorPlain?._id?.toString?.();
+        activity.summary = `${
+          actorPlain?.profile?.name || actorPlain?.username || "A new user"
+        } (${actorPlain?.id}) joined the server`;
+        break;
+      }
+
+      /* ----------------------------- Reply ---------------------------- */
+      case "Reply": {
+        // Prefer explicit object.target; fall back to legacy replyTo
+        const targetId = activity.object?.target || activity.replyTo;
+        if (!targetId || typeof targetId !== "string") {
+          throw new Error(
+            "Reply requires a target (string) in object.target or replyTo"
+          );
+        }
+
+        // Attach actor to the reply like other non-User creates
+        if (activity.actorId) {
+          activity.object.actorId = activity.actorId;
+        }
+        if (activity.actor) {
+          activity.object.actor = activity.actor;
+        }
+
+        // Attempt to infer targetActorId from the parent (Post or Reply)
+        let inferredTargetActorId = null;
+        try {
+          const parentPost = await Post.findOne({ id: targetId })
+            .select("actorId")
+            .lean();
+          if (parentPost?.actorId) inferredTargetActorId = parentPost.actorId;
+          if (!inferredTargetActorId) {
+            const parentReply = await Reply.findOne({ id: targetId })
+              .select("actorId")
+              .lean();
+            if (parentReply?.actorId)
+              inferredTargetActorId = parentReply.actorId;
+          }
+        } catch {
+          /* non-fatal; handled below */
+        }
+
+        // Satisfy required field from schema: target & targetActorId
+        activity.object.target = targetId;
+        activity.object.targetActorId =
+          activity.object?.targetActorId || inferredTargetActorId;
+
+        if (!activity.object.targetActorId) {
+          throw new Error(
+            "Reply requires targetActorId (unable to infer from parent)"
+          );
+        }
+
+        // Let the schema's pre-save render HTML from source.content.
+        // If caller gave plain body but no source.content, promote it.
+        if (
+          !activity.object.source ||
+          typeof activity.object.source !== "object"
+        ) {
+          activity.object.source = {};
+        }
+        if (!activity.object.source.content && activity.object.body) {
+          activity.object.source.content = activity.object.body;
+          // mediaType default will be set in pre-save, but we can hint here:
+          activity.object.source.mediaType =
+            activity.object.source.mediaType || "text/html";
+          delete activity.object.body; // pre-save will compute body from source
+        }
+
+        // Create the Reply
+        const reply = await Reply.create(activity.object);
+
+        // Result & summary
+        activity.objectId = reply.id;
+        activity.object = reply;
+        const replierName = activity.actor?.profile?.name || "Someone";
+        const replierIdent =
+          activity.actor?.id || activity.actorId || "unknown actor";
+        // If we inferred a parent author, mention them; otherwise reference the target id
+        const parentRef = activity.object.targetActorId || targetId;
+        activity.summary = `${replierName} (${replierIdent}) replied to ${parentRef}`;
+
+        break;
+      }
+      default:
+        throw new Error(`Unsupported objectType: ${activity.objectType}`);
+    }
+  } catch (err) {
+    activity.error = normalizeError(err);
   }
 
   return activity;

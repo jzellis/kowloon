@@ -1,18 +1,18 @@
-import parseId from "../parseId.js";
-import getSettings from "../getSettings.js";
-import { Reply, Outbox } from "../../schema/index.js";
-import getObjectById from "../getObjectById.js";
+// ActivityParser/Reply.js
+import Create from "./Create.js";
 
-export default async function (activity) {
-  let item = await getObjectById(activity.target);
-  if (item) {
-    activity.object.actor = activity.actor;
-    activity.object.targetActorId = item.actorId;
-    let reply = await Reply.create(activity.object);
-    activity.objectId = reply.id;
-    activity.object = reply;
-    item.replyCount++;
-    await item.save();
-  }
-  return activity;
+// Alias verb "Reply" -> Create's Reply branch
+export default function Reply(activity = {}) {
+  const obj = activity.object || {};
+  return Create({
+    ...activity,
+    objectType: "Reply",
+    object: {
+      ...obj,
+      // prefer explicit object.target; fall back to replyTo (singular)
+      target: obj.target || activity.replyTo,
+      // optional: set a type for downstream UI
+      type: obj.type || "Reply",
+    },
+  });
 }

@@ -19,9 +19,7 @@ export default async function (req, res, next) {
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
   let items = await Post.find(query)
-    .select(
-      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source -signature"
-    )
+    .select(" -deletedAt -deletedBy -_id -__v -source -signature")
     .limit(pageSize ? pageSize : 0)
     .skip(pageSize ? pageSize * (page - 1) : 0)
     .sort(sort)

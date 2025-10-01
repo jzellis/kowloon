@@ -41,7 +41,7 @@ const isGroupId = (id) => typeof id === "string" && id.startsWith("group");
 const maybeFetchGroup = async (to) => {
   if (!isGroupId(to)) return null;
   return Group.findOne({ id: to }).select(
-    "-flaggedAt -flaggedBy -flaggedReason -approval -deletedAt -deletedBy -_id -__v -members -admins -pending -banned"
+    "-approval -deletedAt -deletedBy -_id -__v -members -admins -pending -banned"
   );
 };
 

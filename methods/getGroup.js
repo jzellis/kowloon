@@ -5,7 +5,7 @@ import { Group } from "../schema/index.js";
 export default async function (id) {
   let group;
   group = await Group.findOne({ id, deletedAt: null }).select(
-    "-flaggedAt -flaggedBy -flaggedReason -approval  -deletedAt -deletedBy -_id -__v -members -admins -pending -banned"
+    "-approval  -deletedAt -deletedBy -_id -__v -members -admins -pending -banned"
   );
   if (!group) {
     let server = id.split("@")[1];

@@ -76,7 +76,7 @@ export default async function (req, res, next) {
     id: { $in: attachments.map((a) => a.id) },
   })
     .lean()
-    .select("-_id -__v -flagged -deletedAt");
+    .select("-_id -__v -deletedAt");
   response = { attachments };
   res.status(status).json(response);
   // next();

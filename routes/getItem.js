@@ -16,14 +16,12 @@ const endpoints = {
   activities: {
     type: "Activity",
     collection: Activity,
-    select:
-      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source",
+    select: " -deletedAt -deletedBy -_id -__v -source",
   },
   bookmarks: {
     type: "Bookmark",
     collection: Bookmark,
-    select:
-      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source",
+    select: " -deletedAt -deletedBy -_id -__v -source",
   },
   circles: {
     type: "Circle",
@@ -33,38 +31,32 @@ const endpoints = {
   groups: {
     type: "Group",
     collection: Group,
-    select:
-      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source",
+    select: " -deletedAt -deletedBy -_id -__v -source",
   },
   events: {
     type: "Event",
     collection: Event,
-    select:
-      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source",
+    select: " -deletedAt -deletedBy -_id -__v -source",
   },
   pages: {
     type: "Page",
     collection: Page,
-    select:
-      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source",
+    select: " -deletedAt -deletedBy -_id -__v -source",
   },
   posts: {
     type: "Post",
     collection: Post,
-    select:
-      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source -signature",
+    select: " -deletedAt -deletedBy -_id -__v -source -signature",
   },
   replies: {
     type: "Reply",
     collection: Reply,
-    select:
-      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source",
+    select: " -deletedAt -deletedBy -_id -__v -source",
   },
   reacts: {
     type: "React",
     collection: React,
-    select:
-      "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source",
+    select: " -deletedAt -deletedBy -_id -__v -source",
   },
   users: {
     type: "User",

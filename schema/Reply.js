@@ -25,7 +25,6 @@ const ReplySchema = new Schema(
     replyCount: { type: Number, default: 0 }, // The number of replies to this post
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     shareCount: { type: Number, default: 0 }, // The number of shares of this post
-    flagged: { type: Boolean, default: false },
     deletedAt: { type: Date, default: null },
     deletedBy: { type: String, default: null },
     url: { type: String, default: undefined },

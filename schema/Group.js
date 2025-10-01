@@ -56,10 +56,6 @@ const GroupSchema = new Schema(
     replyCount: { type: Number, default: 0 }, // The number of replies to this post (unused but here for consistency)
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     shareCount: { type: Number, default: 0 }, // The number of shares of this post
-    flaggedAt: { type: Date, default: null },
-    flaggedBy: { type: String, default: null },
-    flaggedReason: { type: String, default: null },
-
     deletedAt: { type: Date, default: null }, // If the group is deleted, when it was deleted
     deletedBy: { type: String, default: null }, // If the group is deleted, who deleted it (usually the user unless an admin does it),
     url: { type: String, default: undefined },

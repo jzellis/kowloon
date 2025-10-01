@@ -5,7 +5,7 @@ import { Bookmark } from "../schema/index.js";
 export default async function (id) {
   let bookmark;
   bookmark = await Bookmark.findOne({ id, deletedAt: null }).select(
-    "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
+    " -deletedAt -deletedBy -_id -__v -source"
   );
   if (!bookmark) {
     let server = id.split("@")[1];

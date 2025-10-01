@@ -16,7 +16,6 @@ const FileSchema = new Schema(
     size: { type: Number, default: undefined },
     actorId: { type: String, required: true }, // Who created this group?
     server: { type: String, default: undefined }, // The server of the actor
-    flagged: { type: Object, default: false }, // Has this group been flagged? If so, it'll include a reason, who flagged it and when.
     deletedAt: { type: Date, default: null }, // If the group is deleted, when it was deleted
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }

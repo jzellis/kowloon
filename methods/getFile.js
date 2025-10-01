@@ -5,7 +5,7 @@ import { File } from "../schema/index.js";
 export default async function (id) {
   let file;
   file = await File.findOne({ id, deletedAt: null }).select(
-    "-_id -flagged -flaggedAt -deletedAt -__v"
+    "-_id -deletedAt -__v"
   );
   if (!file) {
     let server = id.split("@")[1];

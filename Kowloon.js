@@ -3,14 +3,21 @@ import * as dotenv from "dotenv";
 import fs from "fs";
 import path, { dirname } from "path";
 const __dirname = process.cwd();
-
-dotenv.config();
-
+import defaultSettings from "./config/defaultSettings.js";
+import defaultUser from "./config/defaultUser.js";
 import mongoose from "mongoose";
 import winston from "winston";
-import setup from "./methods/setup.js";
 import { Settings, User } from "./schema/index.js";
+dotenv.config();
 process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Remove this in production, this is only for dev
+const ctx = {
+  domain: process.env.DOMAIN,
+  siteTitle: process.env.SITE_TITLE || "My Kowloon Server",
+  adminEmail: process.env.ADMIN_EMAIL || "admin@" + process.env.DOMAIN,
+  smtpHost: process.env.SMTP_HOST || "",
+  smtpUser: process.env.SMTP_USER || "",
+  smtpPass: process.env.SMTP_PASS || "",
+};
 
 const Kowloon = {
   settings: {},
@@ -26,19 +33,33 @@ const Kowloon = {
       process.exit(0);
     }
 
-    if (
-      (await User.countDocuments()) === 0 &&
-      (await Settings.countDocuments()) === 0
-    ) {
-      console.log("Creating default settings...");
-      await setup();
+    const defaultsettings = defaultSettings(ctx);
+
+    for (const [key, val] of Object.entries(defaultsettings)) {
+      if (!(await Settings.findOne({ name: key }))) {
+        await Settings.create({ name: key, value: val });
+        console.log("Created setting: " + key);
+      }
     }
+
     let settings = await Settings.find();
+
     settings.forEach(async (setting) => {
       this.settings[setting.name] = setting.value;
     });
     console.log("Kowloon settings loaded");
 
+    if (!(await User.findOne())) {
+      let adminUser = defaultUser(ctx);
+      let adminPassword = adminUser.password;
+      let createdUser = await User.create(adminUser);
+      await Settings.findOneAndUpdate(
+        { name: "adminUsers" },
+        { value: [createdUser.id] }
+      );
+
+      console.log("Created default admin user with password: " + adminPassword);
+    }
     // This loads all methods from the "methods" folder
     const methodsDir = `${dirname(fileURLToPath(import.meta.url))}/methods`;
 

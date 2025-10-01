@@ -9,8 +9,7 @@ export default async function (req, res, next) {
   let page = req.query.page || 1;
   let pageSize = req.query.num || 20;
   let sort = {};
-  let select =
-    "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source";
+  let select = " -deletedAt -deletedBy -_id -__v -source";
 
   let summary = `${Kowloon.settings.profile.name} | Pages`;
 

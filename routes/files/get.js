@@ -9,7 +9,7 @@ export default async function (req, res, next) {
   };
 
   let file = await File.findOne(query).select(
-    "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
+    " -deletedAt -deletedBy -_id -__v -source"
   );
   if (file) {
     response = {

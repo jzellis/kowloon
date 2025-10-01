@@ -52,7 +52,7 @@ export default async function ReactVerb(activity) {
   // 2) Stamp actor on the React object
   embedActor(activity);
 
-  // 3) Local vs remote: compare target’s domain against our Settings.domain
+  // 3) Local vs remote: compare target's domain against our Settings.domain
   const settings = await getSettings();
   const localDomain = settings?.domain;
   const targetDomain = domainFromId(target);
@@ -82,7 +82,7 @@ export default async function ReactVerb(activity) {
   const actorIdent = activity.actor?.id || activity.actorId || "unknown actor";
   activity.summary = `${actorName} (${actorIdent}) reacted ${emoji} to ${target}`;
 
-  // 7) Federation policy: send only if target isn’t on our server
+  // 7) Federation policy: send only if target isn't on our server
   if (isRemote) {
     activity.federate = true; // your Outbox/dispatcher uses this (or an allowlist) to deliver
   }

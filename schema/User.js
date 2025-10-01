@@ -48,9 +48,6 @@ const UserSchemaDef = {
   reactTo: { type: String, default: "" },
   url: { type: String },
   active: { type: Boolean, default: true },
-  flaggedAt: { type: Date, default: null },
-  flaggedBy: { type: String, default: null },
-  flaggedReason: { type: String, default: null },
   deletedAt: { type: Date },
   feedRefreshedAt: { type: Date },
 };

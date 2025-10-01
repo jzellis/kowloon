@@ -2,6 +2,7 @@ import Activity from "./Activity.js";
 import Bookmark from "./Bookmark.js";
 import Circle from "./Circle.js";
 import Group from "./Group.js";
+import Flag from "./Flag.js";
 import React from "./React.js";
 import Reply from "./Reply.js";
 import Page from "./Page.js";
@@ -21,6 +22,7 @@ export {
   Bookmark,
   Circle,
   Group,
+  Flag,
   React,
   Page,
   Post,

@@ -37,9 +37,6 @@ const PostSchema = new Schema(
     to: { type: String, default: "" },
     replyTo: { type: String, default: "" },
     reactTo: { type: String, default: "" },
-    flaggedAt: { type: Date, default: null },
-    flaggedBy: { type: String, default: null },
-    flaggedReason: { type: String, default: null },
     deletedAt: { type: Date, default: null }, // If this post was deleted, this is when it was deleted. If it's not set the post is not deleted
     deletedBy: { type: String, default: null }, // I`f the activity is deleted, who deleted it (usually the user unless an admin does it)
     signature: Buffer, // The creator's public signature for verification

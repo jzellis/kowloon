@@ -5,7 +5,7 @@ import { Post } from "../schema/index.js";
 export default async function (id) {
   let post;
   post = await Post.findOne({ id, deletedAt: null }).select(
-    "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
+    " -deletedAt -deletedBy -_id -__v -source"
   );
   if (!post) {
     let server = id.split("@")[1];

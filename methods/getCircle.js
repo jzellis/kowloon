@@ -5,7 +5,7 @@ import { Circle } from "../schema/index.js";
 export default async function (id) {
   let circle;
   circle = await Circle.findOne({ id, deletedAt: null }).select(
-    "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
+    " -deletedAt -deletedBy -_id -__v -source"
   );
   if (!circle) {
     let server = id.split("@")[1];

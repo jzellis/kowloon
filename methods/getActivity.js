@@ -5,7 +5,7 @@ import { Activity } from "../schema/index.js";
 export default async function (id) {
   let activity;
   activity = await Activity.findOne({ id, deletedAt: null }).select(
-    "-flaggedAt -flaggedBy -flaggedReason  -deletedAt -deletedBy -_id -__v -source"
+    " -deletedAt -deletedBy -_id -__v -source"
   );
   if (!activity) {
     let server = id.split("@")[1];

@@ -7,7 +7,7 @@ const FlagSchema = new mongoose.Schema(
     target: { type: String, index: true, required: true }, // object id being flagged
     targetType: { type: String, index: true }, // "Post" | "Reply" | "Event" | ...
     targetActorId: { type: String }, // original author
-    reason: { type: String, required: true }, // validated against Settings
+    reason: { type: Object, required: true }, // validated against Settings
     notes: { type: String }, // optional user-provided context
     actorId: { type: String, index: true, required: true }, // who flagged
     status: {

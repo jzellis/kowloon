@@ -17,6 +17,7 @@
     "@uppy/companion": "^5.5.2",
     "@uppy/core": "^4.4.2",
     "@uppy/xhr-upload": "^4.3.3",
+    "ajv": "^8.17.1",
     "bcryptjs": "^2.4.3",
     "body-parser": "^1.20.3",
     "chalk": "^5.3.0",

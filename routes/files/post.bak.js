@@ -1,6 +1,6 @@
 import Kowloon from "../../Kowloon.js";
 import fs from "fs";
-import { File } from "../../schema/index.js";
+import { File } from "#schema";
 import { IncomingForm } from "formidable";
 
 export default async function (req, res, next) {

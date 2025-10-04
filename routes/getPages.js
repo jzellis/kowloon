@@ -1,6 +1,6 @@
 import Kowloon from "../Kowloon.js";
-import { Page } from "../schema/index.js";
-import buildPageTree from "../methods/buildPageTree.js";
+import { Page } from "#schema";
+import buildPageTree from "#methods/buildPageTree.js";
 
 export default async function (req, res, next) {
   let status = 200;

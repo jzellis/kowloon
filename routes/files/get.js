@@ -1,5 +1,5 @@
 import Kowloon from "../../Kowloon.js";
-import { File } from "../../schema/index.js";
+import { File } from "#schema";
 export default async function (req, res, next) {
   let status = 200;
   let qStart = Date.now();

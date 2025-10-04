@@ -1,5 +1,5 @@
 import Kowloon from "../Kowloon.js";
-import { Circle, User, UserFeed, FeedItem } from "../schema/index.js";
+import { Circle, User, UserFeed, FeedItem } from "#schema";
 
 export default async function (req, res, next) {
   let status = 200;

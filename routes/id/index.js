@@ -5,7 +5,7 @@ export default async function (req, res, next) {
   let qStart = Date.now();
   let response = {};
 
-  response[Kowloon.parseId(req.params.id).type.toLowerCase()] =
+  response[Kowloon.parseKowloonId(req.params.id).type.toLowerCase()] =
     await Kowloon.getObjectById(req.params.id, req.user?.id || null);
   response.queryTime = Date.now() - qStart;
   res.status(status).json(response);

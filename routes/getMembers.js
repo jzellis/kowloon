@@ -10,7 +10,7 @@ import {
   React,
   Reply,
   User,
-} from "../schema/index.js";
+} from "#schema";
 
 const endpoints = {
   activities: {

@@ -10,7 +10,7 @@ import {
   React,
   Reply,
   User,
-} from "../schema/index.js";
+} from "#schema";
 
 export default async function (req, res, next) {
   const modelMap = {

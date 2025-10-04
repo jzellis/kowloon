@@ -10,7 +10,7 @@ import {
   React,
   Reply,
   User,
-} from "../schema/index.js";
+} from "#schema";
 
 const endpoints = {
   activities: {
@@ -82,7 +82,7 @@ export default async function (req, res, next) {
   } else {
     sort = `-updatedAt`;
   }
-  let query = await Kowloon.generateQuery(req.user || null);
+  let query = await Kowloon.query(req.user || null);
   if (req.query.since)
     query.updatedAt = { $gte: new Date(req.query.since).toISOString() };
 

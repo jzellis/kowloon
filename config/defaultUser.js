@@ -1,4 +1,4 @@
-import generatePassword from "../methods/generatePassword.js";
+import generatePassword from "#methods/generate/password.js";
 
 export default (ctx) => {
   return {

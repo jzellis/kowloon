@@ -1,5 +1,5 @@
-import { User, Circle, Post, FeedItem, UserFeed } from "../schema/index.js";
-import getSettings from "./getSettings.js";
+import { User, Circle, Post, FeedItem, UserFeed } from "#schema";
+import getSettings from "#methods/settings/get.js";
 import Parser from "rss-parser";
 import { getLinkPreview } from "link-preview-js";
 import generateToken from "./generateToken.js";

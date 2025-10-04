@@ -1,5 +1,5 @@
 import Kowloon from "../Kowloon.js";
-import { Post } from "../schema/index.js";
+import { Post } from "#schema";
 
 export default async function (req, res, next) {
   let status = 200;

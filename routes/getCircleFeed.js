@@ -1,6 +1,6 @@
 import Kowloon from "../Kowloon.js";
-import { Circle } from "../schema/index.js";
-import updateFeed from "../methods/updateFeed.js";
+import { Circle } from "#schema";
+import updateFeed from "#methods/updateFeed.js";
 
 export default async function (req, res, next) {
   let status = 200;

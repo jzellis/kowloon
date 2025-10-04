@@ -1,15 +1,44 @@
-import { fileURLToPath } from "url";
-import * as dotenv from "dotenv";
 import fs from "fs";
 import path, { dirname } from "path";
-const __dirname = process.cwd();
-import defaultSettings from "./config/defaultSettings.js";
-import defaultUser from "./config/defaultUser.js";
-import mongoose from "mongoose";
-import winston from "winston";
-import { Settings, User } from "./schema/index.js";
+import { fileURLToPath } from "url";
+
+import * as dotenv from "dotenv";
 dotenv.config();
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // Remove this in production, this is only for dev
+
+import winston from "winston";
+import { Settings, User } from "#schema";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+async function attachMethodDomains(Kowloon) {
+  const methodsDir = path.join(__dirname, "methods");
+  const entries = fs.readdirSync(methodsDir, { withFileTypes: true });
+
+  await Promise.all(
+    entries.map(async (ent) => {
+      if (!ent.isDirectory()) return;
+      const name = ent.name; // e.g., "users", "posts"
+      const indexPath = path.join(methodsDir, name, "index.js");
+      if (!fs.existsSync(indexPath)) return;
+
+      try {
+        const mod = await import(`./methods/${name}/index.js`);
+        if (mod?.default) {
+          Kowloon[name] = mod.default; // expect default export object { get, create, ... }
+        } else {
+          // if you prefer named exports instead of default:
+          // Kowloon[name] = mod;
+        }
+      } catch (e) {
+        console.error(`Failed to load methods/${name}:`, e);
+      }
+    })
+  );
+}
+
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"; // dev only
+
 const ctx = {
   domain: process.env.DOMAIN,
   siteTitle: process.env.SITE_TITLE || "My Kowloon Server",
@@ -20,85 +49,48 @@ const ctx = {
 };
 
 const Kowloon = {
+  // activities,
+  // auth,
+  // bookmarks,
+  // circles,
+  // events,
+  // files,
+  // federation,
+  // generate,
+  // groups,
+  // inbox,
+  // invites,
+  // outbox,
+  // pages,
+  // parse,
+  // posts,
+  // query,
+  // reacts,
+  // replies,
+  // users,
+  // utils,
   settings: {},
   connection: {},
-  init: async function () {
-    console.log("Establishing Kowloon database connection...");
-    try {
-      const db = await mongoose.connect(process.env.MONGO_URI);
-      this.connection.isConnected = db.connections[0].readyState === 1;
-      console.log("Kowloon database connection established");
-    } catch (e) {
-      console.error(e);
-      process.exit(0);
-    }
-
-    const defaultsettings = defaultSettings(ctx);
-
-    for (const [key, val] of Object.entries(defaultsettings)) {
-      if (!(await Settings.findOne({ name: key }))) {
-        await Settings.create({ name: key, value: val });
-        console.log("Created setting: " + key);
-      }
-    }
-
-    let settings = await Settings.find();
-
-    settings.forEach(async (setting) => {
-      this.settings[setting.name] = setting.value;
-    });
-    console.log("Kowloon settings loaded");
-
-    if (!(await User.findOne())) {
-      let adminUser = defaultUser(ctx);
-      let adminPassword = adminUser.password;
-      let createdUser = await User.create(adminUser);
-      await Settings.findOneAndUpdate(
-        { name: "adminUsers" },
-        { value: [createdUser.id] }
-      );
-
-      console.log("Created default admin user with password: " + adminPassword);
-    }
-    // This loads all methods from the "methods" folder
-    const methodsDir = `${dirname(fileURLToPath(import.meta.url))}/methods`;
-
-    let files = fs.readdirSync(methodsDir).filter((f) => f.endsWith(".js"));
-    console.log("Loading Kowloon methods...");
-    //
-    await Promise.all(
-      files.map(async function (f) {
-        let name = f.split(".")[0];
-        try {
-          let module = await import(`./methods/${f}`);
-          Kowloon[name] = function () {
-            return module.default(...arguments);
-          };
-        } catch (e) {
-          console.log(e);
-        }
-      })
-    );
-    console.log("Kowloon methods loaded");
-  },
-  logger: winston.createLogger({
-    level: "info",
-    format: winston.format.combine(
-      winston.format.timestamp(),
-      winston.format.printf(
-        (info) => `${info.timestamp} ${info.level}: ${info.json}`
-      )
-    ),
-    defaultMeta: { service: "kowloon" },
-    transports: [
-      new winston.transports.Console(),
-      new winston.transports.File({ filename: "error.log", level: "error" }),
-      new winston.transports.File({ filename: "combined.log" }),
-    ],
-  }),
+  // logger: winston.createLogger({
+  //   level: "info",
+  //   format: winston.format.combine(
+  //     winston.format.timestamp(),
+  //     winston.format.printf(
+  //       (info) => `${info.timestamp} ${info.level}: ${info.json}`
+  //     )
+  //   ),
+  //   defaultMeta: { service: "kowloon" },
+  //   transports: [
+  //     new winston.transports.Console(),
+  //     new winston.transports.File({ filename: "error.log", level: "error" }),
+  //     new winston.transports.File({ filename: "combined.log" }),
+  //   ],
+  // }),
   reservedUsernames: ["admin", "kowloon", "public"],
 };
 
-await Kowloon.init();
+// call the standalone initializer
+await attachMethodDomains(Kowloon);
+await Kowloon.utils.init(Kowloon, ctx);
 
 export default Kowloon;

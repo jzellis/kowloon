@@ -2,7 +2,7 @@ import { IncomingForm } from "formidable";
 import multer from "multer";
 import multerS3 from "multer-s3";
 import { S3Client } from "@aws-sdk/client-s3";
-import { File } from "../../schema/index.js";
+import { File } from "#schema";
 import { v4 as uuidv4 } from "uuid";
 
 export default async function (req, res, next) {

@@ -113,6 +113,7 @@ const defaultSettings = (ctx) => {
     },
     adminEmail: ctx.adminEmail,
     adminUsers: [],
+    editorUsers: [],
     emailServer: {
       protocol: "smtp",
       host: ctx.smtpHost || "localhost",

@@ -1,5 +1,5 @@
 import Kowloon from "../Kowloon.js";
-import buildPageTree from "../methods/buildPageTree.js";
+import buildPageTree from "#methods/buildPageTree.js";
 import Circle from "../schema/Circle.js";
 import Page from "../schema/Page.js";
 export default async function (req, res, next) {

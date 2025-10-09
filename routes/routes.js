@@ -13,37 +13,41 @@ import setupRouter from "./setup/index.js";
 
 const CONFIG_FLAG = path.join(process.cwd(), ".configured");
 
-// Check if server is configured
-if (!fs.existsSync(CONFIG_FLAG)) {
-  console.log("Server not configured - redirecting to setup");
+// Middleware to check if configured and route accordingly
+router.use((req, res, next) => {
+  const isConfigured = fs.existsSync(CONFIG_FLAG);
 
-  // Use the setup router
-  router.use(setupRouter);
+  if (!isConfigured && req.path !== "/setup") {
+    console.log("Server not configured - redirecting to /setup");
+    return res.redirect("/setup");
+  }
 
-  // Redirect all other requests to setup
-  router.use((req, res) => {
-    if (req.path !== "/setup") {
-      return res.redirect("/setup");
-    }
+  if (isConfigured && req.path === "/setup") {
+    console.log("Server already configured - redirecting to /");
+    return res.redirect("/");
+  }
+
+  next();
+});
+
+// Always include setup router (after the middleware check)
+router.use(setupRouter);
+
+// Basic home route (only accessible when configured)
+router.get("/", (req, res) => {
+  res.json({
+    name: "Kowloon",
+    version: "1.0.0",
+    status: "running",
+    message: "Kowloon server is running. This is a federated social networking platform."
   });
-} else {
-  console.log("Server configured - loading routes");
+});
 
-  // Basic home route
-  router.get("/", (req, res) => {
-    res.json({
-      name: "Kowloon",
-      version: "1.0.0",
-      status: "running",
-      message: "Kowloon server is running. This is a federated social networking platform."
-    });
-  });
-
-  // Health check
-  router.get("/health", (req, res) => {
-    res.json({ status: "ok", configured: true });
-  });
-}
+// Health check
+router.get("/health", (req, res) => {
+  const isConfigured = fs.existsSync(CONFIG_FLAG);
+  res.json({ status: "ok", configured: isConfigured });
+});
 
 export default router;
 

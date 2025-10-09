@@ -13,7 +13,10 @@ router.get("/setup", (req, res) => {
   res.sendFile(path.join(__dirname, "page.html"));
 });
 
-router.post("/setup", express.urlencoded({ extended: true }), (req, res) => {
+router.post("/setup", (req, res) => {
+  console.log("POST /setup received");
+  console.log("Request body:", req.body);
+
   const {
     SITE_NAME,
     ADMIN_USERNAME,
@@ -64,13 +67,25 @@ router.post("/setup", express.urlencoded({ extended: true }), (req, res) => {
 
   const envContent = lines.filter(Boolean).join("\n");
 
-  fs.writeFileSync(envPath, envContent);
-  fs.writeFileSync(".configured", "true\n");
+  console.log("Writing .env file to:", envPath);
+  console.log("Env content:", envContent);
 
-  // Optionally re-run any init scripts if needed here
-  // execSync("npm run init-db");
+  try {
+    fs.writeFileSync(envPath, envContent);
+    console.log(".env file written successfully");
 
-  res.redirect("/");
+    fs.writeFileSync(".configured", "true\n");
+    console.log(".configured file written successfully");
+
+    // Optionally re-run any init scripts if needed here
+    // execSync("npm run init-db");
+
+    console.log("Redirecting to /");
+    res.redirect("/");
+  } catch (error) {
+    console.error("Error during setup:", error);
+    res.status(500).send("Setup failed: " + error.message);
+  }
 });
 
 export default router;

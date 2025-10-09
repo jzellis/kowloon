@@ -1,0 +1,73 @@
+services:
+  # MongoDB Database
+  mongo:
+    image: mongo:7
+    container_name: kowloon-mongo
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USER:-kowloon}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-changeme}
+      MONGO_INITDB_DATABASE: ${MONGO_DB:-kowloon}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    networks:
+      - kowloon-network
+
+  # MinIO S3-compatible storage
+  minio:
+    image: minio/minio:latest
+    container_name: kowloon-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-kowloon}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-changeme123}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks:
+      - kowloon-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 20s
+      retries: 3
+
+  # Kowloon Application
+  app:
+    build: .
+    container_name: kowloon-app
+    restart: unless-stopped
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=development
+      - DOMAIN=${DOMAIN:-localhost}
+      - SITE_TITLE=${SITE_TITLE:-Kowloon}
+      - ADMIN_EMAIL=${ADMIN_EMAIL:-admin@localhost}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-changeme}
+      - MONGO_URI=mongodb://${MONGO_USER:-kowloon}:${MONGO_PASSWORD:-changeme}@mongo:27017/${MONGO_DB:-kowloon}?authSource=admin
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-kowloon}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-changeme123}
+      - MINIO_BUCKET=${MINIO_BUCKET:-kowloon}
+      - PORT=3000
+    depends_on:
+      - mongo
+      - minio
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - kowloon-network
+
+volumes:
+  mongo-data:
+  minio-data:
+
+networks:
+  kowloon-network:
+    driver: bridge
+

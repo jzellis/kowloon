@@ -10,7 +10,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const envPath = path.resolve(".env");
 
 router.get("/setup", (req, res) => {
-  res.sendFile(path.join(__dirname, "../public/setup.html"));
+  res.sendFile(path.join(__dirname, "page.html"));
 });
 
 router.post("/setup", express.urlencoded({ extended: true }), (req, res) => {

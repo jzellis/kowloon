@@ -1,5 +1,5 @@
 // Update.js (refactored)
-import getObjectById from "#utils/getObjectById.js";
+import getObjectById from "#methods/get/objectById.js";
 import indefinite from "indefinite";
 
 const sanitize = (obj) => {

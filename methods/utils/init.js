@@ -1,28 +1,46 @@
-// methods/utils/init.js
+// /methods/utils/init.js
 import mongoose from "mongoose";
-import defaultSettings from "../../config/defaultSettings.js";
-import defaultUser from "../../config/defaultUser.js";
+
+import defaultSettings from "#config/defaultSettings.js";
+import defaultUser from "#config/defaultUser.js";
 import { Settings, User } from "#schema";
 
-/**
- * Initialize DB, settings, and a default admin user if none exists.
- * Mutates `kowloon.settings` and `kowloon.connection`.
- *
- * @param {object} kowloon - The Kowloon object to mutate.
- * @param {object} ctx     - { domain, siteTitle, adminEmail, smtpHost, smtpUser, smtpPass }
- */
-export default async function init(kowloon, ctx) {
-  console.log("Establishing Kowloon database connection...");
+function pickDbUri() {
+  return (
+    process.env.MONGODB_URI ||
+    process.env.MONGO_URL ||
+    process.env.DATABASE_URL ||
+    process.env.MONGO_URI ||
+    null
+  );
+}
+
+// IMPORTANT: this file no longer creates an Express app or mounts routes.
+// It ONLY connects to Mongo and seeds settings/admin.
+export default async function init(Kowloon, ctx = {}) {
+  // 1) Database (idempotent)
   try {
-    const db = await mongoose.connect(process.env.MONGO_URI);
-    kowloon.connection.isConnected = db.connections[0]?.readyState === 1;
-    console.log("Kowloon database connection established");
+    if (mongoose.connection.readyState !== 1) {
+      const uri = pickDbUri();
+      if (!uri)
+        throw new Error(
+          "Missing DB URI (MONGODB_URI/MONGO_URL/DATABASE_URL/MONGO_URI)."
+        );
+      console.log("Kowloon: connecting to Mongo…");
+      await mongoose.connect(uri, { maxPoolSize: 10 });
+      console.log("Kowloon: Mongo connected.");
+    } else {
+      console.log("Kowloon: Mongo already connected.");
+    }
+    Kowloon.mongoose = mongoose;
+    Kowloon.connection = mongoose.connection;
   } catch (e) {
-    console.error(e);
-    process.exit(0);
+    console.error("Kowloon DB connect failed:", e);
+    process.exit(1);
   }
 
-  // Ensure default settings exist
+  // 2) Seed defaults, then load settings into memory
+  if (!Kowloon.settings) Kowloon.settings = {};
   const defaults = defaultSettings(ctx);
   for (const [name, value] of Object.entries(defaults)) {
     const exists = await Settings.findOne({ name }).lean();
@@ -31,27 +49,31 @@ export default async function init(kowloon, ctx) {
       console.log("Created setting:", name);
     }
   }
-
-  // Load settings into memory
-  const settings = await Settings.find().lean();
-  for (const s of settings) {
-    kowloon.settings[s.name] = s.value;
+  const settingsDocs = await Settings.find().lean();
+  for (const s of settingsDocs) {
+    Kowloon.settings[s.name] = s.value;
   }
   console.log("Kowloon settings loaded");
 
-  // Ensure at least one user (create default admin if none)
-  const hasUser = await User.findOne().lean();
-  if (!hasUser) {
+  // 3) Ensure default admin user exists
+  let firstUser = await User.findOne().lean();
+  if (!firstUser) {
     const adminUser = defaultUser(ctx);
-    const adminPassword = adminUser.password;
-    const createdUser = await User.create(adminUser);
+    const adminPassword = adminUser.password; // only log in non-prod
+    const created = await User.create(adminUser);
 
     await Settings.findOneAndUpdate(
       { name: "adminUsers" },
-      { value: [createdUser.id] },
+      { $addToSet: { value: created.id } },
       { upsert: true }
     );
 
-    console.log("Created default admin user with password:", adminPassword);
+    if (process.env.NODE_ENV !== "production") {
+      console.log("Created default admin user with password:", adminPassword);
+    } else {
+      console.log("Created default admin user");
+    }
   }
+
+  return { connection: Kowloon.connection, settings: Kowloon.settings };
 }

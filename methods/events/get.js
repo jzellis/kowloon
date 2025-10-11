@@ -1,12 +1,15 @@
-import getObjectById from "#utils/getObjectById.js";
-import assertTypeFromId from "#utils/assertTypeFromId.js";
+// #methods/Event/get.js
+import getObjectById from "#methods/get/objectById.js";
+import assertTypeFromId from "#methods/utils/assertTypeFromId.js";
 
-// This method retrieves a event whether local or remote. Does not return deleted items.
-
-export default async function getEvent(eventId, opts) {
-  assertTypeFromId(eventId, "Event");
-  return getObjectById(eventId, {
-    select: " -deletedAt -deletedBy -_id -__v -source",
-    ...opts,
-  });
+/**
+ * Get a single Event by Kowloon ID.
+ *
+ * @param {string} id - The Kowloon ID (e.g. "<type>:uuid@domain" or "@user@domain")
+ * @param {object} [opts] - { select, lean=true, deleted=false }
+ * @returns {Promise<object|null>}
+ */
+export default async function get(id, opts = {}) {
+  assertTypeFromId(id, "Event");
+  return getObjectById(id, opts);
 }

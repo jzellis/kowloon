@@ -1,38 +1,73 @@
+// schema/Bookmark.js
 import mongoose from "mongoose";
 import Settings from "./Settings.js";
 import { marked } from "marked";
-const Schema = mongoose.Schema;
-const ObjectId = mongoose.Types.ObjectId;
+
+const { Schema } = mongoose;
 
 const BookmarkSchema = new Schema(
   {
-    id: { type: String, key: true },
+    // Stable Kowloon ID: "bookmark:<uuid>@<domain>"
+    id: { type: String, unique: true, index: true },
     objectType: { type: String, default: "Bookmark" },
-    type: { type: String, enum: ["Bookmark", "Folder"], default: "Bookmark" },
-    parentFolder: { type: String, default: undefined, required: false },
-    target: { type: String, required: false, default: undefined },
-    href: { type: String, required: false, default: undefined },
+
+    // Bookmark or Folder (collection)
+    type: {
+      type: String,
+      enum: ["Bookmark", "Folder"],
+      default: "Bookmark",
+      index: true,
+    },
+
+    // 🔐 Ownership (NEW)
+    ownerId: { type: String, required: true, index: true }, // "@user@domain" | "group:uuid@domain" | "@server@domain"
+    ownerType: {
+      type: String,
+      enum: ["User", "Group", "Server"],
+      required: true,
+      index: true,
+    },
+
+    // Folder hierarchy
+    parentFolder: { type: String, default: undefined, index: true }, // id of a Folder
+
+    // What is being bookmarked
+    // Either an internal target id (post:/event:/page:/etc) OR an external URL (href).
+    target: { type: String, default: undefined, index: true },
+    href: { type: String, default: undefined },
+
+    // Presentation
     title: { type: String, default: undefined },
-    actorId: { type: String, required: true },
-    actor: { type: Object, default: undefined },
-    server: { type: String, default: undefined }, // The server of the activity's author. This is used to determine the server of the activity.
+    image: { type: String, default: undefined },
+
+    // Visibility of the *bookmark record itself*
+    to: {
+      type: String,
+      enum: ["@public", "@server"],
+      default: "@public",
+      index: true,
+    },
+
+    // Optional metadata
     tags: { type: [String], default: [] },
     summary: { type: String, default: undefined },
     source: {
-      content: { type: String, default: "" }, // The raw content of the post -- plain text, HTML or Markdown
+      content: { type: String, default: "" }, // raw text/HTML/Markdown
       mediaType: { type: String, default: "text/html" },
     },
     body: { type: String, default: "" },
-    image: { type: String, default: undefined },
-    to: { type: String, default: "" },
-    replyTo: { type: String, default: "" },
-    reactTo: { type: String, default: "" },
-    replyCount: { type: Number, default: 0 }, // The number of replies to this post
-    reactCount: { type: Number, default: 0 }, // The number of likes to this post
-    shareCount: { type: Number, default: 0 }, // The number of shares of this post
-    deletedAt: { type: Date, default: null },
-    deletedBy: { type: String, default: null }, // I`f the activity is deleted, who deleted it (usually the user unless an admin does it),
+
+    // Lifecycle
+    deletedAt: { type: Date, default: null, index: true },
+    deletedBy: { type: String, default: null },
+
+    // Convenience
     url: { type: String, default: undefined },
+
+    // 🧯 Back-compat (deprecated): map to ownerId/ownerType if present
+    actorId: { type: String, default: undefined }, // DEPRECATED
+    actor: { type: Object, default: undefined }, // DEPRECATED
+    server: { type: String, default: undefined }, // host/domain (kept if you use it elsewhere)
   },
   {
     strict: false,
@@ -42,41 +77,102 @@ const BookmarkSchema = new Schema(
   }
 );
 
+// ---- Indexes for common access patterns ----
+BookmarkSchema.index({ ownerId: 1, createdAt: -1 }); // listing someone's bookmarks
+BookmarkSchema.index({ parentFolder: 1, createdAt: -1 }); // folder views
+BookmarkSchema.index({ to: 1, ownerType: 1 });
+BookmarkSchema.index({ target: 1, createdAt: -1 }); // reverse lookups / cleanup
+
+// If you want reactions *to bookmarks* (optional; keep if you use it)
 BookmarkSchema.virtual("reacts", {
   ref: "React",
   localField: "id",
   foreignField: "target",
 });
 
+// ------ Helpers ------
+function inferOwnerTypeFromId(id) {
+  if (!id || typeof id !== "string") return "user";
+  if (id.startsWith("@server@")) return "server";
+  if (id.startsWith("group:")) return "group";
+  return id.startsWith("@") ? "user" : "user";
+}
+
+// ------ Pre-save normalization ------
 BookmarkSchema.pre("save", async function (next) {
-  if (this.isNew) {
-    const domain = (await Settings.findOne({ name: "domain" })).value;
-    this.id = this.id || `bookmark:${this._id}@${domain}`;
-    this.url = this.url || `//${domain}/bookmarks/${this.id}`;
+  try {
+    if (this.isNew) {
+      // Load domain + default server actor
+      const domainSetting = await Settings.findOne({ name: "domain" }).lean();
+      const domain = domainSetting?.value;
+      if (!domain) throw new Error("Bookmark: missing Settings.domain");
 
-    this.image = this.image || `https://${domain}/images/bookmark.png`;
+      // id + url
+      if (!this.id) {
+        // Note: using this._id gives a stable ObjectId; embed domain as spec
+        this.id = `bookmark:${this._id}@${domain}`;
+      }
+      if (!this.url) {
+        this.url = `https://${domain}/bookmarks/${encodeURIComponent(this.id)}`;
+      }
 
-    if (!this.title) this.title = this.href;
-    this.source.mediaType = this.source.mediaType || "text/html";
+      // ownerId / ownerType (NEW) -- back-compat with legacy actorId
+      if (!this.ownerId && this.actorId) {
+        this.ownerId = this.actorId;
+      }
+      if (!this.ownerType && this.ownerId) {
+        this.ownerType = inferOwnerTypeFromId(this.ownerId);
+      }
 
-    switch (this.source.mediaType) {
-      case "text/markdown":
-        this.body = `<p>${marked(this.source.content)}</p>`;
-        break;
-      case "text/html":
-        this.body = this.source.content;
-        break;
-      default:
-        this.body = `<p>${this.source.content.replace(
-          /(?:\r\n|\r|\n)/g,
-          "</p><p>"
-        )}</p>`;
-        break;
+      // Ensure required ownership is set
+      if (!this.ownerId || !this.ownerType) {
+        throw new Error("Bookmark requires ownerId and ownerType");
+      }
+
+      // Visibility default
+      this.to = this.to || "@public";
+
+      // Image + presentation defaults
+      this.image = this.image || `https://${domain}/images/bookmark.png`;
+      if (!this.title) this.title = this.href || this.target || this.title;
+
+      // Render body from source
+      const mediaType = this.source?.mediaType || "text/html";
+      const content = this.source?.content || "";
+      switch (mediaType) {
+        case "text/markdown":
+          this.body = `<div>${marked(content)}</div>`;
+          break;
+        case "text/html":
+          this.body = content;
+          break;
+        default:
+          this.body = `<p>${String(content).replace(
+            /(?:\r\n|\r|\n)/g,
+            "</p><p>"
+          )}</p>`;
+          break;
+      }
+
+      // Optional: store server label (domain) if you use it for queries
+      if (!this.server) this.server = domain;
+    } else {
+      // On updates, keep ownerId/ownerType consistent if someone edits actorId
+      if (!this.ownerId && this.actorId) this.ownerId = this.actorId;
+      if (this.ownerId && !this.ownerType)
+        this.ownerType = inferOwnerTypeFromId(this.ownerId);
     }
-    this.server =
-      this.server || (await Settings.findOne({ name: "actorId" })).value;
+
+    // Validation: either target (internal object) OR href (external) must exist for type=Bookmark
+    if (this.type === "Bookmark") {
+      if (!this.target && !this.href) {
+        throw new Error("Bookmark requires either target or href");
+      }
+    }
+    next();
+  } catch (err) {
+    next(err);
   }
-  next();
 });
 
 export default mongoose.model("Bookmark", BookmarkSchema);

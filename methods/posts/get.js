@@ -1,4 +1,4 @@
-import getObjectById from "#utils/getObjectById.js";
+import getObjectById from "#methods/get/objectById.js";
 import assertTypeFromId from "#utils/assertTypeFromId.js";
 
 export default async function getPost(postId, opts) {

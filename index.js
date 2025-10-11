@@ -1,72 +1,59 @@
-// server.js
+// /index.js
+import "dotenv/config";
 import express from "express";
 import cookieParser from "cookie-parser";
-import nocache from "nocache";
 import cors from "cors";
+import nocache from "nocache";
 import http from "http";
-import path, { dirname } from "path";
-import { fileURLToPath } from "url";
-import routes from "./routes/routes.js";
-import fs from "fs";
-import schedule from "node-schedule";
 
-const __dirname = `${dirname(fileURLToPath(import.meta.url))}`;
+import Kowloon, { attachMethodDomains } from "#kowloon";
+// Connect DB & load settings BEFORE loading method domains, to avoid buffering timeouts.
+import initKowloon from "#methods/utils/init.js";
+
+// 1) Connect DB + load settings/admin
+await initKowloon(Kowloon, {
+  domain: process.env.DOMAIN || undefined,
+  siteTitle: process.env.SITE_TITLE || "Kowloon",
+  adminEmail: process.env.ADMIN_EMAIL || undefined,
+  smtpHost: process.env.SMTP_HOST || undefined,
+  smtpUser: process.env.SMTP_USER || undefined,
+  smtpPass: process.env.SMTP_PASS || undefined,
+});
+
+// 2) Now load methods (safe: DB is up)
+await attachMethodDomains(Kowloon);
+
+// 3) Build Express
 const app = express();
-
 app.use(cors());
 app.use(express.json({ limit: "100mb" }));
-app.use(
-  express.urlencoded({
-    extended: true,
-    limit: "50mb",
-  })
-);
+app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 app.use(cookieParser());
 app.use(nocache());
-app.use(routes);
 
-const port = normalizePort(process.env.PORT || "3000");
-app.set("port", port);
+// Make Kowloon available to routes
+app.locals.Kowloon = Kowloon;
+app.use((req, _res, next) => {
+  req.Kowloon = Kowloon;
+  next();
+});
 
-const server = http.createServer(
-  // {
-  //   key: fs.readFileSync("./ssl/server.key"),
-  //   cert: fs.readFileSync("./ssl/server.crt"),
-  // },
-  app
-);
+// 4) Import and mount your existing aggregate router AFTER DB + methods are ready
+const routes = (await import("#routes/index.js")).default;
+app.use("/", routes);
 
-server.listen(port || 3001, "0.0.0.0");
-server.on("error", onError);
-server.on("listening", onListening);
+// Health
+app.get("/__health", (_req, res) => {
+  const ready =
+    !!Kowloon?.mongoose && Kowloon.mongoose.connection?.readyState === 1;
+  res.json({
+    ok: ready,
+    readyState: Kowloon.mongoose?.connection?.readyState ?? -1,
+  });
+});
 
-function onError(error) {
-  if (error.syscall !== "listen") {
-    throw error;
-  }
-  const bind = typeof port === "string" ? "Pipe " + port : "Port " + port;
-  switch (error.code) {
-    case "EACCES":
-      console.error(bind + " requires elevated privileges");
-      process.exit(1);
-    case "EADDRINUSE":
-      console.error(bind + " is already in use");
-      process.exit(1);
-    default:
-      throw error;
-  }
-}
-
-function onListening() {
-  const addr = server.address();
-  const bind = typeof addr === "string" ? "pipe " + addr : "port " + addr.port;
-  console.log("Listening on " + bind);
-  console.log("Server is running....");
-}
-
-function normalizePort(val) {
-  const port = parseInt(val, 10);
-  if (isNaN(port)) return val;
-  if (port >= 0) return port;
-  return false;
-}
+// Start HTTP
+const port = Number(process.env.PORT || 3000);
+http.createServer(app).listen(port, "0.0.0.0", () => {
+  console.log(`HTTP listening on :${port}`);
+});

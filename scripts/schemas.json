@@ -1,0 +1,2818 @@
+[
+  {
+    "model": "Activity",
+    "options": {
+      "timestamps": true,
+      "strict": false
+    },
+    "fields": {
+      "id": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actor": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actorId": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "server": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "type": {
+        "kind": "String",
+        "required": false,
+        "default": "Create",
+        "unique": false,
+        "index": false
+      },
+      "object": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "objectType": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "objectId": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "target": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "to": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "replyTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "reactTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "summary": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "deletedBy": {
+        "kind": "String",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "url": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": []
+  },
+  {
+    "model": "Bookmark",
+    "options": {
+      "timestamps": true,
+      "strict": false
+    },
+    "fields": {
+      "id": {
+        "kind": "String",
+        "required": false,
+        "unique": true,
+        "index": true
+      },
+      "objectType": {
+        "kind": "String",
+        "required": false,
+        "default": "Bookmark",
+        "unique": false,
+        "index": false
+      },
+      "type": {
+        "kind": "String",
+        "required": false,
+        "default": "Bookmark",
+        "unique": false,
+        "index": true,
+        "enum": [
+          "Bookmark",
+          "Folder"
+        ]
+      },
+      "ownerId": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": true
+      },
+      "ownerType": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": true,
+        "enum": [
+          "user",
+          "group",
+          "server"
+        ]
+      },
+      "parentFolder": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": true
+      },
+      "target": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": true
+      },
+      "href": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "title": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "image": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "to": {
+        "kind": "String",
+        "required": false,
+        "default": "@public",
+        "unique": false,
+        "index": true,
+        "enum": [
+          "@public",
+          "@server"
+        ]
+      },
+      "tags": {
+        "kind": "Array",
+        "required": false,
+        "default": [],
+        "unique": false,
+        "index": false,
+        "of": "String"
+      },
+      "summary": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "source.content": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "source.mediaType": {
+        "kind": "String",
+        "required": false,
+        "default": "text/html",
+        "unique": false,
+        "index": false
+      },
+      "body": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": true
+      },
+      "deletedBy": {
+        "kind": "String",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "url": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actorId": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actor": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "server": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": [
+      {
+        "spec": {
+          "id": 1
+        },
+        "options": {
+          "unique": true,
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "type": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "ownerId": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "ownerType": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "parentFolder": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "target": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "to": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "deletedAt": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "ownerId": 1,
+          "createdAt": -1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "parentFolder": 1,
+          "createdAt": -1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "to": 1,
+          "ownerType": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "target": 1,
+          "createdAt": -1
+        },
+        "options": {
+          "background": true
+        }
+      }
+    ]
+  },
+  {
+    "model": "Circle",
+    "options": {
+      "timestamps": true,
+      "strict": true
+    },
+    "fields": {
+      "id": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "objectType": {
+        "kind": "String",
+        "required": false,
+        "default": "Circle",
+        "unique": false,
+        "index": false
+      },
+      "name": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actorId": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "actor": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "server": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "summary": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "icon": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "members": {
+        "kind": "Subdocument",
+        "required": false,
+        "default": [],
+        "unique": false,
+        "index": false,
+        "of": "Function"
+      },
+      "memberCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "to": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "replyTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "reactTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "replyCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "reactCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "shareCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "deletedBy": {
+        "kind": "String",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "url": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "lastFetchedAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": [
+      {
+        "spec": {
+          "members.id": 1
+        },
+        "options": {
+          "background": true
+        }
+      }
+    ]
+  },
+  {
+    "model": "Event",
+    "options": {
+      "timestamps": true,
+      "strict": false
+    },
+    "fields": {
+      "id": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actor": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actorId": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "server": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "type": {
+        "kind": "String",
+        "required": false,
+        "default": "Event",
+        "unique": false,
+        "index": false
+      },
+      "to": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "replyTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "reactTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "title": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "description": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "startTime": {
+        "kind": "Date",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "endTime": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "location": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "ageRestricted": {
+        "kind": "Boolean",
+        "required": false,
+        "default": false,
+        "unique": false,
+        "index": false
+      },
+      "href": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "admins": {
+        "kind": "Array",
+        "required": false,
+        "default": [],
+        "unique": false,
+        "index": false,
+        "of": "String"
+      },
+      "attending": {
+        "kind": "Subdocument",
+        "required": false,
+        "default": [],
+        "unique": false,
+        "index": false,
+        "of": "Function"
+      },
+      "invited": {
+        "kind": "Subdocument",
+        "required": false,
+        "default": [],
+        "unique": false,
+        "index": false,
+        "of": "Function"
+      },
+      "memberCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "replyCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "reactCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "shareCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "deletedBy": {
+        "kind": "String",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "url": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": [
+      {
+        "spec": {
+          "attending.id": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "invited.id": 1
+        },
+        "options": {
+          "background": true
+        }
+      }
+    ]
+  },
+  {
+    "model": "File",
+    "options": {
+      "timestamps": true,
+      "strict": true
+    },
+    "fields": {
+      "id": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "originalFileName": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "title": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "summary": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "url": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "location": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "mimeType": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "extension": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "size": {
+        "kind": "Number",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actorId": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "server": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": []
+  },
+  {
+    "model": "Flag",
+    "options": {
+      "timestamps": false,
+      "strict": true
+    },
+    "fields": {
+      "id": {
+        "kind": "String",
+        "required": false,
+        "unique": true,
+        "index": true
+      },
+      "target": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": true
+      },
+      "targetType": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": true
+      },
+      "targetActorId": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "reason": {
+        "kind": "Mixed",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "notes": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actorId": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": true
+      },
+      "status": {
+        "kind": "String",
+        "required": false,
+        "default": "open",
+        "unique": false,
+        "index": true,
+        "enum": [
+          "open",
+          "resolved",
+          "dismissed"
+        ]
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": true
+      },
+      "resolvedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "resolvedBy": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "server": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": [
+      {
+        "spec": {
+          "id": 1
+        },
+        "options": {
+          "unique": true,
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "target": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "targetType": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "actorId": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "status": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "createdAt": 1
+        },
+        "options": {
+          "background": true
+        }
+      }
+    ]
+  },
+  {
+    "model": "Group",
+    "options": {
+      "timestamps": true,
+      "strict": true
+    },
+    "fields": {
+      "id": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "objectType": {
+        "kind": "String",
+        "required": false,
+        "default": "Group",
+        "unique": false,
+        "index": false
+      },
+      "name": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actorId": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "actor": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "server": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "description": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "icon": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "location": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "members": {
+        "kind": "Subdocument",
+        "required": false,
+        "default": [],
+        "unique": false,
+        "index": false,
+        "of": "Function"
+      },
+      "pending": {
+        "kind": "Subdocument",
+        "required": false,
+        "default": [],
+        "unique": false,
+        "index": false,
+        "of": "Function"
+      },
+      "blocked": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "admins": {
+        "kind": "Array",
+        "required": false,
+        "default": [],
+        "unique": false,
+        "index": false,
+        "of": "String"
+      },
+      "to": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "replyTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "reactTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "replyCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "reactCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "shareCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "deletedBy": {
+        "kind": "String",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "url": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": [
+      {
+        "spec": {
+          "members.id": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "pending.id": 1
+        },
+        "options": {
+          "background": true
+        }
+      }
+    ]
+  },
+  {
+    "model": "Inbox",
+    "collection": "inbox",
+    "options": {
+      "timestamps": true,
+      "strict": true
+    },
+    "fields": {
+      "status": {
+        "kind": "String",
+        "required": false,
+        "default": "pending",
+        "unique": false,
+        "index": false,
+        "enum": [
+          "pending",
+          "completed",
+          "blocked",
+          "error"
+        ]
+      },
+      "activity": {
+        "kind": "Mixed",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "server": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "ipAddress": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "processedAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "error": {
+        "kind": "Mixed",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": []
+  },
+  {
+    "model": "Invite",
+    "options": {
+      "timestamps": true,
+      "strict": true
+    },
+    "fields": {
+      "actorId": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "server": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "email": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "code": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "qrCode": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "url": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "expiresAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": []
+  },
+  {
+    "model": "Outbox",
+    "collection": "outbox",
+    "options": {
+      "timestamps": true,
+      "strict": true
+    },
+    "fields": {
+      "id": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "status": {
+        "kind": "String",
+        "required": false,
+        "default": "pending",
+        "unique": false,
+        "index": false,
+        "enum": [
+          "pending",
+          "delivered",
+          "error"
+        ]
+      },
+      "activity": {
+        "kind": "Mixed",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "response": {
+        "kind": "Mixed",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "lastAttemptedAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "deliveredAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "error": {
+        "kind": "Mixed",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": []
+  },
+  {
+    "model": "Page",
+    "options": {
+      "timestamps": true,
+      "strict": true
+    },
+    "fields": {
+      "id": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "objectType": {
+        "kind": "String",
+        "required": false,
+        "default": "Page",
+        "unique": false,
+        "index": false
+      },
+      "type": {
+        "kind": "String",
+        "required": false,
+        "default": "Page",
+        "unique": false,
+        "index": false,
+        "enum": [
+          "Page",
+          "Folder"
+        ]
+      },
+      "parentFolder": {
+        "kind": "String",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "order": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "url": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "href": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actorId": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actor": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "server": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "title": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "slug": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "summary": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "source.content": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "source.mediaType": {
+        "kind": "String",
+        "required": false,
+        "default": "text/html",
+        "unique": false,
+        "index": false
+      },
+      "source.contentEncoding": {
+        "kind": "String",
+        "required": false,
+        "default": "utf-8",
+        "unique": false,
+        "index": false
+      },
+      "body": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "wordCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "charCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "replyCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "reactCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "shareCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "image": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "attachments": {
+        "kind": "Array",
+        "required": false,
+        "default": [],
+        "unique": false,
+        "index": false,
+        "of": "Mixed"
+      },
+      "tags": {
+        "kind": "Array",
+        "required": false,
+        "default": [],
+        "unique": false,
+        "index": false,
+        "of": "String"
+      },
+      "to": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "replyTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "reactTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "deletedBy": {
+        "kind": "String",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "signature": {
+        "kind": "Buffer",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": [
+      {
+        "spec": {
+          "title": "text",
+          "source": "text",
+          "source.content": "text",
+          "location.name": "text"
+        },
+        "options": {
+          "background": true
+        }
+      }
+    ]
+  },
+  {
+    "model": "Post",
+    "options": {
+      "timestamps": true,
+      "strict": true
+    },
+    "fields": {
+      "id": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "objectType": {
+        "kind": "String",
+        "required": false,
+        "default": "Post",
+        "unique": false,
+        "index": false
+      },
+      "type": {
+        "kind": "String",
+        "required": false,
+        "default": "Note",
+        "unique": false,
+        "index": false
+      },
+      "url": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "href": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actorId": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actor": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "server": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "group": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "title": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "summary": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "source.content": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "source.mediaType": {
+        "kind": "String",
+        "required": false,
+        "default": "text/html",
+        "unique": false,
+        "index": false
+      },
+      "source.contentEncoding": {
+        "kind": "String",
+        "required": false,
+        "default": "utf-8",
+        "unique": false,
+        "index": false
+      },
+      "body": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "wordCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "charCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "replyCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "reactCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "shareCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "image": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "attachments": {
+        "kind": "Array",
+        "required": false,
+        "default": [],
+        "unique": false,
+        "index": false,
+        "of": "Mixed"
+      },
+      "tags": {
+        "kind": "Array",
+        "required": false,
+        "default": [],
+        "unique": false,
+        "index": false,
+        "of": "String"
+      },
+      "location": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "target": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "to": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "replyTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "reactTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "deletedBy": {
+        "kind": "String",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "signature": {
+        "kind": "Buffer",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": [
+      {
+        "spec": {
+          "title": "text",
+          "source": "text",
+          "source.content": "text",
+          "location.name": "text"
+        },
+        "options": {
+          "background": true
+        }
+      }
+    ]
+  },
+  {
+    "model": "React",
+    "options": {
+      "timestamps": true,
+      "strict": true
+    },
+    "fields": {
+      "id": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "type": {
+        "kind": "String",
+        "required": false,
+        "default": "React",
+        "unique": false,
+        "index": false
+      },
+      "target": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "actorId": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "actor": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "server": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "emoji": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "name": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "replyCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "reactCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "shareCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": []
+  },
+  {
+    "model": "Reply",
+    "collection": "replies",
+    "options": {
+      "timestamps": true,
+      "strict": true
+    },
+    "fields": {
+      "id": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actorId": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "actor": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "server": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "target": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "targetActorId": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "parent": {
+        "kind": "String",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "href": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "source.content": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "source.mediaType": {
+        "kind": "String",
+        "required": false,
+        "default": "text/html",
+        "unique": false,
+        "index": false
+      },
+      "body": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "image": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "replyCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "reactCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "shareCount": {
+        "kind": "Number",
+        "required": false,
+        "default": 0,
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "deletedBy": {
+        "kind": "String",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "url": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "signature": {
+        "kind": "Buffer",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": []
+  },
+  {
+    "model": "Settings",
+    "options": {
+      "timestamps": false,
+      "strict": true
+    },
+    "fields": {
+      "name": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "value": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "summary": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "public": {
+        "kind": "Boolean",
+        "required": false,
+        "default": true,
+        "unique": false,
+        "index": false
+      },
+      "ui.type": {
+        "kind": "String",
+        "required": false,
+        "default": "text",
+        "unique": false,
+        "index": false
+      },
+      "ui.options": {
+        "kind": "Mixed",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": []
+  },
+  {
+    "model": "TimelineEntry",
+    "options": {
+      "timestamps": true,
+      "strict": true
+    },
+    "fields": {
+      "userId": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": true
+      },
+      "objectType": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": true,
+        "enum": [
+          "Post",
+          "Reply",
+          "Event",
+          "Page",
+          "Bookmark",
+          "File",
+          "Group",
+          "Circle",
+          "Invite",
+          "Flag",
+          "React"
+        ]
+      },
+      "objectId": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": true,
+        "unique": false,
+        "index": true
+      },
+      "reason": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false,
+        "enum": [
+          "follow",
+          "domain",
+          "mention",
+          "self",
+          "circle"
+        ]
+      },
+      "scope": {
+        "kind": "String",
+        "required": true,
+        "unique": false,
+        "index": false,
+        "enum": [
+          "public",
+          "server",
+          "circle"
+        ]
+      },
+      "localCircleId": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "snapshot.id": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "snapshot.actorId": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "snapshot.title": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "snapshot.body": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "snapshot.media": {
+        "kind": "Array",
+        "required": false,
+        "unique": false,
+        "index": false,
+        "of": "Mixed"
+      },
+      "snapshot.visibility": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false,
+        "enum": [
+          "public",
+          "server",
+          "circle"
+        ]
+      },
+      "snapshot.summary": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "originDomain": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "fetchedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "default": null,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": [
+      {
+        "spec": {
+          "userId": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "objectType": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "createdAt": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "userId": 1,
+          "objectId": 1
+        },
+        "options": {
+          "unique": true,
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "userId": 1,
+          "createdAt": -1
+        },
+        "options": {
+          "background": true
+        }
+      }
+    ]
+  },
+  {
+    "model": "User",
+    "options": {
+      "timestamps": true,
+      "strict": true
+    },
+    "fields": {
+      "id": {
+        "kind": "String",
+        "required": false,
+        "unique": true,
+        "index": true
+      },
+      "server": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "objectType": {
+        "kind": "String",
+        "required": false,
+        "default": "User",
+        "unique": false,
+        "index": false
+      },
+      "type": {
+        "kind": "String",
+        "required": false,
+        "default": "Person",
+        "unique": false,
+        "index": false
+      },
+      "username": {
+        "kind": "String",
+        "required": true,
+        "unique": true,
+        "index": true
+      },
+      "password": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "email": {
+        "kind": "String",
+        "required": false,
+        "unique": true,
+        "index": true
+      },
+      "profile": {
+        "kind": "Subdocument",
+        "required": false,
+        "default": {},
+        "unique": false,
+        "index": false
+      },
+      "prefs.defaultPostType": {
+        "kind": "String",
+        "required": false,
+        "default": "Note",
+        "unique": false,
+        "index": false
+      },
+      "prefs.defaultTo": {
+        "kind": "String",
+        "required": false,
+        "default": "@public",
+        "unique": false,
+        "index": false
+      },
+      "prefs.defaultReplyTo": {
+        "kind": "String",
+        "required": false,
+        "default": "@public",
+        "unique": false,
+        "index": false
+      },
+      "prefs.defaultReactTo": {
+        "kind": "String",
+        "required": false,
+        "default": "@public",
+        "unique": false,
+        "index": false
+      },
+      "prefs.defaultPostView": {
+        "kind": "Array",
+        "required": false,
+        "default": [
+          "Note",
+          "Article",
+          "Media",
+          "Link"
+        ],
+        "unique": false,
+        "index": false,
+        "of": "String"
+      },
+      "prefs.defaultCircleView": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "prefs.defaultEditorType": {
+        "kind": "String",
+        "required": false,
+        "default": "html",
+        "unique": false,
+        "index": false
+      },
+      "prefs.lang": {
+        "kind": "String",
+        "required": false,
+        "default": "en",
+        "unique": false,
+        "index": false
+      },
+      "prefs.theme": {
+        "kind": "String",
+        "required": false,
+        "default": "light",
+        "unique": false,
+        "index": false
+      },
+      "inbox": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "outbox": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "following": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "allFollowing": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "blocked": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "muted": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "lastLogin": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "publicKey": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "privateKey": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "to": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "replyTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "reactTo": {
+        "kind": "String",
+        "required": false,
+        "default": "",
+        "unique": false,
+        "index": false
+      },
+      "url": {
+        "kind": "String",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "active": {
+        "kind": "Boolean",
+        "required": false,
+        "default": true,
+        "unique": false,
+        "index": false
+      },
+      "deletedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "feedRefreshedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "meta": {
+        "kind": "Subdocument",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "_id": {
+        "kind": "ObjectId",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "createdAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      },
+      "updatedAt": {
+        "kind": "Date",
+        "required": false,
+        "unique": false,
+        "index": false
+      }
+    },
+    "indexes": [
+      {
+        "spec": {
+          "id": 1
+        },
+        "options": {
+          "unique": true,
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "username": 1
+        },
+        "options": {
+          "unique": true,
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "email": 1
+        },
+        "options": {
+          "unique": true,
+          "sparse": true,
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "profile.location": "2dsphere"
+        },
+        "options": {
+          "name": "profile_location_2dsphere",
+          "partialFilterExpression": {
+            "profile.location": {
+              "$exists": true
+            }
+          }
+        }
+      },
+      {
+        "spec": {
+          "meta.seed": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "meta.runId": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "meta.externalId": 1
+        },
+        "options": {
+          "background": true
+        }
+      },
+      {
+        "spec": {
+          "username": "text",
+          "email": "text",
+          "profile.name": "text",
+          "profile.description": "text",
+          "profile.location.name": "text"
+        },
+        "options": {
+          "background": true
+        }
+      }
+    ]
+  }
+]

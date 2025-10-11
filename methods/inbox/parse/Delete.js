@@ -1,4 +1,4 @@
-import getObjectById from "#utils/getObjectById.js";
+import getObjectById from "#methods/get/objectById.js";
 import { User } from "#schema";
 export default async function (activity) {
   let user = await User.findOne({ id: activity.actorId });

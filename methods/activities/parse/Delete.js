@@ -1,5 +1,5 @@
 // Delete.js (refactored)
-import getObjectById from "#utils/getObjectById.js";
+import getObjectById from "#methods/get/objectById.js";
 import { User } from "#schema";
 import indefinite from "indefinite";
 

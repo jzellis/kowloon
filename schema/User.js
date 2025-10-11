@@ -55,9 +55,9 @@ const UserSchemaDef = {
 // if (process.env.NODE_ENV === "development") {
 const MetaSchema = new mongoose.Schema(
   {
-    seed: { type: String, index: true },
+    seed: { type: String },
     runId: { type: String, index: true },
-    externalId: { type: String, index: true },
+    externalId: { type: String },
   },
   { _id: false }
 );

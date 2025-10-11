@@ -1,6 +1,6 @@
 import { User } from "#schema";
 import parseKowloonId from "#methods/parse/parseKowloonId.js";
-import getObjectById from "#utils/getObjectById.js";
+import getObjectById from "#methods/get/objectById.js";
 import { get } from "https";
 export default async function (activity) {
   let user = await User.findOne({ id: activity.actorId });

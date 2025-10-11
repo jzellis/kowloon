@@ -1,4 +1,4 @@
-import Kowloon from "../../Kowloon.js";
+import Kowloon from "#kowloon";
 
 export default async function (req, res, next) {
   let status = 200;

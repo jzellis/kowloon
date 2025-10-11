@@ -1,4 +1,4 @@
-import Kowloon from "../../Kowloon.js";
+import Kowloon from "#kowloon";
 import { exportJWK } from "jose";
 import { createHash, createPublicKey } from "crypto";
 

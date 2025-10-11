@@ -1,6 +1,6 @@
 import { Post } from "#schema";
 import indefinite from "indefinite";
-import getObjectById from "#utils/getObjectById.js";
+import getObjectById from "#methods/get/objectById.js";
 import parseKowloonId from "#methods/parse/parseKowloonId.js";
 
 export default async function (activity) {

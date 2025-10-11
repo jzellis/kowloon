@@ -1,4 +1,4 @@
-import getObjectById from "#utils/getObjectById.js";
+import getObjectById from "#methods/get/objectById.js";
 import indefinite from "indefinite";
 export default async function (activity) {
   if (!activity.target) throw new Error("No target provided");

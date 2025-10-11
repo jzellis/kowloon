@@ -1,27 +1,36 @@
-// Builds a tree structure from a list of pages, organizing them into folders and pages. Generated with ChatGPT because I was too lazy to bother writing my own.
-
-export default function (pages) {
+// #methods/pages/buildTree.js
+export default function buildTree(pages) {
   const map = new Map();
-  const tree = [];
+  const roots = [];
 
-  // Initialize map with each page and prepare a items array
-  pages.forEach((page) => {
-    map.set(page.id, { ...page, items: [] });
-  });
+  for (const p of pages) map.set(p.id, { ...p, items: [] });
 
-  // Populate tree structure
-  pages.forEach((page) => {
-    if (page.parentFolder) {
-      // Attach page to its parent's items array
-      const parent = map.get(page.parentFolder);
+  for (const p of pages) {
+    if (p.parentFolder) {
+      const parent = map.get(p.parentFolder);
       if (parent) {
-        parent.items.push(map.get(page.id));
+        parent.items.push(map.get(p.id));
+      } else {
+        // orphan: treat as root
+        roots.push(map.get(p.id));
       }
     } else {
-      // Root level pages (no parent)
-      tree.push(map.get(page.id));
+      roots.push(map.get(p.id));
     }
-  });
+  }
 
-  return tree;
+  // sort children arrays by (order, title) if present
+  const sortChildren = (node) => {
+    if (Array.isArray(node.items) && node.items.length) {
+      node.items.sort((a, b) => {
+        if ((a.order ?? 0) !== (b.order ?? 0))
+          return (a.order ?? 0) - (b.order ?? 0);
+        return (a.title || "").localeCompare(b.title || "");
+      });
+      node.items.forEach(sortChildren);
+    }
+  };
+  roots.forEach(sortChildren);
+
+  return roots;
 }

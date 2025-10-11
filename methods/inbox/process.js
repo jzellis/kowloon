@@ -1,6 +1,6 @@
 import { Circle, Inbox } from "#schema";
 import InboxParser from "./parse/index.js";
-import getObjectById from "#utils/getObjectById.js";
+import getObjectById from "#methods/get/objectById.js";
 export default async function (limit = 0, skip = 0) {
   let queue = await Inbox.find({ status: "pending" }).limit(limit).skip(skip);
   await Promise.all(

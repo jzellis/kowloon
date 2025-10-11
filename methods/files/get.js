@@ -1,12 +1,15 @@
-import getObjectById from "#utils/getObjectById.js";
-import assertTypeFromId from "#utils/assertTypeFromId.js";
+// #methods/File/get.js
+import getObjectById from "#methods/get/objectById.js";
+import assertTypeFromId from "#methods/utils/assertTypeFromId.js";
 
-// This method retrieves a file whether local or remote. Does not return deleted items.
-
-export default async function getFile(fileId, opts) {
-  assertTypeFromId(fileId, "File");
-  return getObjectById(fileId, {
-    select: " -deletedAt -deletedBy -_id -__v -source",
-    ...opts,
-  });
+/**
+ * Get a single File by Kowloon ID.
+ *
+ * @param {string} id - The Kowloon ID (e.g. "<type>:uuid@domain" or "@user@domain")
+ * @param {object} [opts] - { select, lean=true, deleted=false }
+ * @returns {Promise<object|null>}
+ */
+export default async function get(id, opts = {}) {
+  assertTypeFromId(id, "File");
+  return getObjectById(id, opts);
 }

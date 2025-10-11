@@ -3,7 +3,7 @@
 // - target is the ID of the item being reacted to
 // - federate when the target is not on the local server
 import getSettings from "#methods/settings/get.js";
-import getObjectById from "#utils/getObjectById.js";
+import getObjectById from "#methods/get/objectById.js";
 import { React } from "#schema";
 
 function ensureObject(activity) {

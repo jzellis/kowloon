@@ -1,6 +1,6 @@
 import { React } from "#schema";
 
-import getObjectById from "#utils/getObjectById.js";
+import getObjectById from "#methods/get/objectById.js";
 export default async function (activity) {
   let item = await getObjectById(activity.target);
   if (item) {

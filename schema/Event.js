@@ -1,6 +1,15 @@
 import mongoose from "mongoose";
 import Settings from "./Settings.js";
 const Schema = mongoose.Schema;
+import Member from "./subschema/Member.js";
+const Attendee = Member.clone();
+Attendee.add({
+  status: {
+    type: String,
+    enum: ["Interested", "Attending"],
+    default: "pending",
+  },
+});
 
 const EventSchema = new Schema(
   {
@@ -20,43 +29,8 @@ const EventSchema = new Schema(
     ageRestricted: { type: Boolean, default: false },
     href: { type: String, default: undefined },
     admins: { type: [String], default: [] },
-    attending: {
-      type: [
-        {
-          id: { type: String, required: true },
-          name: { type: String, default: undefined },
-          inbox: { type: String, default: undefined },
-          outbox: { type: String, default: undefined },
-          icon: { type: String, default: undefined },
-          url: { type: String, default: undefined },
-          server: { type: String },
-          createdAt: { type: Date, default: Date.now },
-          updatedAt: { type: Date, default: Date.now },
-          status: {
-            type: String,
-            enum: ["Interested", "Attending"],
-            default: "pending",
-          },
-        },
-      ],
-      default: [],
-    },
-    invited: {
-      type: [
-        {
-          id: { type: String, required: true },
-          name: { type: String, default: undefined },
-          inbox: { type: String, default: undefined },
-          outbox: { type: String, default: undefined },
-          icon: { type: String, default: undefined },
-          url: { type: String, default: undefined },
-          server: { type: String },
-          createdAt: { type: Date, default: Date.now },
-          updatedAt: { type: Date, default: Date.now },
-        },
-      ],
-      default: [],
-    }, // Pending members
+    attending: { type: [Attendee], default: [] },
+    invited: { type: [Member], default: [] },
     memberCount: { type: Number, default: 0 },
     replyCount: { type: Number, default: 0 }, // The number of replies to this post
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
@@ -72,7 +46,8 @@ const EventSchema = new Schema(
     toObject: { virtuals: true },
   }
 );
-
+EventSchema.index({ "attending.id": 1 });
+EventSchema.index({ "invited.id": 1 });
 EventSchema.pre("save", async function (next) {
   if (this.admins.length === 0) this.admins = [this.actorId];
   // Create the event id and url

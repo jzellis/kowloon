@@ -10,9 +10,16 @@
     "setup": "node setup.js"
   },
   "imports": {
+    "#kowloon": "./Kowloon.js",
     "#schema": "./schema/index.js",
+    "#schema/*": "./schema/*",
     "#methods/*": "./methods/*",
-    "#utils/*": "./methods/utils/*"
+    "#utils/*": "./methods/utils/*",
+    "#routes": "./routes/index.js",
+    "#routes/*": "./routes/*",
+    "#ActivityParser": "/ActivityParser/index.js",
+    "#ActivityParser/*": "/ActivityParser/*",
+    "#config/*": "./config/*"
   },
   "author": "Joshua Ellis",
   "license": "ISC",
@@ -44,6 +51,7 @@
     "winston": "^3.14.2"
   },
   "devDependencies": {
+    "@faker-js/faker": "^10.0.0",
     "jest": "^29.7.0"
   }
 }

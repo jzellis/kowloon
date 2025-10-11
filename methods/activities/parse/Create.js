@@ -15,7 +15,7 @@ import fs from "fs";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
 import dotenv from "dotenv";
-import getObjectById from "#utils/getObjectById.js";
+import getObjectById from "#methods/get/objectById.js";
 
 dotenv.config();
 

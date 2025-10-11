@@ -1,6 +1,6 @@
 import { get } from "https";
 import { User } from "#schema";
-import getObjectById from "#utils/getObjectById.js";
+import getObjectById from "#methods/get/objectById.js";
 import parseKowloonId from "#methods/parse/parseKowloonId.js";
 
 export default async function (activity) {

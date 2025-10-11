@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Settings from "./Settings.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
+import Member from "./subschema/Member.js";
 
 const CircleSchema = new Schema(
   {
@@ -13,23 +14,7 @@ const CircleSchema = new Schema(
     server: { type: String, default: undefined },
     summary: { type: String, default: undefined },
     icon: { type: String, default: undefined },
-    members: {
-      type: [
-        {
-          id: { type: String, required: true },
-          server: { type: String, default: undefined },
-          type: { type: String, default: "User" },
-          name: { type: String, default: undefined },
-          inbox: { type: String, default: undefined },
-          outbox: { type: String, default: undefined },
-          icon: { type: String, default: undefined },
-          url: { type: String, default: undefined },
-          createdAt: { type: Date, default: Date.now },
-          updatedAt: { type: Date, default: Date.now },
-        },
-      ],
-      default: [],
-    },
+    members: { type: [Member], default: [] },
     memberCount: { type: Number, default: 0 },
     to: { type: String, default: "" },
     replyTo: { type: String, default: "" },
@@ -44,7 +29,7 @@ const CircleSchema = new Schema(
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
-
+CircleSchema.index({ "members.id": 1 }); // fast "is viewer a member?" checks
 CircleSchema.virtual("reacts", {
   ref: "React",
   localField: "id",

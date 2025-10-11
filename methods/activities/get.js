@@ -1,11 +1,15 @@
-import getObjectById from "#utils/getObjectById.js";
-import assertTypeFromId from "#utils/assertTypeFromId.js";
-// This method retrieves a activity whether local or remote. Does not return deleted items.
+// #methods/Activity/get.js
+import getObjectById from "#methods/get/objectById.js";
+import assertTypeFromId from "#methods/utils/assertTypeFromId.js";
 
-export default async function get(activityId, opts) {
-  assertTypeFromId(activityId, "Activity");
-  return getObjectById(activityId, {
-    select: " -deletedAt -deletedBy -_id -__v -source",
-    ...opts,
-  });
+/**
+ * Get a single Activity by Kowloon ID.
+ *
+ * @param {string} id - The Kowloon ID (e.g. "<type>:uuid@domain" or "@user@domain")
+ * @param {object} [opts] - { select, lean=true, deleted=false }
+ * @returns {Promise<object|null>}
+ */
+export default async function get(id, opts = {}) {
+  assertTypeFromId(id, "Activity");
+  return getObjectById(id, opts);
 }

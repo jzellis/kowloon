@@ -1,14 +1,15 @@
-import getObjectById from "#utils/getObjectById.js";
-import assertTypeFromId from "#utils/assertTypeFromId.js";
+// #methods/Circle/get.js
+import getObjectById from "#methods/get/objectById.js";
+import assertTypeFromId from "#methods/utils/assertTypeFromId.js";
 
-// This method retrieves a circle whether local or remote. Does not return deleted items.
-
-export default async function getCircle(circleId, opts) {
-  assertTypeFromId(circleId, "Circle");
-  return getObjectById(circleId, {
-    select: " -deletedAt -deletedBy -_id -__v -source",
-    ...opts,
-  });
+/**
+ * Get a single Circle by Kowloon ID.
+ *
+ * @param {string} id - The Kowloon ID (e.g. "<type>:uuid@domain" or "@user@domain")
+ * @param {object} [opts] - { select, lean=true, deleted=false }
+ * @returns {Promise<object|null>}
+ */
+export default async function get(id, opts = {}) {
+  assertTypeFromId(id, "Circle");
+  return getObjectById(id, opts);
 }
-
-(" -deletedAt -deletedBy -_id -__v -source");

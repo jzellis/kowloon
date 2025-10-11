@@ -1,4 +1,4 @@
-import getObjectById from "#utils/getObjectById.js";
+import getObjectById from "#methods/get/objectById.js";
 import assertTypeFromId from "#utils/assertTypeFromId.js";
 
 // This method retrieves a invite whether local or remote. Does not return deleted items.

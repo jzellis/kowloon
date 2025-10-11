@@ -1,12 +1,15 @@
-import getObjectById from "#utils/getObjectById.js";
-import assertTypeFromId from "#utils/assertTypeFromId.js";
+// #methods/Group/get.js
+import getObjectById from "#methods/get/objectById.js";
+import assertTypeFromId from "#methods/utils/assertTypeFromId.js";
 
-// This method retrieves a group whether local or remote. Does not return deleted items.
-
-export default async function getGroup(groupId, opts) {
-  assertTypeFromId(groupId, "Group");
-  return getObjectById(groupId, {
-    select: "-approval -pending -banned",
-    ...opts,
-  });
+/**
+ * Get a single Group by Kowloon ID.
+ *
+ * @param {string} id - The Kowloon ID (e.g. "<type>:uuid@domain" or "@user@domain")
+ * @param {object} [opts] - { select, lean=true, deleted=false }
+ * @returns {Promise<object|null>}
+ */
+export default async function get(id, opts = {}) {
+  assertTypeFromId(id, "Group");
+  return getObjectById(id, opts);
 }

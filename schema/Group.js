@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { Circle, Settings, User } from "./index.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
+import Member from "./subschema/Member.js";
 
 const GroupSchema = new Schema(
   {
@@ -14,40 +15,8 @@ const GroupSchema = new Schema(
     description: { type: String, default: undefined },
     icon: { type: String, default: undefined },
     location: { type: Object, default: undefined },
-    members: {
-      type: [
-        {
-          id: { type: String, required: true },
-          name: { type: String, default: undefined },
-          inbox: { type: String, default: undefined },
-          outbox: { type: String, default: undefined },
-          icon: { type: String, default: undefined },
-          url: { type: String, default: undefined },
-          server: { type: String },
-          createdAt: { type: Date, default: Date.now },
-          updatedAt: { type: Date, default: Date.now },
-        },
-      ],
-      default: [],
-    },
-    memberCount: { type: Number, default: 0 },
-
-    pending: {
-      type: [
-        {
-          id: { type: String, required: true },
-          name: { type: String, default: undefined },
-          inbox: { type: String, default: undefined },
-          outbox: { type: String, default: undefined },
-          icon: { type: String, default: undefined },
-          url: { type: String, default: undefined },
-          server: { type: String },
-          createdAt: { type: Date, default: Date.now },
-          updatedAt: { type: Date, default: Date.now },
-        },
-      ],
-      default: [],
-    }, // Pending members
+    members: { type: [Member], default: [] },
+    pending: { type: [Member], default: [] }, // Pending members
     blocked: { type: String, default: "" }, // The Circle ID of blocked users who cannot join
     admins: { type: [String], default: [] },
     to: { type: String, default: "" }, // Who can see this group
@@ -62,7 +31,8 @@ const GroupSchema = new Schema(
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
-
+GroupSchema.index({ "members.id": 1 });
+GroupSchema.index({ "pending.id": 1 });
 GroupSchema.virtual("reacts", {
   ref: "React",
   localField: "id",

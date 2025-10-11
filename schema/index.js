@@ -14,8 +14,7 @@ import Inbox from "./Inbox.js";
 import Invite from "./Invite.js";
 import Outbox from "./Outbox.js";
 import File from "./File.js";
-// import FeedItem from "./FeedItem.js";
-// import UserFeed from "./UserFeed.js";
+import TimelineEntry from "./TimelineEntry.js";
 
 export {
   Activity,
@@ -34,6 +33,5 @@ export {
   Invite,
   Outbox,
   File,
-  // FeedItem,
-  // UserFeed,
+  TimelineEntry,
 };

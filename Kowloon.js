@@ -7,8 +7,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// The singleton we’ll populate and export
-const Kowloon = {
+// The singleton we'll populate and export
+const kowloon = {
   settings: {},
   connection: null, // set by utils/init.js
   mongoose: null, // set by utils/init.js
@@ -17,7 +17,7 @@ const Kowloon = {
 
 // Load method namespaces *on demand* (NOT at import time)
 // Attaches each /methods/<domain>/index.js as Kowloon[domain]
-export async function attachMethodDomains(target = Kowloon) {
+export async function attachMethodDomains(target = kowloon) {
   const methodsDir = path.join(__dirname, "methods");
   let entries = [];
   try {
@@ -47,5 +47,9 @@ export async function attachMethodDomains(target = Kowloon) {
   }
   return target;
 }
+
+const Kowloon = kowloon;
+await attachMethodDomains(Kowloon);
+await Kowloon.utils.init(Kowloon);
 
 export default Kowloon;

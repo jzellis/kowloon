@@ -15,7 +15,7 @@ import Invite from "./Invite.js";
 import Outbox from "./Outbox.js";
 import File from "./File.js";
 import TimelineEntry from "./TimelineEntry.js";
-
+import FederationCursor from "./FederationCursor.js";
 export {
   Activity,
   Bookmark,
@@ -34,4 +34,5 @@ export {
   Outbox,
   File,
   TimelineEntry,
+  FederationCursor,
 };

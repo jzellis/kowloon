@@ -1,6 +1,6 @@
 import { Outbox } from "#schema";
 import post from "./post.js";
-import parseKowloonId from "#methods/parse/parseKowloonId.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 
 export default async function (limit = 0, skip = 0) {
   // let queue = await Outbox.find({ status: "pending" }).limit(limit).skip(skip);
@@ -9,7 +9,7 @@ export default async function (limit = 0, skip = 0) {
   //     item.lastAttemptedAt = new Date();
   //     try {
   //       let response = await post(
-  //         `https://${parseKowloonId(item.activity.to).server}/inbox`,
+  //         `https://${kowloonId(item.activity.to).server}/inbox`,
   //         { activity: item.activity }
   //       );
   //       if (response) {

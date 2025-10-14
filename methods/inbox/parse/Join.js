@@ -1,6 +1,6 @@
 import { Group, User } from "#schema";
 import getUser from "#methods/users/get.js";
-import parseKowloonId from "#methods/parse/parseKowloonId.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 
 export default async function (activity) {
   let user = await getUser({ id: activity.actorId });
@@ -13,16 +13,16 @@ export default async function (activity) {
     ) {
       group.members.push({
         id: user.id,
-        serverId: `@${parseKowloonId(activity.actorId).server}`,
+        serverId: `@${kowloonId(activity.actorId).server}`,
         name: user.profile.name,
-        inbox: `https://${parseKowloonId(activity.actorId).server}/users/${
+        inbox: `https://${kowloonId(activity.actorId).server}/users/${
           activity.target
         }/inbox`,
-        outbox: `https://${parseKowloonId(activity.actorId).server}/users/${
+        outbox: `https://${kowloonId(activity.actorId).server}/users/${
           activity.target
         }/outbox`,
         icon: user.profile.icon,
-        url: `https://${parseKowloonId(activity.actorId).server}/users/${
+        url: `https://${kowloonId(activity.actorId).server}/users/${
           activity.target
         }`,
       });
@@ -30,16 +30,16 @@ export default async function (activity) {
       if (!group.pending.some((member) => member.id === activity.actorId))
         group.pending.push({
           id: user.id,
-          serverId: `@${parseKowloonId(activity.actorId).server}`,
+          serverId: `@${kowloonId(activity.actorId).server}`,
           name: user.profile.name,
-          inbox: `https://${parseKowloonId(activity.actorId).server}/users/${
+          inbox: `https://${kowloonId(activity.actorId).server}/users/${
             activity.target
           }/inbox`,
-          outbox: `https://${parseKowloonId(activity.actorId).server}/users/${
+          outbox: `https://${kowloonId(activity.actorId).server}/users/${
             activity.target
           }/outbox`,
           icon: user.profile.icon,
-          url: `https://${parseKowloonId(activity.actorId).server}/users/${
+          url: `https://${kowloonId(activity.actorId).server}/users/${
             activity.target
           }`,
         });

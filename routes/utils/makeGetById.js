@@ -1,6 +1,6 @@
 // /routes/utils/makeGetById.js
 import route from "../utils/route.js";
-
+import Kowloon from "#kowloon";
 /**
  * Creates a GET-by-id route handler that uses Kowloon.get.objectById
  *
@@ -19,7 +19,7 @@ export default function makeGetById({
     const viewerId = req.user?.id || null;
 
     try {
-      const result = await req.Kowloon.get.objectById(id, {
+      const result = await Kowloon.get.objectById(id, {
         viewerId,
         mode,
         enforceLocalVisibility,

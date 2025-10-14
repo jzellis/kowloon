@@ -1,6 +1,6 @@
 import { User, Circle } from "#schema";
 import getUser from "#methods/users/get.js";
-import parseKowloonId from "#methods/parse/parseKowloonId.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 
 export default async function (activity) {
   activity.to = activity.actorId;
@@ -9,7 +9,7 @@ export default async function (activity) {
   let user = await User.findOne({ id: activity.actorId });
   let blockedUser = await getUser(activity.target);
   if (blockedUser) {
-    let blockedUserServer = parseKowloonId(activity.target).server;
+    let blockedUserServer = kowloonId(activity.target).server;
     activity.summary = `@${user.profile.name} muted ${blockedUser.profile.name}`;
     await Circle.findOneAndUpdate(
       { id: user.muted },

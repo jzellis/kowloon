@@ -21,7 +21,7 @@ await initKowloon(Kowloon, {
 });
 
 // 2) Now load methods (safe: DB is up)
-await attachMethodDomains(Kowloon);
+// await attachMethodDomains(Kowloon);
 
 // 3) Build Express
 const app = express();
@@ -57,3 +57,4 @@ const port = Number(process.env.PORT || 3000);
 http.createServer(app).listen(port, "0.0.0.0", () => {
   console.log(`HTTP listening on :${port}`);
 });
+export default Kowloon;

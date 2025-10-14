@@ -17,8 +17,8 @@
     "#utils/*": "./methods/utils/*",
     "#routes": "./routes/index.js",
     "#routes/*": "./routes/*",
-    "#ActivityParser": "/ActivityParser/index.js",
-    "#ActivityParser/*": "/ActivityParser/*",
+    "#ActivityParser": "./ActivityParser/index.js",
+    "#ActivityParser/*": "./ActivityParser/*",
     "#config/*": "./config/*"
   },
   "author": "Joshua Ellis",

@@ -1,4 +1,4 @@
-// schema/TimelineEntry.js
+// /schema/TimelineEntry.js
 import mongoose from "mongoose";
 const { Schema } = mongoose;
 
@@ -23,28 +23,29 @@ const TimelineEntrySchema = new Schema(
       required: true,
       index: true,
     },
-    objectId: { type: String, required: true }, // e.g., "post:uuid@remote.tld"
-    createdAt: { type: Date, required: true, index: true }, // from the object, for sorting
+    objectId: { type: String, required: true }, // e.g. "post:uuid@remote.tld"
+    createdAt: { type: Date, required: true, index: true }, // source object's timestamp
 
     // why this is in the feed
     reason: {
       type: String,
-      enum: ["follow", "domain", "mention", "self", "circle"],
+      enum: ["follow", "domain", "mention", "self", "circle", "group", "event"], // added group/event
       required: true,
     },
 
-    // what the viewer was allowed to see at fetch time (never reveal circle name/id)
+    // visibility at fetch time
     scope: {
       type: String,
       enum: ["public", "server", "circle"],
       required: true,
     },
 
-    // optional local-only discriminator for filtering timelines by your own circles
-    // never expose this in APIs
+    // local scoping (never expose)
     localCircleId: { type: String, default: undefined, select: false },
+    localGroupId: { type: String, default: undefined, select: false }, // optional
+    localEventId: { type: String, default: undefined, select: false }, // optional
 
-    // denormalized fields to render quickly (keep small; omit secrets)
+    // denormalized render bits (keep small)
     snapshot: {
       id: String,
       actorId: String,
@@ -53,21 +54,16 @@ const TimelineEntrySchema = new Schema(
       media: [Object],
       visibility: { type: String, enum: ["public", "server", "circle"] },
       summary: String,
-      // add anything cheap you routinely display
     },
 
-    // housekeeping
-    originDomain: { type: String }, // author's domain
+    originDomain: { type: String },
     fetchedAt: { type: Date, default: Date.now },
-    deletedAt: { type: Date, default: null }, // hide without losing audit trail
+    deletedAt: { type: Date, default: null },
   },
-  { timestamps: true } // adds createdAt/updatedAt (different from object createdAt)
+  { timestamps: true }
 );
 
-// Avoid duplicates per viewer/object
 TimelineEntrySchema.index({ userId: 1, objectId: 1 }, { unique: true });
-
-// Fast list queries
 TimelineEntrySchema.index({ userId: 1, createdAt: -1 });
 
 export default mongoose.model("TimelineEntry", TimelineEntrySchema);

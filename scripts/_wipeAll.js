@@ -59,7 +59,7 @@ async function main() {
     // add other models here if your schema index exports them
   } = Models;
 
-  // Find the admin user — prefer username "admin", fallback to first created user
+  // Find the admin user - prefer username "admin", fallback to first created user
   let adminUser = await User.findOne({ username: "admin" }).lean();
   if (!adminUser) {
     adminUser = await User.findOne({}).sort({ createdAt: 1 }).lean();

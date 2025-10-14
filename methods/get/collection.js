@@ -107,12 +107,18 @@ export default async function getFromCollection(type, opts = {}) {
       Model.countDocuments(filter),
     ]);
     const totalPages = Math.max(1, Math.ceil(totalItems / ipp));
-    return { items, totalItems, page: p, itemsPerPage: ipp, totalPages };
+    const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+    return { items, totalItems, page: p, itemsPerPage: ipp, totalPages, pages };
   }
 
   const [items, totalItems] = await Promise.all([
     q,
     Model.countDocuments(filter),
   ]);
-  return { items, totalItems };
+  const totalPages = Math.max(
+    1,
+    Math.ceil(totalItems / Math.max(1, Math.floor(itemsPerPage)))
+  );
+  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
+  return { items, totalItems, totalPages, pages };
 }

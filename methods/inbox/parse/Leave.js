@@ -1,5 +1,5 @@
 import { Group, User } from "#schema";
-import parseKowloonId from "#methods/parse/parseKowloonId.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 
 export default async function (activity) {
   let user = await User.findOne({ id: activity.actorId });

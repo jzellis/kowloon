@@ -1,5 +1,5 @@
 import { User } from "#schema";
-import parseKowloonId from "#methods/parse/parseKowloonId.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 import getObjectById from "#methods/get/objectById.js";
 import { get } from "https";
 export default async function (activity) {
@@ -14,16 +14,16 @@ export default async function (activity) {
   ) {
     target.members.push({
       id: activity.actorId,
-      serverId: `@${parseKowloonId(activity.actorId).server}`,
+      serverId: `@${kowloonId(activity.actorId).server}`,
       name: user.profile.name,
-      inbox: `https://${parseKowloonId(activity.actorId).server}/users/${
+      inbox: `https://${kowloonId(activity.actorId).server}/users/${
         activity.target23
       }/inbox`,
-      outbox: `https://${parseKowloonId(activity.actorId).server}/users/${
+      outbox: `https://${kowloonId(activity.actorId).server}/users/${
         activity.target
       }/outbox`,
       icon: user.profile.icon,
-      url: `https://${parseKowloonId(activity.actorId).server}/users/${
+      url: `https://${kowloonId(activity.actorId).server}/users/${
         activity.target
       }`,
     });

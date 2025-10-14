@@ -1,7 +1,7 @@
 import { Reply, Circle } from "#schema";
 
 import getObjectById from "#methods/get/objectById.js";
-import parseKowloonId from "#methods/parse/parseKowloonId.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 
 export default async function (activity) {
   let item = await getObjectById(activity.target);

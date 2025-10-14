@@ -1,7 +1,7 @@
 // Unfollow.js (remove from one circle if target set; otherwise from all actor's circles)
 import { User, Circle } from "#schema";
 import getUser from "#methods/users/get.js";
-import parseKowloonId from "#methods/parse/parseKowloonId.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 
 function canon(target) {
   // Accept {id}, "@user@host", or "user@host" → normalize to "@user@host"
@@ -27,7 +27,7 @@ export default async function Unfollow(activity) {
   if (!me) throw new Error("Actor not found");
 
   // Resolve target user ID (canonical)
-  const targetId = canon(activity.object) || parseKowloonId(activity.object);
+  const targetId = canon(activity.object) || kowloonId(activity.object);
   if (!targetId) throw new Error("Invalid target");
 
   // Optionally resolve for a friendlier summary (no mutation, no network if not needed)

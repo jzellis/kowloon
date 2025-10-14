@@ -1,8 +1,9 @@
-// routes/inbox/index.js
+// /routes/inbox/index.js
 import express from "express";
 import route from "../utils/route.js";
 import getFeed from "#methods/inbox/getFeed.js";
-// import parseIncomingActivity from "#ActivityParser/index.js";
+import post from "./post.js";
+
 const router = express.Router();
 
 /**
@@ -35,26 +36,11 @@ router.get(
       includeSelf: query.includeSelf !== "false", // default true
     });
 
-    set("items", items);
-    set("count", count);
-    if (nextCursor) set("nextCursor", nextCursor);
+    set({ items, count, nextCursor });
   })
 );
 
-router.post("/", async (req, res) => {
-  const ctx = {
-    targetUserId: req.params?.id || null,
-    requestMeta: { headers: req.headers, rawBody: req.rawBody, ip: req.ip },
-    db: req.app.locals.db,
-    queues: req.app.locals.queues,
-    federation: req.app.locals.federation,
-    logger: req.app.locals.logger,
-    domain: process.env.DOMAIN,
-    baseUrl: `https://${process.env.DOMAIN}`,
-  };
-
-  // const result = await parseIncomingActivity(req.body, ctx);
-  res.status(202).json({ id: result.activity.id, status: "accepted" });
-});
+// Attach the POST route for inbound federation
+router.post("/", post);
 
 export default router;

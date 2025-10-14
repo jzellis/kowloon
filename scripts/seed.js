@@ -240,7 +240,7 @@ async function main() {
     const start = faker.date.soon({ days: 90 });
     const end = new Date(
       start.getTime() + 1000 * 60 * (60 + Math.floor(Math.random() * 240))
-    ); // 1–5 hrs
+    ); // 1-5 hrs
     const evAddr = addressingTriple({ domain, circles, groups, events: [] });
 
     const e = await Event.create({

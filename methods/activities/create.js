@@ -1,162 +1,97 @@
 // /methods/createActivity.js
-// Validates an incoming Activity against the Ajv JSON Schema, then routes to the verb handler.
+// Centralized Activity creation for ALL callers (outbox + inbox).
+// - Validates with ActivityParser/validate
+// - Dispatches to verb handler
+// - Applies idempotency (remoteId / dedupeKey) when present
+// - Persists Activity with new schema fields (objectId, sideEffects, federated flag, etc.)
+// - Strips transient _federation before saving
 
-import { Activity, Outbox, User } from "#schema";
-import ActivityParser from "./parse/index.js";
-import getSettings from "../settings/get.js";
-import parseKowloonId from "#methods/parse/parseKowloonId.js";
-import shouldFederate from "#methods/federation/shouldFederate.js";
-// === Ajv setup ===
-import Ajv from "ajv";
-import addFormats from "ajv-formats";
-import activitySchema from "./parse/validators/activity.js";
+import { Activity } from "#schema";
+import ActivityParser from "#ActivityParser";
+import validateActivity from "#ActivityParser/validate.js";
 
-// compile once at module load
-const ajv = new Ajv({
-  allErrors: true,
-  strict: false,
-  // NOTE: if you later decide to allow missing to/replyTo/reactTo and let Mongoose fill them,
-  // set useDefaults: "empty" and add defaults to the schema. Right now the schema requires them.
-});
-addFormats(ajv);
-const validate = ajv.compile(activitySchema);
-
-// Only these types federate by default; others must set activity.federate = true explicitly
-const FEDERATE_TYPES = new Set([
-  "Create", // e.g., posts you choose to federate later
-  "Announce",
-  // Reply/React federation is decided conditionally (remote-only) below
-]);
-
-function domainFromId(id) {
-  if (!id || typeof id !== "string") return null;
-  const at = id.lastIndexOf("@");
-  return at > -1 ? id.slice(at + 1) : null;
-}
-
-function shouldFederateByTarget(activity, localDomain) {
-  // Pull a plausible target id from common fields
-  const targetId =
-    activity?.object?.target || activity?.replyTo || activity?.target || null;
-
-  if (!targetId || !localDomain) return false;
-  const targetDomain = domainFromId(targetId);
-  return Boolean(targetDomain && targetDomain !== localDomain);
-}
-
-function formatAjvErrors(errors = []) {
-  // Compact, dev-friendly messages (path → message)
-  return errors.map((e) => {
-    const path = e.instancePath || e.schemaPath || "";
-    const where = path ? `(${path})` : "";
-    const details = e.message ? `: ${e.message}` : "";
-    return `Validation error ${where}${details}`;
-  });
-}
-
-export default async function createActivity(activity) {
+export default async function createActivity(input) {
   try {
-    // 1) Schema validation (pure shape/constraints)
-    const ok = validate(activity);
-    if (!ok) {
-      const msgs = formatAjvErrors(validate.errors);
-      const err = new Error(`Invalid Activity payload.\n${msgs.join("\n")}`);
-      err.status = 400;
-      throw err;
+    // Shallow clone to avoid mutating caller payload
+    const activity = { ...input };
+
+    // ---- Basic guards ------------------------------------------------------
+    if (!activity?.type || typeof activity.type !== "string") {
+      return { error: "Activity: missing or invalid 'type'" };
+    }
+    if (!activity?.actorId || typeof activity.actorId !== "string") {
+      return { error: "Activity: missing or invalid 'actorId'" };
     }
 
-    // 2) Resolve actor (user/server) with lean guard
-    const parsed = parseKowloonId(activity.actorId);
-    if (!parsed?.type) {
-      const err = new Error("Invalid actorId");
-      err.status = 400;
-      throw err;
-    }
-
-    if (parsed.type === "User") {
-      const actor = await User.findOne({ id: activity.actorId })
-        .select("-_id id profile publicKey type url inbox outbox")
-        .lean();
-      if (!actor) {
-        const err = new Error(`Actor not found: ${activity.actorId}`);
-        err.status = 404;
-        throw err;
+    // ---- Idempotency (federation + local) ---------------------------------
+    // 1) For federated inbound, prefer remoteId-based dedupe.
+    if (activity.remoteId && typeof activity.remoteId === "string") {
+      const existing = await Activity.findOne({
+        remoteId: activity.remoteId,
+      }).lean();
+      if (existing) {
+        return { activity: existing, duplicated: true, federated: true };
       }
-      activity.actor = actor;
-    } else if (parsed.type === "Server") {
-      const settings = await getSettings();
-      activity.actor = {
-        id: settings.actorId,
-        profile: settings.profile,
-        publicKey: settings.publicKey,
-      };
-    } else {
-      const err = new Error(`Unsupported actor type: ${parsed.type}`);
-      err.status = 400;
-      throw err;
     }
-
-    // 3) Route to verb handler
-    const handler = ActivityParser[activity.type];
-    if (!handler) {
-      const valid = Object.keys(ActivityParser).join(", ");
-      const err = new Error(
-        `Invalid activity type "${activity.type}". Valid types: ${valid}`
-      );
-      err.status = 400;
-      throw err;
-    }
-
-    // 4) Execute verb-specific logic
-    activity = await handler(activity);
-
-    // 5) Default-stamp object's actor/actorId only if missing (leave hooks to do the rest)
-    if (activity.object && typeof activity.object === "object") {
-      activity.object.actor ??= activity.actor;
-      activity.object.actorId ??= activity.actorId;
-    }
-
-    // 6) Auto-flag federation for remote Reply/React targets
-    //    - Reply comes through as type "Create" with objectType "Reply"
-    //    - React is type "React"
-    if (!activity.federate) {
-      const settings = await getSettings();
-      const isReply =
-        activity.type === "Create" &&
-        (activity.objectType === "Reply" || activity.object?.type === "Reply");
-      const isReact = activity.type === "React";
-
-      if (
-        (isReply || isReact) &&
-        shouldFederateByTarget(activity, settings?.domain)
-      ) {
-        activity.federate = true;
+    // 2) Optional local idempotency via a caller-provided dedupeKey.
+    if (activity.dedupeKey && typeof activity.dedupeKey === "string") {
+      const existing = await Activity.findOne({
+        dedupeKey: activity.dedupeKey,
+      }).lean();
+      if (existing) {
+        return { activity: existing, duplicated: true };
       }
     }
 
-    // 7) Persist (if handler didn't signal an error)
-    if (activity.error) {
-      // keep your existing convention
-      console.log("Error:", activity.error);
-      return activity;
+    // ---- Validate with the dynamic verbs validator ------------------------
+    const valid = await validateActivity(activity);
+    if (!valid?.success) {
+      return { error: valid?.error || "Invalid activity" };
     }
 
-    activity = await Activity.create(activity);
-
-    // 8) Conditional delivery enqueue
-    if (shouldFederate(activity)) {
-      await Outbox.findOneAndUpdate(
-        { "activity.id": activity.id },
-        { activity },
-        { new: true, upsert: true }
-      );
+    // ---- Dispatch to the verb handler -------------------------------------
+    const parser = await ActivityParser();
+    const handler = parser[activity.type];
+    if (typeof handler !== "function") {
+      return { error: `Unsupported activity type: ${activity.type}` };
     }
 
-    return activity;
-  } catch (e) {
-    console.log(e);
-    // Bubble HTTP-ish status if you threw one above
-    if (e instanceof Error) throw e;
-    throw new Error(String(e));
+    const result = await handler(activity);
+    if (result?.error) {
+      // Verb reported an error → do not persist an Activity record
+      return { error: result.error, result };
+    }
+
+    // ---- Persist the Activity (annotate with handler effects) --------------
+    const toSave = {
+      ...activity,
+      objectId: result?.activity?.objectId,
+      sideEffects: result?.activity?.sideEffects,
+
+      // If the handler signals federation is needed, mark here so
+      // the caller (e.g., /outbox) can enqueue; you can flip this to true AFTER
+      // successful fan-out if you want it to mean "already federated".
+      federated: Boolean(result?.federate || activity.federated),
+
+      // Keep idempotency hints if provided:
+      remoteId: activity.remoteId,
+      remoteRecipients: activity.remoteRecipients,
+      dedupeKey: activity.dedupeKey,
+    };
+
+    // 🚫 Do NOT persist transient federation meta
+    // (e.g., { domain, keyId, remoteUser } added by /inbox route)
+    const { _federation, ...persistable } = toSave;
+
+    const createdActivity = await Activity.create(persistable);
+
+    // Return both the saved Activity and the verb's payload
+    return {
+      activity: createdActivity,
+      result,
+      federate: Boolean(result?.federate), // convenience flag for /outbox caller
+    };
+  } catch (err) {
+    return { error: err?.message || String(err) };
   }
 }

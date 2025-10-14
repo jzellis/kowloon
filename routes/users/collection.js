@@ -1,10 +1,11 @@
 import route from "../utils/route.js";
-import getVisibleCollection from "#methods/get/visibleCollection.js";
+// import getVisibleCollection from "#methods/get/visibleCollection.js";
+import Kowloon from "#kowloon";
 
 export default route(async ({ req, query, set }) => {
   const { before, page, itemsPerPage, sort, select, actorId } = query;
 
-  const result = await getVisibleCollection("user", {
+  const result = await Kowloon.get.visibleCollection("user", {
     viewerId: req.user?.id || null,
     before,
     page: page ? Number(page) : undefined,

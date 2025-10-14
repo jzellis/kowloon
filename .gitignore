@@ -154,3 +154,5 @@ minio-s3-credentials.json
 .env
 setup.tmp
 frontend.bak/
+subscriptions
+*.zip

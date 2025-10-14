@@ -1,5 +1,6 @@
 // #methods/pages/buildTree.js
 export default function buildTree(pages) {
+  if (!Array.isArray(pages)) return [];
   const map = new Map();
   const roots = [];
 

@@ -1,7 +1,7 @@
 // Block.js (refactored)
 import { User, Circle } from "#schema";
 import getUser from "#methods/users/get.js";
-import parseKowloonId from "#methods/parse/parseKowloonId.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 
 // keep if other callers rely on it
 

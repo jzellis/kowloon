@@ -1,43 +1,50 @@
+// /schema/Event.js
 import mongoose from "mongoose";
 import Settings from "./Settings.js";
-const Schema = mongoose.Schema;
-import Member from "./subschema/Member.js";
-const Attendee = Member.clone();
-Attendee.add({
-  status: {
-    type: String,
-    enum: ["Interested", "Attending"],
-    default: "pending",
-  },
-});
+import { Circle, User } from "./index.js";
 
+const { Schema } = mongoose;
+
+// ---- Event Schema: circle references instead of embedded arrays ----
 const EventSchema = new Schema(
   {
-    id: { type: String, key: true }, // This is different from the _id, this is the global UUID of the event.
+    id: { type: String, key: true }, // global stable id e.g. event:<_id>@<domain>
+    type: { type: String, default: "Event" },
     actor: { type: Object, default: undefined },
-    actorId: { type: String, required: true }, // The actor ID of the event's author. Required.
-    server: { type: String, default: undefined }, // The server of the event's author.
-    type: { type: String, default: "Event" }, // We can create a list of possible event types later
+    actorId: { type: String, required: true }, // creator's @user@domain (local for local events)
+    server: { type: String, default: undefined }, // server of the event author
+
+    // Addressing / vis
     to: { type: String, default: "" },
     replyTo: { type: String, default: "" },
     reactTo: { type: String, default: "" },
+
+    // Content
     title: { type: String, default: undefined },
+    name: { type: String, default: undefined }, // keep both for backward compat, prefer 'title'
     description: { type: String, default: undefined },
     startTime: { type: Date, required: true },
     endTime: { type: Date },
     location: { type: Object, default: undefined },
     ageRestricted: { type: Boolean, default: false },
     href: { type: String, default: undefined },
-    admins: { type: [String], default: [] },
-    attending: { type: [Attendee], default: [] },
-    invited: { type: [Member], default: [] },
-    memberCount: { type: Number, default: 0 },
-    replyCount: { type: Number, default: 0 }, // The number of replies to this post
-    reactCount: { type: Number, default: 0 }, // The number of likes to this post
-    shareCount: { type: Number, default: 0 }, // The number of shares of this post
-    deletedAt: { type: Date, default: null }, // If the event is deleted, when it was deleted
-    deletedBy: { type: String, default: null }, // I`f the event is deleted, who deleted it (usually the user unless an admin does it)
     url: { type: String, default: undefined },
+
+    // Circle references (IDs; each circle's ownerId will be this event's id)
+    admins: { type: String, default: "" }, // circle id
+    invited: { type: String, default: "" }, // circle id
+    interested: { type: String, default: "" }, // circle id
+    attending: { type: String, default: "" }, // circle id
+    blocked: { type: String, default: "" }, // circle id  <-- NEW
+
+    // Denormalized counts (optional; keep for UI speed)
+    replyCount: { type: Number, default: 0 },
+    reactCount: { type: Number, default: 0 },
+    shareCount: { type: Number, default: 0 },
+
+    // Soft delete
+    deletedAt: { type: Date, default: null },
+    deletedBy: { type: String, default: null },
   },
   {
     strict: false,
@@ -46,17 +53,113 @@ const EventSchema = new Schema(
     toObject: { virtuals: true },
   }
 );
-EventSchema.index({ "attending.id": 1 });
-EventSchema.index({ "invited.id": 1 });
+
+// ---------- pre('save'): mint id/url/server like your current style ----------
 EventSchema.pre("save", async function (next) {
-  if (this.admins.length === 0) this.admins = [this.actorId];
-  // Create the event id and url
-  const domain = (await Settings.findOne({ name: "domain" })).value;
-  this.id = this.id || `event:${this._id}@${domain}`;
-  this.url = this.url || `https://${domain}/events/${this.id}`;
-  this.server =
-    this.server || (await Settings.findOne({ name: "actorId" })).value;
-  next();
+  try {
+    const domainSetting = await Settings.findOne({ name: "domain" });
+    const actorIdSetting = await Settings.findOne({ name: "actorId" });
+    const domain = domainSetting?.value;
+    const serverActorId = actorIdSetting?.value;
+
+    // normalize title/name
+    if (this.title) this.title = this.title.trim();
+    if (!this.title && this.name) this.title = String(this.name).trim();
+
+    // ids/urls
+    if (!this.id && domain) this.id = `event:${this._id}@${domain}`;
+    if (!this.url && domain && this.id) {
+      this.url = `https://${domain}/events/${this.id}`;
+    }
+    if (!this.server && serverActorId) this.server = serverActorId;
+
+    next();
+  } catch (err) {
+    next(err);
+  }
+});
+
+// ---------- post('save'): ensure circles + seed creator into admins ----------
+EventSchema.post("save", async function (doc) {
+  try {
+    // Only handle local events (doc.id must include our domain)
+    const domainSetting = await Settings.findOne({ name: "domain" });
+    const domain = domainSetting?.value;
+    if (!domain || !doc?.id || !String(doc.id).endsWith(`@${domain}`)) {
+      return; // remote event mirror or missing config → don't create local circles
+    }
+
+    // Helper to ensure (create if missing) a circle owned by this event
+    async function ensureCircle(currentId, suffix, description) {
+      if (currentId) {
+        const c = await Circle.findOne({ id: currentId });
+        if (c) return c; // already exists
+      }
+      // Create a new circle; let Circle's own hooks mint id
+      const created = await Circle.create({
+        name: `${doc.title || "Event"} - ${suffix}`,
+        actorId: doc.id, // owner is the event itself
+        description: description || `${doc.title || "Event"} | ${suffix}`,
+        to: doc.id, // default addressing: to the event
+        replyTo: doc.id,
+        reactTo: doc.id,
+      });
+      // Store back the circle id on the event document field that references it
+      doc[suffix.toLowerCase()] = created.id; // admins|invited|interested|attending|blocked
+      await doc.save(); // persist the circle id back to the Event
+      return created;
+    }
+
+    // Ensure all five circles exist
+    const adminsCircle = await ensureCircle(doc.admins, "Admins", "Admins");
+    const invitedCircle = await ensureCircle(doc.invited, "Invited", "Invited");
+    const interestedCircle = await ensureCircle(
+      doc.interested,
+      "Interested",
+      "Interested"
+    );
+    const attendingCircle = await ensureCircle(
+      doc.attending,
+      "Attending",
+      "Attending"
+    );
+    const blockedCircle = await ensureCircle(doc.blocked, "Blocked", "Blocked"); // NEW
+
+    // Seed creator (actorId) into Admins circle, once
+    if (doc.actorId) {
+      // Enrich from local user if available
+      const creator = await User.findOne({ id: doc.actorId }).lean();
+      const member = creator
+        ? {
+            id: creator.id,
+            name: creator?.profile?.name,
+            icon: creator?.profile?.icon,
+            url: creator?.url,
+            inbox: creator?.inbox,
+            outbox: creator?.outbox,
+            server: creator?.server,
+          }
+        : { id: doc.actorId };
+
+      // Only push if not already present
+      await Circle.findOneAndUpdate(
+        { id: adminsCircle.id, "members.id": { $ne: member.id } },
+        { $push: { members: member }, $set: { updatedAt: new Date() } },
+        { new: true }
+      );
+
+      await Circle.findOneAndUpdate(
+        { id: attendingCircle.id, "members.id": { $ne: member.id } },
+        { $push: { members: member }, $set: { updatedAt: new Date() } },
+        { new: true }
+      );
+    }
+
+    // No default seeds for invited/interested/attending/blocked
+  } catch (err) {
+    // Post hooks don't take next(); log so we can debug without breaking saves
+    console.error("Event post-save circle ensure error:", err);
+  }
 });
 
 export default mongoose.model("Event", EventSchema);

@@ -6,6 +6,6 @@ export default route(async ({ req, set, setStatus }) => {
   set("server", {
     id: Kowloon.settings.actorId,
     profile: Kowloon.settings.profile,
-    pages: Kowloon.pages.buildTree(await Kowloon.pages.list()),
+    // pages: Kowloon.pages.buildTree(await Kowloon.pages.list()),
   });
 });

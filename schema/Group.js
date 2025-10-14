@@ -1,82 +1,167 @@
+// /schema/Group.js
 import mongoose from "mongoose";
-import { Circle, Settings, User } from "./index.js";
-const Schema = mongoose.Schema;
-const ObjectId = mongoose.Types.ObjectId;
-import Member from "./subschema/Member.js";
+import Settings from "./Settings.js";
+import { Circle, User } from "./index.js";
+
+const { Schema } = mongoose;
 
 const GroupSchema = new Schema(
   {
     id: { type: String, key: true },
     objectType: { type: String, default: "Group" },
-    name: { type: String, default: undefined },
-    actorId: { type: String, required: true }, // Who created this group?
+
+    // Ownership / actor
+    actorId: { type: String, required: true }, // creator's @user@domain (local for local groups)
     actor: { type: Object, default: undefined },
-    server: { type: String, default: undefined }, // The server of the actor
+    server: { type: String, default: undefined }, // server of the actor/creator
+
+    // Presentation
+    name: { type: String, default: undefined },
     description: { type: String, default: undefined },
     icon: { type: String, default: undefined },
     location: { type: Object, default: undefined },
-    members: { type: [Member], default: [] },
-    pending: { type: [Member], default: [] }, // Pending members
-    blocked: { type: String, default: "" }, // The Circle ID of blocked users who cannot join
-    admins: { type: [String], default: [] },
-    to: { type: String, default: "" }, // Who can see this group
-    replyTo: { type: String, default: "" }, // Who can reply to this group (unused but here for consistency)
-    reactTo: { type: String, default: "" }, // Who can react to this group
-    replyCount: { type: Number, default: 0 }, // The number of replies to this post (unused but here for consistency)
-    reactCount: { type: Number, default: 0 }, // The number of likes to this post
-    shareCount: { type: Number, default: 0 }, // The number of shares of this post
-    deletedAt: { type: Date, default: null }, // If the group is deleted, when it was deleted
-    deletedBy: { type: String, default: null }, // If the group is deleted, who deleted it (usually the user unless an admin does it),
+
+    // Addressing defaults
+    to: { type: String, default: "" },
+    replyTo: { type: String, default: "" },
+    reactTo: { type: String, default: "" },
+
+    // Circle references (store the Circle IDs — ownerId of each is this group's id)
+    admins: { type: String, default: "" }, // circle id
+    moderators: { type: String, default: "" }, // circle id
+    members: { type: String, default: "" }, // circle id
+    invited: { type: String, default: "" }, // circle id
+    blocked: { type: String, default: "" }, // circle id
+
+    // Denormalized counts (optional)
+    replyCount: { type: Number, default: 0 },
+    reactCount: { type: Number, default: 0 },
+    shareCount: { type: Number, default: 0 },
+
+    // Soft delete
+    deletedAt: { type: Date, default: null },
+    deletedBy: { type: String, default: null },
+
+    // Links
     url: { type: String, default: undefined },
   },
-  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+    strict: false,
+  }
 );
-GroupSchema.index({ "members.id": 1 });
-GroupSchema.index({ "pending.id": 1 });
+
+// Keep your reacts virtual
 GroupSchema.virtual("reacts", {
   ref: "React",
   localField: "id",
   foreignField: "target",
 });
 
+// -------- pre('save'): mint id/url/server/icon (no member/admin pushes here) --------
 GroupSchema.pre("save", async function (next) {
-  if (this.isNew) {
-    let actor = await User.findOne({ id: this.actorId });
-    const domain = (await Settings.findOne({ name: "domain" })).value;
-    this.title = this.title && this.title.trim();
-    this.id = this.id || `group:${this._id}@${domain}`;
-    this.url = this.url || `https://${domain}/groups/${this.id}`;
-    this.icon = this.icon || `https://${domain}/images/group.png`;
-    this.server =
-      this.server || (await Settings.findOne({ name: "actorId" })).value;
-    if (this.members.length === 0) {
-      this.members.push({
-        id: actor.id,
-        name: actor.profile.name,
-        icon: actor.profile.icon,
-        inbox: `https://${domain}/users/${actor.id}/inbox`,
-        outbox: `https://${domain}/users/${actor.id}/outbox`,
-        serverId: `@${domain}`,
-        url: actor.url,
-        updatedAt: Date.now(),
-      });
-    }
-    if (this.admins.length === 0) {
-      this.admins.push(actor.id);
-    }
+  try {
+    const domainSetting = await Settings.findOne({ name: "domain" });
+    const actorIdSetting = await Settings.findOne({ name: "actorId" });
+    const domain = domainSetting?.value;
+    const serverActorId = actorIdSetting?.value;
 
-    let blockedCircle = await Circle.create({
-      name: `${this.name} - Blocked`,
-      actorId: this.id,
-      description: `${this.name} | Blocked`,
-      to: this.id,
-      replyTo: this.id,
-      reactTo: this.id,
-    });
-    this.blocked = blockedCircle.id;
+    if (this.name) this.name = this.name.trim();
+
+    if (!this.id && domain) this.id = `group:${this._id}@${domain}`;
+    if (!this.url && domain && this.id)
+      this.url = `https://${domain}/groups/${this.id}`;
+    if (!this.icon && domain) this.icon = `https://${domain}/images/group.png`;
+    if (!this.server && serverActorId) this.server = serverActorId;
+
+    next();
+  } catch (err) {
+    next(err);
   }
+});
 
-  next();
+// -------- post('save'): ensure circles + seed creator into admins/moderators/members --------
+GroupSchema.post("save", async function (doc) {
+  try {
+    // Only create circles for local groups
+    const domainSetting = await Settings.findOne({ name: "domain" });
+    const domain = domainSetting?.value;
+    if (!domain || !doc?.id || !String(doc.id).endsWith(`@${domain}`)) {
+      return; // remote mirror or missing config — do nothing
+    }
+
+    // Helper: ensure a circle exists and is linked to the group field
+    async function ensureCircle(currentId, key, label) {
+      if (currentId) {
+        const existing = await Circle.findOne({ id: currentId });
+        if (existing) return existing;
+      }
+      const created = await Circle.create({
+        name: `${doc.name || "Group"} - ${label}`,
+        actorId: doc.id, // owner is this group
+        description: `${doc.name || "Group"} | ${label}`,
+        to: doc.id,
+        replyTo: doc.id,
+        reactTo: doc.id,
+      });
+      doc[key] = created.id; // key ∈ {admins, moderators, members, invited, blocked}
+      await doc.save(); // persist the circle id back to the Group
+      return created;
+    }
+
+    // Ensure all five circles exist
+    const adminsCircle = await ensureCircle(doc.admins, "admins", "Admins");
+    const moderatorsCircle = await ensureCircle(
+      doc.moderators,
+      "moderators",
+      "Moderators"
+    );
+    const membersCircle = await ensureCircle(doc.members, "members", "Members");
+    const invitedCircle = await ensureCircle(doc.invited, "invited", "Invited");
+    const blockedCircle = await ensureCircle(doc.blocked, "blocked", "Blocked");
+
+    // Seed creator into admins + moderators + members once
+    if (doc.actorId) {
+      const creator = await User.findOne({ id: doc.actorId }).lean();
+      const member = creator
+        ? {
+            id: creator.id,
+            name: creator?.profile?.name,
+            icon: creator?.profile?.icon,
+            url: creator?.url,
+            inbox: creator?.inbox,
+            outbox: creator?.outbox,
+            server: creator?.server,
+          }
+        : { id: doc.actorId };
+
+      // add only if not already present
+      const now = new Date();
+      await Promise.all([
+        Circle.findOneAndUpdate(
+          { id: adminsCircle.id, "members.id": { $ne: member.id } },
+          { $push: { members: member }, $set: { updatedAt: now } },
+          { new: true }
+        ),
+        Circle.findOneAndUpdate(
+          { id: moderatorsCircle.id, "members.id": { $ne: member.id } },
+          { $push: { members: member }, $set: { updatedAt: now } },
+          { new: true }
+        ),
+        Circle.findOneAndUpdate(
+          { id: membersCircle.id, "members.id": { $ne: member.id } },
+          { $push: { members: member }, $set: { updatedAt: now } },
+          { new: true }
+        ),
+      ]);
+    }
+
+    // (No default seeds for invited/blocked)
+  } catch (err) {
+    console.error("Group post-save circle ensure error:", err);
+  }
 });
 
 export default mongoose.model("Group", GroupSchema);

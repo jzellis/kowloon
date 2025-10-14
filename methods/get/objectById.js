@@ -1,5 +1,5 @@
 // methods/getObjectById.js
-import parseKowloonId from "#methods/parse/parseKowloonId.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 import getSettings from "#methods/settings/get.js";
 
 // ---------- Errors ----------
@@ -307,7 +307,7 @@ export default async function getObjectById(
   }
 
   // ---- B) Object id (type:<_id>@domain) ----
-  const parsed = parseKowloonId(id); // { type, server, mongoId, id }
+  const parsed = kowloonId(id); // { type, server, mongoId, id }
   if (!parsed?.type || !parsed?.server)
     throw new BadRequest(`Invalid id: ${id}`);
   const entry = modelFor(parsed.type, Models);

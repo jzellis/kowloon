@@ -1,5 +1,5 @@
-import getFromCollection from "#methods/get/objectById.js";
+import get from "#methods/get/index.js";
 
 export default async function (opts) {
-  return await getFromCollection("Groups", opts);
+  return await get.collection("Groups", opts);
 }

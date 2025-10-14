@@ -45,7 +45,7 @@ for (const dirent of entries) {
     continue;
   }
 
-  // Build mount path — “home” mounts at "/", everything else at "/<name>"
+  // Build mount path - "home" mounts at "/", everything else at "/<name>"
   const mountPath = name === "home" ? "/" : `/${name}`;
 
   try {

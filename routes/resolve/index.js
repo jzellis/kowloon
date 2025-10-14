@@ -1,13 +1,11 @@
 import express from "express";
 import attachUser from "#routes/middleware/attachUser.js";
-import parseKowloonId from "#methods/parse/parseKowloonId.js";
-import getSettings from "#methods/settings/get.js";
-import getObjectById, {
+import {
   NotFound,
   NotAuthorized,
   BadRequest,
 } from "#methods/get/objectById.js";
-
+import Kowloon from "#kowloon";
 const router = express.Router();
 
 function parseHandle(h) {
@@ -20,28 +18,32 @@ try {
       const id = req.query.id;
       if (!id) throw new BadRequest("Missing ?id");
 
-      const settings = await getSettings();
       const localDomain = (
-        settings.domain ||
+        Kowloon.settings.domain ||
         process.env.DOMAIN ||
         ""
       ).toLowerCase();
 
       // Object id resolution (local-only)
-      const parsed = parseKowloonId(id);
+      const parsed = Kowloon.parse.kowloonId(id);
       if (!parsed?.server) throw new BadRequest("Invalid id");
       if (parsed.server.toLowerCase() !== localDomain)
         return res.status(404).json({ error: "Not found" });
 
       const viewerId = req.user?.id || null;
-      const result = await getObjectById(id, {
-        viewerId,
-        mode: "local",
-        enforceLocalVisibility: true,
-        hydrateRemoteIntoDB: false,
-      });
+      try {
+        const result = await Kowloon.get.objectById(id, {
+          viewerId,
+          mode: "local",
+          enforceLocalVisibility: true,
+          hydrateRemoteIntoDB: false,
+        });
 
-      return res.status(200).json(result.object);
+        return res.status(200).json(result.object);
+      } catch (e) {
+        return res.send("Fail");
+        console.error(e);
+      }
     } catch (err) {
       if (err instanceof NotFound)
         return res.status(404).json({ error: err.message });

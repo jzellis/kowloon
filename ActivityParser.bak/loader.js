@@ -1,10 +1,10 @@
+// loader.js
 import { readdirSync, statSync } from "fs";
 import { join, dirname, basename } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const CORE_HANDLERS_ROOT = join(__dirname, "handlers");
-// If/when you add plugins: const PLUGINS_ROOT = join(__dirname, "../modules");
 
 const isDir = (p) => {
   try {
@@ -22,8 +22,7 @@ const isFile = (p) => {
 };
 
 async function loadActivityTypeFolder(dir) {
-  // dir like ".../handlers/Create"
-  const bucket = { _default: null, subtypes: {}, hooks: null };
+  const bucket = { entry: null, _default: null, subtypes: {}, hooks: null }; // 👈 add entry
   if (!isDir(dir)) return bucket;
 
   const entries = readdirSync(dir, { withFileTypes: true });
@@ -34,7 +33,8 @@ async function loadActivityTypeFolder(dir) {
     const mod = await import(pathToFileURL(file).href);
     const fn = mod.default || mod;
 
-    if (name === "_default") bucket._default = fn;
+    if (name === "index") bucket.entry = fn; // 👈 new: verb entry point
+    else if (name === "_default") bucket._default = fn;
     else if (name === "_hooks")
       bucket.hooks = mod; // { before?, after?, onError? }
     else bucket.subtypes[name] = fn; // Post.js → bucket.subtypes.Post
@@ -56,7 +56,6 @@ async function buildFromRoot(root) {
       ...(reg[verb] || {}),
       ...loaded,
       subtypes: { ...(reg[verb]?.subtypes || {}), ...(loaded.subtypes || {}) },
-      // hooks: last writer wins; change policy if you add plugins
     };
   }
   return reg;
@@ -65,12 +64,7 @@ async function buildFromRoot(root) {
 let REGISTRY = null;
 
 export async function buildRegistry() {
-  // If later adding plugins, load them first so they override core.
-  // const pluginsReg = await buildFromRoot(PLUGINS_ROOT);
   const coreReg = await buildFromRoot(CORE_HANDLERS_ROOT);
-
-  // Merge policy (plugins first if you add them):
-  // return { ...pluginsReg, ...coreReg, Verb: { ...pluginsReg.Verb, ...coreReg.Verb, subtypes: {...} } };
   return coreReg;
 }
 
@@ -79,7 +73,6 @@ export async function ensureRegistry() {
   return REGISTRY;
 }
 
-// For tests/hot-reload
 export async function resetRegistry() {
   REGISTRY = null;
   return ensureRegistry();

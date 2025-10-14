@@ -1,4 +1,4 @@
 import isLocalDomain from "./isLocalDomain.js";
-import parseKowloonId from "./parseKowloonId.js";
+import kowloonId from "./kowloonId.js";
 
-export default { isLocalDomain, parseKowloonId };
+export default { isLocalDomain, kowloonId };

@@ -1,5 +1,5 @@
 import { Group, User } from "#schema";
-import parseKowloonId from "#methods/parse/parseKowloonId.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 
 export default async function (activity) {
   let group = await Group.findOne({ id: activity.target });
@@ -12,16 +12,16 @@ export default async function (activity) {
   ) {
     group.members.push({
       id: activity.actorId,
-      serverId: `@${parseKowloonId(activity.actorId).server}`,
+      serverId: `@${kowloonId(activity.actorId).server}`,
       name: activity.actor.profile.name,
-      inbox: `https://${parseKowloonId(activity.actorId).server}/users/${
+      inbox: `https://${kowloonId(activity.actorId).server}/users/${
         activity.target
       }/inbox`,
-      outbox: `https://${parseKowloonId(activity.actorId).server}/users/${
+      outbox: `https://${kowloonId(activity.actorId).server}/users/${
         activity.target
       }/outbox`,
       icon: activity.actor.profile.icon,
-      url: `https://${parseKowloonId(activity.actorId).server}/users/${
+      url: `https://${kowloonId(activity.actorId).server}/users/${
         activity.target
       }`,
     });

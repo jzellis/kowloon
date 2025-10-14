@@ -3,7 +3,7 @@
 It retrieves items addressed to the logged in user, "@public", the user's home server, or any local Groups or Circles the user is a member of, but *not* items from IDs the user has blocked or muted.
 
 */
-import parseKowloonId from "#methods/parse/parseKowloonId.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 export default async function (user) {
   let response = user
     ? {
@@ -15,7 +15,7 @@ export default async function (user) {
                 new Set([
                   user.id,
                   "@public",
-                  `@${parseKowloonId(user.id).server}`,
+                  `@${kowloonId(user.id).server}`,
                   ...user.memberships,
                 ])
               ),

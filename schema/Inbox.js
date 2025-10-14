@@ -54,7 +54,7 @@ const InboxSchema = new Schema(
 );
 
 // Idempotency on remoteId (only when present)
-InboxSchema.index({ remoteId: 1 }, { unique: true, sparse: true });
+
 // Ops-friendly views
 InboxSchema.index({ domain: 1, receivedAt: -1 });
 InboxSchema.index({ "status.type": 1, receivedAt: -1 });

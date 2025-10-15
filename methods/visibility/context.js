@@ -19,21 +19,36 @@ export async function getViewerContext(viewerId) {
 
   const viewerDomain = domainOf(viewerId);
 
-  // Query by subdoc membership
-  const [circleRows, groupRows, viewer] = await Promise.all([
-    Circle.find({ "members.id": viewerId, deletedAt: null })
-      .select("id")
-      .lean(),
-    Group.find({ "members.id": viewerId, deletedAt: null }).select("id").lean(),
-    User.findOne({ id: viewerId }).select("blocked").lean(),
-  ]);
+  const memberCircles = await Circle.find({
+    "members.id": viewerId,
+    deletedAt: null,
+  })
+    .select("id")
+    .lean();
+  const memberCircleIds = memberCircles.map((c) => c.id);
+
+  const groups = memberCircleIds.length
+    ? await Group.find({ members: { $in: memberCircleIds }, deletedAt: null })
+        .select("id")
+        .lean()
+    : [];
+  const groupIds = new Set(groups.map((g) => g.id));
+
+  const viewer = await User.findOne({ id: viewerId }).select("blocked").lean();
+  let blockedActorIds = new Set();
+  if (viewer?.blocked) {
+    const blockedCircle = await Circle.findOne({ id: viewer.blocked })
+      .select("members.id")
+      .lean();
+    blockedActorIds = new Set((blockedCircle?.members ?? []).map((m) => m.id));
+  }
 
   return {
     isAuthenticated: true,
     viewerId,
     viewerDomain,
-    circleIds: new Set(circleRows.map((c) => c.id)),
-    groupIds: new Set(groupRows.map((g) => g.id)),
-    blockedActorIds: new Set(viewer?.blocked || []),
+    circleIds: new Set(memberCircleIds),
+    groupIds,
+    blockedActorIds,
   };
 }

@@ -3,7 +3,7 @@ import express from "express";
 import route from "../utils/route.js";
 import getVisibleBookmarks from "#methods/get/visibleBookmarks.js";
 
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
 router.get(
   "/",

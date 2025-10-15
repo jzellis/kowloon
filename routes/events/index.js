@@ -5,7 +5,7 @@ import attending from "./attending/index.js";
 import invited from "./invited/index.js";
 import replies from "../replies/index.js";
 import reacts from "../reacts/index.js";
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
 router.get("/", collection);
 router.get("/:id", id);

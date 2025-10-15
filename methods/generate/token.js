@@ -29,7 +29,6 @@ export default async function (actorId) {
     },
     loggedIn: user.lastLogin,
   };
-  console.log("Token data: ", data);
   let token = jwt.sign(
     {
       user: {

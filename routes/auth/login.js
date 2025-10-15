@@ -1,9 +1,9 @@
 // routes/auth/login.js
 import express from "express";
 import route from "../utils/route.js";
-import login from "#methods/auth/login.js";
+import Kowloon from "#kowloon";
 
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
 /**
  * POST /auth/login
@@ -16,6 +16,9 @@ router.post(
   route(async ({ req, res, body, set, setStatus }) => {
     const { username, password } = body || {};
 
+    // Don't log passwords
+    // console.log("login", username);
+
     if (
       !username ||
       typeof username !== "string" ||
@@ -26,15 +29,20 @@ router.post(
       return;
     }
 
-    const { user, token, error } = await login(username, password);
+    // Let auth layer do the verification; don't inspect user.password here
+    const { user, token, error } = await Kowloon.auth.login(username, password);
 
-    if (error) {
+    if (error || !user || !token) {
+      // No direct res.json — use the route() setters so the wrapper sends once
       setStatus(401);
       set("error", "Invalid credentials");
       return;
     }
 
-    // ✅ Set Authorization header for clients that want to grab it directly
+    // Optional: belt-and-braces sanitize in case auth.login returned a full doc
+    if ("password" in user) delete user.password;
+
+    // Safe to set headers; the wrapper hasn't sent anything yet
     res.set("Authorization", `Bearer ${token}`);
 
     set("user", user);

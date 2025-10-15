@@ -4,7 +4,7 @@ import collection from "./collection.js";
 import pathView from "./path.js";
 import idView from "./id.js"; // Optional: keep if you want a dedicated /pages/id/:id
 
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
 router.get("/", collection);
 

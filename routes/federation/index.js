@@ -4,7 +4,7 @@ import postPull from "./pull/post.js";
 import authStart from "./auth/start.js";
 import authFinish from "./auth/finish.js";
 
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
 // Server-to-server scoped pull (batch per remote domain)
 router.post("/pull", postPull);

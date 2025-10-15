@@ -7,7 +7,7 @@ import nodeinfo from "./nodeinfo.js";
 import nodeinfo20 from "./nodeinfo20.js";
 import actor from "./actor.js";
 
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
 // Mount well-known subroutes
 router.use("/jwks.json", jwks);

@@ -1,5 +1,5 @@
 import express from "express";
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
 router.get("/", (req, res) => {
   // Redirect to the current NodeInfo document

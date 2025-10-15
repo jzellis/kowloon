@@ -4,7 +4,7 @@ import route from "../utils/route.js";
 import getFeed from "#methods/inbox/getFeed.js";
 import post from "./post.js";
 
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
 /**
  * GET /inbox

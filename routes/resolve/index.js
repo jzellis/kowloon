@@ -6,7 +6,7 @@ import {
   BadRequest,
 } from "#methods/get/objectById.js";
 import Kowloon from "#kowloon";
-const router = express.Router();
+const router = express.Router({ mergeParams: true });
 
 function parseHandle(h) {
   const m = typeof h === "string" ? h.match(/^@([^@]+)@(.+)$/) : null;

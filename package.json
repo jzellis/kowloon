@@ -6,8 +6,10 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "test": "jest",
-    "setup": "node setup.js"
+    "setup": "node setup.js",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
+    "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest tests/unit --runInBand",
+    "test:int": "NODE_OPTIONS=--experimental-vm-modules jest tests/integration --runInBand"
   },
   "imports": {
     "#kowloon": "./Kowloon.js",

@@ -157,10 +157,8 @@ UserSchema.pre("save", async function (next) {
   const domainSetting = await Settings.findOne({ name: "domain" });
   const domain = domainSetting?.value;
   if (!domain) return next(new Error("Missing Settings: domain"));
-
-  if (this.isModified("password")) {
+  if (this.isModified("password"))
     this.password = bcrypt.hashSync(this.password, 10);
-  }
 
   if (this.isNew) {
     // Keep your existing id scheme for compatibility
@@ -225,7 +223,7 @@ UserSchema.pre("save", async function (next) {
     this.following = followingCircle.id;
 
     const allFollowingCircle = await Circle.create({
-      name: `${this.id} | Following`,
+      name: `${this.id} | All Following`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | All Following`,
       to: this.id,
@@ -264,28 +262,9 @@ UserSchema.pre("save", async function (next) {
   next();
 });
 
-function hashInUpdate(update) {
-  if (!update) return update;
-  // Handle both direct and $set usage
-  if (update.password) {
-    update.password = bcrypt.hashSync(update.password, 10);
-  }
-  if (update.$set && update.$set.password) {
-    update.$set.password = bcrypt.hashSync(update.$set.password, 10);
-  }
-  return update;
-}
-
-UserSchema.pre("update", async function (next) {
-  const update = this.getUpdate();
-  this.setUpdate(hashInUpdate(update));
-  next();
-});
-
 /** ---------- Methods (unchanged) ---------- */
 UserSchema.methods.verifyPassword = async function (plaintext) {
-  if (typeof this.password !== "string" || !this.password) return false;
-  return bcrypt.compare(plaintext, this.password);
+  return await bcrypt.compare(plaintext, this.password);
 };
 
 UserSchema.methods.getMemberships = async function () {

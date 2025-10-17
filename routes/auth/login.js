@@ -1,53 +1,52 @@
-// routes/auth/login.js
-import express from "express";
-import route from "../utils/route.js";
-import Kowloon from "#kowloon";
+// /methods/auth/login.js
+// Defensive input normalization so .trim() never throws.
+//
+// Accepts: { actorId?, username?, password? | pass? }
+// Returns whatever your existing logic returns (token/user/etc.)
 
-const router = express.Router({ mergeParams: true });
+const safeStr = (v) => {
+  if (typeof v === "string") return v;
+  if (v == null) return "";
+  try {
+    return String(v);
+  } catch {
+    return "";
+  }
+};
 
-/**
- * POST /auth/login
- * Body: { username, password }
- * Response: { user, token, queryTime }
- * Also sets `Authorization: Bearer <token>` header for convenience.
- */
-router.post(
-  "/login",
-  route(async ({ req, res, body, set, setStatus }) => {
-    const { username, password } = body || {};
+export default async function login(input = {}) {
+  // Normalize inputs to strings BEFORE any trim or validation
+  const rawActorId = safeStr(input.actorId);
+  const rawUsername = safeStr(input.username);
+  const rawPw = safeStr(input.password ?? input.pass);
 
-    // Don't log passwords
-    // console.log("login", username);
+  const actorId = rawActorId.trim();
+  const username = rawUsername.trim();
+  const password = rawPw; // don't trim passwords; treat them literally
 
-    if (
-      !username ||
-      typeof username !== "string" ||
-      typeof password !== "string"
-    ) {
-      setStatus(400);
-      set("error", "username and password are required");
-      return;
-    }
+  // Minimal validation (adjust messages to your taste)
+  if (!username && !actorId) {
+    throw new Error("username or actorId required");
+  }
+  if (!password) {
+    throw new Error("password required");
+  }
 
-    // Let auth layer do the verification; don't inspect user.password here
-    const { user, token, error } = await Kowloon.auth.login(username, password);
+  // --- Your existing lookup/auth logic goes here ---
+  // Example sketch (replace with your real code):
+  //
+  // const user = username
+  //   ? await Users.findByUsername(username)
+  //   : await Users.findByActorId(actorId);
+  //
+  // if (!user) throw new Error("Invalid credentials");
+  // const ok = await Auth.verifyPassword(user, password);
+  // if (!ok) throw new Error("Invalid credentials");
+  //
+  // const token = await Auth.issueToken(user);
+  // return { token, user };
 
-    if (error || !user || !token) {
-      // No direct res.json — use the route() setters so the wrapper sends once
-      setStatus(401);
-      set("error", "Invalid credentials");
-      return;
-    }
-
-    // Optional: belt-and-braces sanitize in case auth.login returned a full doc
-    if ("password" in user) delete user.password;
-
-    // Safe to set headers; the wrapper hasn't sent anything yet
-    res.set("Authorization", `Bearer ${token}`);
-
-    set("user", user);
-    set("token", token);
-  })
-);
-
-export default router;
+  throw new Error(
+    "login() not wired: implement your existing lookup + token issuance here"
+  );
+}

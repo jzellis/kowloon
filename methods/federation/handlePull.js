@@ -127,7 +127,7 @@ function toItem(d, fallbackType) {
   return {
     id: d.id, // e.g. "post:<uuid>@local.domain"
     type,
-    actorId: d.actorId || d.authorId || d.ownerId, // typical actor field
+    actorId: d.actorId, // typical actor field
     createdAt:
       d.createdAt || d.published || d.updatedAt || new Date().toISOString(),
     visibility: inferVisibility(d), // "public" | "server" | "circle"

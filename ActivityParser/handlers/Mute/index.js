@@ -4,25 +4,43 @@ import { Circle, User } from "#schema";
 import objectById from "#methods/get/objectById.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 
+// Extract the user being muted from `object` (preferred) or legacy `target`
+function pickMemberId(activity) {
+  const obj = activity?.object;
+  if (typeof obj === "string" && obj.trim()) return obj.trim();
+  if (obj && typeof obj === "object" && !Array.isArray(obj)) {
+    const v = (obj.actorId ?? "").toString().trim();
+    if (v) return v;
+  }
+  if (typeof activity?.target === "string" && activity.target.trim()) {
+    return activity.target.trim(); // legacy
+  }
+  return null;
+}
+
 export default async function Mute(activity) {
   try {
-    // ---- Validation ----
     if (!activity?.actorId || typeof activity.actorId !== "string") {
       return { activity, error: "Mute: missing activity.actorId" };
     }
-    if (!activity?.target || typeof activity.target !== "string") {
-      return { activity, error: "Mute: missing or malformed activity.target" };
+
+    const memberId = pickMemberId(activity);
+    if (!memberId) {
+      return {
+        activity,
+        error: 'Mute requires object ("@user@domain" or {actorId})',
+      };
     }
-    if (activity.target === activity.actorId) {
+
+    if (memberId === activity.actorId) {
       return { activity, error: "Mute: cannot mute yourself" };
     }
 
-    // ---- Load actor and their muted circle ----
+    // Actor & their "muted" circle
     const actor = await User.findOne({ id: activity.actorId });
     if (!actor) {
       return { activity, error: `Mute: user not found: ${activity.actorId}` };
     }
-
     const circleId = actor.muted;
     if (!circleId) {
       return { activity, error: "Mute: user has no 'muted' circle set" };
@@ -33,9 +51,8 @@ export default async function Mute(activity) {
       return { activity, error: `Mute: muted circle not found: ${circleId}` };
     }
 
-    // ---- Build member record ----
-    const memberId = activity.target;
-    const local = await objectById(memberId);
+    // Build a member subdoc (local if we can resolve, otherwise remote stub)
+    const local = await objectById(memberId).catch(() => null);
     const parsed = kowloonId(memberId);
 
     const member = local
@@ -53,45 +70,24 @@ export default async function Mute(activity) {
           server: parsed?.domain,
         };
 
-    // ---- Add only if not already present ----
-    const filter = { id: circle.id, "members.id": { $ne: member.id } };
-    const update = {
-      $push: { members: member },
-      $set: { updatedAt: new Date() },
-    };
-    const opts = { new: true };
+    // Idempotent add
+    const res = await Circle.updateOne(
+      { id: circle.id, "members.id": { $ne: member.id } },
+      { $addToSet: { members: member } }
+    );
 
-    let updatedCircle = await Circle.findOneAndUpdate(filter, update, opts);
-    let added = false;
+    const updatedCircle = await Circle.findOne({ id: circle.id });
+    const added = res.modifiedCount > 0;
 
-    if (updatedCircle) {
-      added = true;
-    } else {
-      // already present or circle vanished
-      updatedCircle = await Circle.findOne({ id: circle.id });
-      if (!updatedCircle) {
-        return {
-          activity,
-          error: `Mute: circle disappeared during update: ${circle.id}`,
-        };
-      }
-    }
-
-    // ---- Annotate for Undo and downstream use ----
+    // Annotate for downstream/Undo
     activity.objectId = member.id; // who was muted
-    activity.target = updatedCircle.id; // which circle was used
+    activity.target = updatedCircle.id; // which circle did the mute
     activity.sideEffects = {
       circleId: updatedCircle.id,
       memberId: member.id,
     };
 
-    // Federation hint: mute is local-only unless you want to federate later
-    return {
-      activity,
-      circle: updatedCircle,
-      added,
-      federate: false,
-    };
+    return { activity, circle: updatedCircle, added, federate: false };
   } catch (err) {
     return { activity, error: err?.message || String(err) };
   }

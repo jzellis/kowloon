@@ -1,78 +1,105 @@
-// /ActivityParser/handlers/Leave/index.js
-
+// /ActivityParser/handlers/Unfollow/index.js
 import { Circle, User } from "#schema";
 
-export default async function Leave(activity) {
+function normalizeUnfollowObject(obj) {
+  if (typeof obj === "string") return { actorId: obj, id: obj, type: "User" };
+  if (obj && typeof obj === "object") {
+    const actorId = obj.actorId || obj.id;
+    if (typeof actorId === "string" && actorId.trim()) {
+      return {
+        ...obj,
+        actorId,
+        id: obj.id || actorId,
+        type: obj.type || "User",
+      };
+    }
+  }
+  return null;
+}
+
+export default async function Unfollow(activity) {
   try {
-    // Basic validations
+    // ---- Basics ----
     if (!activity?.actorId || typeof activity.actorId !== "string") {
-      return { activity, error: "Leave: missing activity.actorId" };
+      return { activity, error: "Unfollow: missing activity.actorId" };
     }
-    if (!activity?.object || typeof activity.object !== "string") {
-      return { activity, error: "Leave: missing or malformed activity.object" };
+    const norm = normalizeUnfollowObject(activity.object);
+    if (!norm) {
+      return {
+        activity,
+        error:
+          "Unfollow: missing/malformed activity.object (string or {actorId})",
+      };
     }
-    if (activity.target && typeof activity.target !== "string") {
-      return { activity, error: "Leave: malformed activity.target" };
+    activity.object = norm;
+
+    // Ensure actor exists (and to make owner checks clearer)
+    const actor = await User.findOne({ id: activity.actorId }).lean();
+    if (!actor) {
+      return {
+        activity,
+        error: `Unfollow: actor not found: ${activity.actorId}`,
+      };
     }
 
-    // Ensure the unfollowing user exists (mainly to guard owner lookups)
-    const unfollower = await User.findOne({ id: activity.actorId }).lean();
-    if (!unfollower) {
-      return { activity, error: `Leave: user not found: ${activity.actorId}` };
-    }
+    const memberId = norm.actorId;
 
-    const memberId = activity.object;
-
-    // Case A: remove from a specific circle (activity.target provided)
+    // ---- Case A: specific circle (must be user-owned) ----
     if (activity.target) {
-      const circleId = activity.target;
+      if (typeof activity.target !== "string") {
+        return {
+          activity,
+          error:
+            "Unfollow: malformed activity.target (circle id string expected)",
+        };
+      }
 
-      // First, do a conditional pull to know if anything was actually removed
+      const circle = await Circle.findOne({ id: activity.target }).lean(false);
+      if (!circle) {
+        return {
+          activity,
+          error: `Unfollow: target circle not found: ${activity.target}`,
+        };
+      }
+      if (circle.actorId !== activity.actorId) {
+        return {
+          activity,
+          error: `Unfollow: target circle not owned by actor (${circle.actorId} != ${activity.actorId})`,
+        };
+      }
+
       const res = await Circle.updateOne(
-        { id: circleId, "members.id": memberId },
+        { id: circle.id, actorId: activity.actorId, "members.id": memberId },
         {
           $pull: { members: { id: memberId } },
           $set: { updatedAt: new Date() },
         }
       );
 
-      // Fetch the latest circle state to return a consistent payload
-      const circle = await Circle.findOne({ id: circleId });
-
-      if (!circle) {
-        return {
-          activity,
-          error: `Leave: target circle not found: ${circleId}`,
-        };
-      }
-
       const removed = res.modifiedCount > 0;
 
-      // annotate for downstreams
       activity.target = circle.id;
       activity.objectId = memberId;
+      activity.sideEffects = { circleId: circle.id, memberId, removed };
 
       return { activity, circle, removed };
     }
 
-    // Case B: no target → remove from all circles owned by the unfollowing user
-    // We don’t create or assume any circles here; if the user owns none, nothing happens.
+    // ---- Case B: no target → remove from ALL circles owned by the actor ----
     const res = await Circle.updateMany(
-      { ownerId: activity.actorId, "members.id": memberId },
+      { actorId: activity.actorId, "members.id": memberId },
       { $pull: { members: { id: memberId } }, $set: { updatedAt: new Date() } }
     );
 
-    // Fetch all circles for the owner (post-update) to return a consistent snapshot
-    const circles = await Circle.find({ ownerId: activity.actorId });
-
-    // annotate for downstreams
+    const removedCount = res.modifiedCount || 0;
     activity.objectId = memberId;
-
-    return {
-      activity,
-      circles,
-      removedCount: res.modifiedCount || 0,
+    activity.sideEffects = {
+      ownerActorId: activity.actorId,
+      memberId,
+      removedCount,
     };
+
+    return { activity, removedCount };
   } catch (err) {
     return { activity, error: err?.message || String(err) };
   }

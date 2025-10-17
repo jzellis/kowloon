@@ -42,12 +42,7 @@ export default async function FlagHandler(activity) {
       (parsedTarget?.type && capitalize(parsedTarget.type)) ||
       undefined;
 
-    const targetActorId =
-      targetDoc?.actorId ||
-      targetDoc?.authorId ||
-      targetDoc?.ownerId ||
-      targetDoc?.userId ||
-      undefined;
+    const targetActorId = targetDoc?.actorId || undefined;
 
     const isTargetRemote =
       !targetDoc ||

@@ -1,5 +1,6 @@
 // methods/getObjectById.js
-import kowloonId from "#methods/parse/kowloonId.js";
+// Robust, parser-driven ID handling for local/remote lookup.
+import parseKowloonId from "#methods/parse/kowloonId.js";
 import getSettings from "#methods/settings/get.js";
 
 // ---------- Errors ----------
@@ -54,9 +55,9 @@ async function defaultFetch(url, { headers, timeoutMs = 8000 } = {}) {
   }
 }
 
-const isLocal = (server, localDomain) =>
-  String(server || "").toLowerCase() ===
-  String(localDomain || "").toLowerCase();
+const eqLower = (a, b) =>
+  String(a || "").toLowerCase() === String(b || "").toLowerCase();
+const isLocal = (server, localDomain) => eqLower(server, localDomain);
 
 const authHeaders = ({ bearer, extra } = {}) => {
   const h = new Headers({ Accept: "application/json" });
@@ -104,7 +105,7 @@ function parseHandle(h) {
 }
 
 // Build public-only filter for anonymous viewers (no viewerId).
-// We try to be schema-aware: if model has 'visibility' or 'to' (string of space-separated ids).
+// We try to be schema-aware: if model has 'visibility' or 'to' (string with space-separated ids).
 function buildAnonymousFilter(Model) {
   const useVis = hasPath(Model, "visibility");
   const useTo = hasPath(Model, "to");
@@ -112,18 +113,17 @@ function buildAnonymousFilter(Model) {
     return { $or: [{ visibility: "public" }, { to: /(^| )@public( |$)/ }] };
   if (useVis) return { visibility: "public" };
   if (useTo) return { to: /(^| )@public( |$)/ };
-  // If neither field exists, default to allowing (most Users/Groups have no per-doc ACL fields)
+  // If neither field exists, default to allowing (Users/Groups often have no per-doc ACL fields)
   return {};
 }
 
 // Prefer universal /resolve; otherwise try resource urls
-function buildResolveUrlForObject(id, type, server) {
-  const u = new URL(`https://${server}/resolve`);
+function buildResolveUrlForObject(id, type, serverDomain) {
+  const u = new URL(`https://${serverDomain}/resolve`);
   u.searchParams.set("id", id);
   return u.toString();
 }
 function buildResolveUrlsForUserHandle({ username, server }) {
-  // Try /resolve?id=@name@domain then actor urls
   return [
     (() => {
       const u = new URL(`https://${server}/resolve`);
@@ -152,10 +152,12 @@ export default async function getObjectById(
     fetcher = defaultFetch,
     getBearerForDomain = null,
     models = null, // optional: inject to avoid lazy import cycles
-    canView = async () => true, // your ACL for local docs when viewerId present
+    canView = async () => true, // ACL for local docs when viewerId present
   } = {}
 ) {
-  if (!id) throw new BadRequest("Missing id");
+  const idStr = String(id || "").trim();
+  if (!idStr) throw new BadRequest("Missing id");
+
   const Models = models || (await getDefaultModels());
   const settings = await getSettings();
   const localDomain = (
@@ -165,7 +167,7 @@ export default async function getObjectById(
   ).toLowerCase();
 
   // ---- A) User handle (@name@domain) ----
-  const handle = id.startsWith("@") ? parseHandle(id) : null;
+  const handle = idStr.startsWith("@") ? parseHandle(idStr) : null;
   if (handle) {
     const local = isLocal(handle.server, localDomain);
 
@@ -179,12 +181,11 @@ export default async function getObjectById(
       const actorUrl1 = `https://${handle.server}/users/${handle.username}`;
       const actorUrl2 = `https://${handle.server}/users/${handle.username}@${handle.server}`;
       const doc =
-        (await Models.User.findOne({ id }).lean()) ||
+        (await Models.User.findOne({ id: idStr }).lean()) ||
         (await Models.User.findOne({ id: actorUrl1 }).lean()) ||
         (await Models.User.findOne({ id: actorUrl2 }).lean());
 
       if (doc) {
-        // If you want "private profiles" enforced, put that in canView(User).
         if (
           enforceLocalVisibility &&
           viewerId &&
@@ -200,21 +201,21 @@ export default async function getObjectById(
         };
       }
       if (local && mode !== "remote" && mode !== "both")
-        throw new NotFound(`User not found: ${id}`);
+        throw new NotFound(`User not found: ${idStr}`);
     }
 
     // 2) Remote
     if (
-      !isLocal(handle.server, localDomain) &&
+      !local &&
       (mode === "remote" || mode === "prefer-local" || mode === "both")
     ) {
       const urls = buildResolveUrlsForUserHandle(handle);
       let lastErr = null;
 
-      // Optional cached user shadow
+      // Cached user shadow
       let cached = null;
       if (maxStaleSeconds > 0) {
-        cached = await Models.User.findOne({ id }).lean();
+        cached = await Models.User.findOne({ id: idStr }).lean();
         if (cached && !isExpired(cached.lastFetchedAt, maxStaleSeconds)) {
           return {
             object: cached,
@@ -226,7 +227,6 @@ export default async function getObjectById(
         }
       }
 
-      // Try each URL until one works
       let res = null,
         urlHit = null;
       let bearer = null;
@@ -244,7 +244,7 @@ export default async function getObjectById(
         try {
           res = await fetcher(url, { headers, timeoutMs });
           urlHit = url;
-          break;
+          if (res) break;
         } catch (e) {
           lastErr = e;
         }
@@ -254,7 +254,7 @@ export default async function getObjectById(
 
       if (res.status === 304 && cached) {
         await Models.User.findOneAndUpdate(
-          { id },
+          { id: idStr },
           { lastCheckedAt: new Date().toISOString() }
         );
         return {
@@ -268,7 +268,7 @@ export default async function getObjectById(
       if (res.status === 401 || res.status === 403)
         throw new NotAuthorized(`Unauthorized at ${handle.server}`);
       if (res.status === 404)
-        throw new NotFound(`Remote user not found: ${id}`);
+        throw new NotFound(`Remote user not found: ${idStr}`);
       if (res.status >= 500)
         throw new UpstreamError(
           `Upstream error from ${handle.server}`,
@@ -289,7 +289,7 @@ export default async function getObjectById(
       if (hydrateRemoteIntoDB) {
         const now = new Date().toISOString();
         hydrated = await Models.User.findOneAndUpdate(
-          { id: payload.id || id },
+          { id: payload.id || idStr },
           { ...payload, etag, originDomain: handle.server, lastFetchedAt: now },
           { upsert: true, new: true, setDefaultsOnInsert: true }
         ).lean();
@@ -303,21 +303,23 @@ export default async function getObjectById(
       };
     }
 
-    throw new NotFound(`User not found: ${id}`);
+    throw new NotFound(`User not found: ${idStr}`);
   }
 
   // ---- B) Object id (type:<_id>@domain) ----
-  const parsed = kowloonId(id); // { type, server, mongoId, id }
-  if (!parsed?.type || !parsed?.server)
-    throw new BadRequest(`Invalid id: ${id}`);
+  const parsed = parseKowloonId(idStr); // { type, domain, ... }
+  const parsedDomain = parsed?.domain || parsed?.server || null; // tolerate legacy parsers
+  if (!parsed?.type || !parsedDomain)
+    throw new BadRequest(`Invalid id: ${idStr}`);
+
   const entry = modelFor(parsed.type, Models);
   if (!entry) throw new BadRequest(`Unsupported type: ${parsed.type}`);
 
   // Local helpers
   const localFind = async () =>
-    entry.model.findOne({ id, deletedAt: null }).lean();
+    entry.model.findOne({ id: idStr, deletedAt: null }).lean();
   const localFindVisible = async () => {
-    let baseFilter = { id, deletedAt: null };
+    let baseFilter = { id: idStr, deletedAt: null };
     // Anonymous → public-only filter
     if (!viewerId && enforceLocalVisibility) {
       baseFilter = { ...baseFilter, ...buildAnonymousFilter(entry.model) };
@@ -330,20 +332,21 @@ export default async function getObjectById(
     return doc;
   };
 
-  const local = isLocal(parsed.server, localDomain);
+  const local = isLocal(parsedDomain, localDomain);
 
   // 1) Local
   if (local || mode === "local" || mode === "prefer-local" || mode === "both") {
     const doc = await localFindVisible();
-    if (doc)
+    if (doc) {
       return {
         object: doc,
         source: "local",
         visibility: doc.visibility || "unknown",
         cached: false,
       };
+    }
     if (local && mode !== "remote" && mode !== "both")
-      throw new NotFound(`Local object not found: ${id}`);
+      throw new NotFound(`Local object not found: ${idStr}`);
   }
 
   // 2) Remote
@@ -355,7 +358,7 @@ export default async function getObjectById(
     let cached = null;
     if (maxStaleSeconds > 0) {
       cached = await entry.model
-        .findOne({ id, originDomain: parsed.server, deletedAt: null })
+        .findOne({ id: idStr, originDomain: parsedDomain, deletedAt: null })
         .lean();
       if (cached && !isExpired(cached.lastFetchedAt, maxStaleSeconds)) {
         return {
@@ -368,11 +371,11 @@ export default async function getObjectById(
       }
     }
 
-    const url = buildResolveUrlForObject(id, parsed.type, parsed.server);
+    const url = buildResolveUrlForObject(idStr, parsed.type, parsedDomain);
     let bearer = null;
     if (getBearerForDomain) {
       try {
-        bearer = await getBearerForDomain(viewerId, parsed.server);
+        bearer = await getBearerForDomain(viewerId, parsedDomain);
       } catch {}
     }
     const headers = authHeaders({
@@ -384,7 +387,7 @@ export default async function getObjectById(
 
     if (res.status === 304 && cached) {
       await entry.model.findOneAndUpdate(
-        { id },
+        { id: idStr },
         { lastCheckedAt: new Date().toISOString() }
       );
       return {
@@ -396,19 +399,19 @@ export default async function getObjectById(
       };
     }
     if (res.status === 401 || res.status === 403)
-      throw new NotAuthorized(`Unauthorized at ${parsed.server}`);
+      throw new NotAuthorized(`Unauthorized at ${parsedDomain}`);
     if (res.status === 404)
-      throw new NotFound(`Remote object not found: ${id}`);
+      throw new NotFound(`Remote object not found: ${idStr}`);
     if (res.status >= 500)
       throw new UpstreamError(
-        `Upstream error from ${parsed.server}`,
+        `Upstream error from ${parsedDomain}`,
         res.status
       );
 
     const ct = res.headers.get("content-type") || "";
     if (!ct.includes("json"))
       throw new UpstreamError(
-        `Unexpected content-type from ${parsed.server}`,
+        `Unexpected content-type from ${parsedDomain}`,
         res.status
       );
 
@@ -420,10 +423,10 @@ export default async function getObjectById(
       const now = new Date().toISOString();
       hydrated = await entry.model
         .findOneAndUpdate(
-          { id: payload.id || id },
+          { id: payload.id || idStr },
           {
             ...payload,
-            originDomain: parsed.server,
+            originDomain: parsedDomain,
             etag,
             lastFetchedAt: now,
             deletedAt: null,
@@ -441,5 +444,5 @@ export default async function getObjectById(
     };
   }
 
-  throw new NotFound(`Object not found: ${id}`);
+  throw new NotFound(`Object not found: ${idStr}`);
 }

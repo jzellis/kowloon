@@ -92,6 +92,7 @@ export default async function createActivity(input) {
       federate: Boolean(result?.federate), // convenience flag for /outbox caller
     };
   } catch (err) {
+    console.err(error);
     return { error: err?.message || String(err) };
   }
 }

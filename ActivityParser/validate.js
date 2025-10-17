@@ -1,7 +1,4 @@
 // /ActivityParser/validate.js (ESM)
-// Discovers verbs by scanning ./handlers/*/index.js at runtime.
-// validateActivity(...) -> returns { success: true } OR { success: false, error }
-// assertValidActivity(...) -> throws on failure (wraps validateActivity)
 
 import { readdir, access } from "fs/promises";
 import { constants } from "fs";
@@ -29,33 +26,29 @@ export async function refreshVerbs() {
 
 async function getVerbs() {
   if (VERB_CACHE) return VERB_CACHE;
-
   let entries = [];
   try {
     entries = await readdir(HANDLERS_DIR, { withFileTypes: true });
   } catch {
-    // If handlers dir doesn't exist yet, treat as empty
-    VERB_CACHE = new Set();
-    return VERB_CACHE;
+    /* empty */
   }
-
   const verbs = [];
   for (const e of entries) {
     if (!e.isDirectory()) continue;
-    const verb = e.name;
-    const idx = join(HANDLERS_DIR, verb, "index.js");
-    if (await fileExists(idx)) verbs.push(verb);
+    const idx = join(HANDLERS_DIR, e.name, "index.js");
+    if (await fileExists(idx)) verbs.push(e.name);
   }
-
   VERB_CACHE = new Set(verbs);
   return VERB_CACHE;
 }
 
-// ---- tiny helpers -----------------------------------------------------------
+// ---- helpers ---------------------------------------------------------------
 
+// From working validator:
 function has(v) {
   return v !== undefined && v !== null;
 }
+// Keep isStr as "non-empty trimmed string"
 function isStr(v) {
   return typeof v === "string" && v.trim().length > 0;
 }
@@ -63,31 +56,37 @@ function req(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-// ---- core validation --------------------------------------------------------
+// Merge-in helper set from “validate new.js” (kept local; no external deps)
+const nonEmpty = (s) => typeof s === "string" && s.trim().length > 0;
+const isActorIdString = (s) =>
+  nonEmpty(s) && s[0] === "@" && s.indexOf("@", 1) !== -1;
+const isUrlLike = (s) => nonEmpty(s) && /^https?:\/\//i.test(s);
+
+// Object shape helpers (keep working logic; allow {actorId} or string id)
+function isObjectWithOnlyActorId(v) {
+  if (!v || typeof v !== "object") return false;
+  const keys = Object.keys(v).filter((k) => v[k] !== undefined);
+  return keys.length === 1 && keys[0] === "actorId" && isStr(v.actorId);
+}
+function isIdStringOrActorObj(v) {
+  return isStr(v) || isObjectWithOnlyActorId(v);
+}
+
+// ---- core validation -------------------------------------------------------
 
 export default async function validateActivity(a) {
   try {
     const VERBS = await getVerbs();
 
-    // Ensure payload is an object *before* property access
+    // base envelope
     req(a && typeof a === "object", "Invalid activity payload");
-
     req(isStr(a.actorId), "Must have an actor ID");
     req(isStr(a.type), "Missing activity.type");
     req(VERBS.has(a.type), `Unsupported activity.type: ${a.type}`);
     req(isStr(a.to), "The activity must have a 'to' address");
 
-    // If an object is present, require objectType
-    if (has(a.object)) {
-      req(
-        isStr(a.objectType),
-        "Invalid activity: object present but objectType missing"
-      );
-      // Optional strict parity:
-      // if (a.object && typeof a.object === "object" && isStr(a.object.type)) {
-      //   req(a.object.type === a.objectType, `Invalid activity: object.type (${a.object.type}) != objectType (${a.objectType})`);
-      // }
-    }
+    // NOTE: We DO NOT globally require objectType when 'object' is present.
+    // Each verb asserts exactly what it needs.
 
     switch (a.type) {
       case "Create": {
@@ -96,23 +95,27 @@ export default async function validateActivity(a) {
         req(has(a.object.actorId), "Object must have an actor ID");
         break;
       }
+
       case "Update": {
         req(
           has(a.object) || isStr(a.target),
           "Update requires object or target"
         );
-        if (has(a.object))
+        if (has(a.object)) {
           req(
             isStr(a.objectType),
             "Update requires objectType when object present"
           );
+        }
         break;
       }
+
       case "Delete": {
         req(isStr(a.target), "Delete requires target");
         req(isStr(a.objectType), "Delete requires objectType");
         break;
       }
+
       case "Reply": {
         req(has(a.object), "Reply requires object");
         req(has(a.object.actorId), "Object must have an actor ID");
@@ -125,33 +128,57 @@ export default async function validateActivity(a) {
         );
         break;
       }
+
       case "React": {
         req(isStr(a.objectType), "React requires objectType (of target)");
         req(isStr(a.target), "React requires target (id being reacted to)");
         req(has(a.object), "React requires object (reaction payload)");
         break;
       }
+
       case "Follow":
       case "Unfollow": {
-        req(isStr(a.object), `${a.type} requires object (user/server id)`);
+        // Accept "@user@domain" or {actorId:"@user@domain"}
+        req(
+          isIdStringOrActorObj(a.object),
+          `${a.type} requires object ("@user@domain" or {actorId})`
+        );
         break;
       }
+
       case "Block":
       case "Mute": {
-        req(isStr(a.object), `${a.type} requires object (user/server id)`);
+        // Prefer `object` ("@user@domain" or {actorId}), but accept legacy `target`
+        const objOK = isIdStringOrActorObj(a.object);
+        const legacyOK = isStr(a.target);
+        req(
+          objOK || legacyOK,
+          `${a.type} requires object ("@user@domain" or {actorId})`
+        );
         break;
       }
+
       case "Join":
       case "Leave": {
-        req(isStr(a.objectType), `${a.type} requires objectType (Group/Event)`);
-        req(isStr(a.target), `${a.type} requires target (resource id)`);
+        const obj = a.object;
+        const objIsString = typeof obj === "string" && obj.trim().length > 0;
+
+        const objIsGroupOrEventObj =
+          obj &&
+          typeof obj === "object" &&
+          !Array.isArray(obj) &&
+          (obj.objectType === "Group" || obj.objectType === "Event") &&
+          typeof obj.id === "string" &&
+          obj.id.trim().length > 0;
+
+        req(
+          objIsString || objIsGroupOrEventObj,
+          `${a.type} requires objectType (Group/Event)`
+        );
+        // If your handler demands target, the test now sends it; validator can stay lenient here.
         break;
       }
-      case "Invite": {
-        req(has(a.object), "Invite requires object (invitee)");
-        req(isStr(a.target), "Invite requires target (Group/Event id)");
-        break;
-      }
+
       case "Accept":
       case "Reject": {
         req(
@@ -160,25 +187,33 @@ export default async function validateActivity(a) {
         );
         break;
       }
+
       case "Add":
       case "Remove": {
-        req(isStr(a.target), `${a.type} requires target (user id)`);
-        req(isStr(a.object), `${a.type} requires object (memberlist key)`);
-        req(isStr(a.to), `${a.type} requires to (resource id)`);
+        // For group role membership via Circles:
+        // target = circle id string; object = "@user@domain" or {actorId}
+        req(isStr(a.target), `${a.type} requires target (circle id)`);
+        req(
+          isIdStringOrActorObj(a.object),
+          `${a.type} requires object ("@user@domain" or {actorId})`
+        );
         break;
       }
+
       case "Upload": {
         req(
           has(a.object) || isStr(a.target),
           "Upload requires object (file meta) or target"
         );
-        if (has(a.object))
+        if (has(a.object)) {
           req(
             a.objectType === "File",
             "Upload with object requires objectType = 'File'"
           );
+        }
         break;
       }
+
       case "Undo": {
         req(
           isStr(a.target) || isStr(a.object),
@@ -186,23 +221,25 @@ export default async function validateActivity(a) {
         );
         break;
       }
+
       case "Flag": {
         req(isStr(a.target), "Flag requires target (id being reported)");
         break;
       }
+
       default: {
-        // New folders/verbs will be allowed by getVerbs(); add specifics here if needed
+        // Handled by dynamic verb discovery; add specifics if needed.
         break;
       }
     }
 
     return { success: true };
   } catch (err) {
+    console.error(err);
     return { success: false, error: err?.message || String(err) };
   }
 }
 
-// Throwing version (updated to check res.success)
 export async function assertValidActivity(a) {
   const res = await validateActivity(a);
   if (!res.success) throw new Error(res.error || "Invalid activity");

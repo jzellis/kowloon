@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const router = express.Router({ mergeParams: true });
 
-// --- parse JSON EARLY (so route wrapper sees req.body) ----------------------
+// --- parse JSON early -------------------------------------------------------
 const JSON_LIMIT = process.env.JSON_LIMIT || "2mb";
 const jsonTypes = [
   "application/json",
@@ -27,17 +27,14 @@ router.use(
         .toLowerCase();
       if (!ct) return false;
       if (jsonTypes.includes(ct)) return true;
-      // also allow vendor types that end with +json
       if (ct.endsWith("+json")) return true;
       return false;
     },
   })
 );
-
-// Optional: urlencoded (harmless, helps some tools)
 router.use(express.urlencoded({ extended: false, limit: JSON_LIMIT }));
 
-// --- request logging (endpoint + querystring) -------------------------------
+// --- request logging ---------------------------------------------------------
 const API_LOG =
   /^(1|true|yes)$/i.test(process.env.API_LOG || "") ||
   process.env.NODE_ENV === "development";
@@ -51,7 +48,81 @@ router.use((req, _res, next) => {
   next();
 });
 
-// --- helpers you already have ----------------------------------------------
+// === NEW: attach req.user from Authorization: Bearer <token> ================
+// Tries your own auth helpers if present; otherwise falls back to JWT verify.
+router.use(async (req, _res, next) => {
+  if (req.user && req.user.id) return next();
+
+  const auth = req.headers.authorization || "";
+  const m = auth.match(/^Bearer\s+(.+)$/i);
+  if (!m) return next();
+  const token = m[1];
+
+  // Try your project methods first (optional imports; won't throw if missing)
+  try {
+    // 1) whoami(token) -> { id, ... }
+    try {
+      const mod = await import("#methods/auth/whoami.js");
+      const whoami = mod?.default || mod?.whoami || mod;
+      if (typeof whoami === "function") {
+        const u = await whoami(token);
+        if (u && u.id) {
+          req.user = { id: u.id, ...u };
+          if (API_LOG) console.log(`API auth user (whoami): ${req.user.id}`);
+          return next();
+        }
+      }
+    } catch {}
+
+    // 2) verify(token) -> { id, ... }
+    try {
+      const mod = await import("#methods/auth/verify.js");
+      const verify = mod?.default || mod?.verify || mod;
+      if (typeof verify === "function") {
+        const u = await verify(token);
+        if (u && u.id) {
+          req.user = { id: u.id, ...u };
+          if (API_LOG) console.log(`API auth user (verify): ${req.user.id}`);
+          return next();
+        }
+      }
+    } catch {}
+
+    // 3) fallback: decode JWT if available
+    try {
+      const jwtMod = await import("jsonwebtoken");
+      const getSettingsMod = await import("#methods/settings/get.js");
+      const getSettings = getSettingsMod?.default || getSettingsMod;
+
+      const settings =
+        typeof getSettings === "function"
+          ? await getSettings().catch(() => ({}))
+          : {};
+      const secret =
+        settings?.jwtSecret ||
+        settings?.jwt?.secret ||
+        process.env.JWT_SECRET ||
+        process.env.JWT_KEY;
+
+      if (secret && jwtMod?.verify) {
+        const payload = jwtMod.verify(token, secret);
+        const id = payload?.id || payload?.sub || payload?.actorId;
+        if (id) {
+          req.user = { id };
+          if (API_LOG) console.log(`API auth user (jwt): ${req.user.id}`);
+        }
+      }
+    } catch {
+      // ignore JWT errors; req.user stays undefined
+    }
+  } catch {
+    // never block the request on auth attach
+  }
+  next();
+});
+
+// ---------------------------------------------------------------------------
+// existing dynamic route mounting (unchanged)
 function isFile(p) {
   try {
     return fs.statSync(p).isFile();
@@ -59,15 +130,11 @@ function isFile(p) {
     return false;
   }
 }
-
 const routesRoot = __dirname;
 const entries = fs.readdirSync(routesRoot, { withFileTypes: true });
-const mounted = [];
 
-// Mount subrouters (folders with index.js)
 for (const dirent of entries) {
   if (!dirent.isDirectory()) continue;
-
   const name = dirent.name;
   if (name === "middleware" || name === "utils") {
     console.log(`routes: skip ${name} (utility)`);
@@ -78,77 +145,19 @@ for (const dirent of entries) {
     console.log(`routes: skip ${name} (no index.js)`);
     continue;
   }
-
   const mountPath = name === "home" ? "/" : `/${name}`;
   try {
     const mod = await import(pathToFileURL(indexJs).href);
     const subrouter = mod.default || mod.router || mod;
-    if (!subrouter || typeof subrouter !== "function") {
+    if (typeof subrouter !== "function") {
       console.warn(`routes: skip ${name} (default export is not a router)`);
       continue;
     }
     router.use(mountPath, subrouter);
-    mounted.push({ name, mountPath, router: subrouter });
     console.log(`routes: mounted ${mountPath}`);
   } catch (e) {
     console.error(`routes: failed to mount ${name}:`, e.message);
   }
-}
-
-// Dev-only introspection (unchanged)
-if (process.env.NODE_ENV !== "production") {
-  const regexToPath = (layer) => {
-    if (layer?.regexp?.fast_slash) return "";
-    if (layer?.route?.path) return layer.route.path;
-    const src = layer?.regexp?.source;
-    if (!src) return "";
-    let p = src.replace(/\\\//g, "/").replace(/^\^/, "").replace(/\$$/, "");
-    if (Array.isArray(layer.keys) && layer.keys.length) {
-      let i = 0;
-      p = p
-        .replace(
-          /\(\?:\(\[\^\\\/]\+\?\)\)/g,
-          () => `:${layer.keys[i++]?.name || "param"}`
-        )
-        .replace(
-          /\(\[\^\/]+\?\)/g,
-          () => `:${layer.keys[i++]?.name || "param"}`
-        );
-    }
-    p = p.replace(/\/\?\(\?=\\\/\|\$\)/g, "").replace(/\/\?\(\?=\/\|\$\)/g, "");
-    if (p && !p.startsWith("/")) p = "/" + p;
-    return p;
-  };
-  const walk = (rtr, base = "") => {
-    const out = [];
-    const stack = rtr?.stack || [];
-    for (const layer of stack) {
-      if (layer.name === "router" && layer.handle && layer.handle.stack) {
-        const seg = regexToPath(layer);
-        const nextBase = (base + seg).replace(/\/+/g, "/");
-        out.push({
-          path: nextBase || "/",
-          children: walk(layer.handle, nextBase),
-        });
-      } else if (layer.route) {
-        const routePath = (base + layer.route.path).replace(/\/+/g, "/") || "/";
-        const methods = Object.keys(layer.route.methods || {}).map((m) =>
-          m.toUpperCase()
-        );
-        out.push({ methods, path: routePath });
-      }
-    }
-    return out;
-  };
-  const buildTree = () =>
-    mounted.map(({ name, mountPath, router: r }) => ({
-      mount: mountPath,
-      dir: name,
-      tree: walk(r, mountPath === "/" ? "" : mountPath),
-    }));
-  router.get("/__routes", (_req, res) => {
-    res.json({ generatedAt: new Date().toISOString(), mounts: buildTree() });
-  });
 }
 
 export default router;

@@ -9,9 +9,9 @@ const defaultSettings = (ctx) => {
   });
 
   return {
-    actorId: `@${ctx.domain}`,
+    actorId: `@${ctx.DOMAIN}`,
     profile: {
-      name: ctx.siteTitle,
+      name: ctx.SITE_TITLE,
       subtitle: "My brand new Kowloon server",
       description:
         "<p>This is a new Kowloon server that I've set up. It's going to be a great place for me and my community to share ideas with each other and the world!</p>",
@@ -22,9 +22,9 @@ const defaultSettings = (ctx) => {
         longitude: "114.190278",
       },
       icon: "/images/icons/server.png",
-      urls: [`https://${ctx.domain}`],
+      urls: [`https://${ctx.DOMAIN}`],
     },
-    domain: ctx.domain,
+    domain: ctx.DOMAIN,
     registrationIsOpen: false,
     maxUploadSize: 100,
     defaultPronouns: {
@@ -120,6 +120,8 @@ const defaultSettings = (ctx) => {
       username: ctx.smtpUser || "test",
       password: ctx.smtpPass || "test",
     },
+    adminCircle: "",
+    modCircle: "",
     publicKey: publicKey,
     privateKey: privateKey,
     createdAt: new Date(),

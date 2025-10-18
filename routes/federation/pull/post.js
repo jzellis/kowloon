@@ -27,7 +27,7 @@ export default route(async (api) => {
   //   return;
   // }
 
-  // Delegate selection to Kowloon — this should return { items, next? }
+  // Delegate selection to Kowloon -- this should return { items, next? }
   // items: array of minimal objects (id,type,actorId,createdAt,visibility, ...snapshot)
   // next:  opaque cursor or ISO timestamp the caller should use on their next request
   const result = await Kowloon.federation.handlePull({

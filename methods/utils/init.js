@@ -3,7 +3,8 @@ import mongoose from "mongoose";
 
 import defaultSettings from "#config/defaultSettings.js";
 import defaultUser from "#config/defaultUser.js";
-import { Settings, User } from "#schema";
+import { Settings, User, Circle } from "#schema";
+import toMember from "#methods/parse/toMember.js";
 
 function pickDbUri() {
   return (
@@ -49,6 +50,31 @@ export default async function init(Kowloon, ctx = {}) {
       console.log("Created setting:", name);
     }
   }
+
+  if ((await Circle.find({}).countDocuments()) === 0) {
+    const adminCircle = await Circle.create({
+      name: `${ctx.SITE_TITLE || "Kowloon"} Admins`,
+      to: "",
+      reactTo: "",
+      replyTo: "",
+      actorId: `@${process.env.DOMAIN}`,
+    });
+
+    const modCircle = await Circle.create({
+      name: `${ctx.SITE_TITLE || "Kowloon"} Moderators`,
+      to: "",
+      reactTo: "",
+      replyTo: "",
+      actorId: `@${process.env.DOMAIN}`,
+    });
+
+    await Settings.updateOne(
+      { name: "adminCircle" },
+      { value: adminCircle.id }
+    );
+    await Settings.updateOne({ name: "modCircle" }, { value: modCircle.id });
+  }
+
   const settingsDocs = await Settings.find().lean();
   for (const s of settingsDocs) {
     Kowloon.settings[s.name] = s.value;
@@ -62,10 +88,14 @@ export default async function init(Kowloon, ctx = {}) {
     const adminPassword = adminUser.password; // only log in non-prod
     const created = await User.create(adminUser);
 
-    await Settings.findOneAndUpdate(
-      { name: "adminUsers" },
-      { $addToSet: { value: created.id } },
-      { upsert: true }
+    const member = toMember(created);
+    await Circle.findOneAndUpdate(
+      { id: Kowloon.settings.adminCircle },
+      { memberCount: 1, $addToSet: { members: toMember(created) } }
+    );
+    await Circle.findOneAndUpdate(
+      { id: Kowloon.settings.modCircle },
+      { memberCount: 1, $addToSet: { members: toMember(created) } }
     );
 
     if (process.env.NODE_ENV !== "production") {

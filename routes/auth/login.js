@@ -1,52 +1,92 @@
-// /methods/auth/login.js
-// Defensive input normalization so .trim() never throws.
-//
-// Accepts: { actorId?, username?, password? | pass? }
-// Returns whatever your existing logic returns (token/user/etc.)
+// /routes/auth/login.js
+import route from "../utils/route.js";
+import doLogin from "#methods/auth/login.js";
 
-const safeStr = (v) => {
-  if (typeof v === "string") return v;
-  if (v == null) return "";
-  try {
-    return String(v);
-  } catch {
-    return "";
-  }
+const DEV =
+  process.env.NODE_ENV === "development" ||
+  /^(1|true|yes)$/i.test(process.env.ROUTE_DEBUG || "");
+
+const asStr = (v) => (typeof v === "string" ? v : v == null ? "" : String(v));
+const usernameFromActorId = (aid) => {
+  const m = asStr(aid).match(/^@([^@]+)@[^@]+$/);
+  return m ? m[1] : "";
 };
 
-export default async function login(input = {}) {
-  // Normalize inputs to strings BEFORE any trim or validation
-  const rawActorId = safeStr(input.actorId);
-  const rawUsername = safeStr(input.username);
-  const rawPw = safeStr(input.password ?? input.pass);
+export default route(
+  async ({ body, set, setStatus }) => {
+    const b = body && typeof body === "object" ? body : {};
 
-  const actorId = rawActorId.trim();
-  const username = rawUsername.trim();
-  const password = rawPw; // don't trim passwords; treat them literally
+    // Strict schema: only { username? , id? , password }
+    const allowed = new Set(["username", "id", "password"]);
+    const extras = Object.keys(b).filter((k) => !allowed.has(k));
+    if (extras.length) {
+      setStatus(400);
+      set("error", `Unsupported fields: ${extras.join(", ")}`);
+      return;
+    }
 
-  // Minimal validation (adjust messages to your taste)
-  if (!username && !actorId) {
-    throw new Error("username or actorId required");
+    const username = asStr(b.username).trim();
+    const id = asStr(b.id).trim(); // actor id like "@user@domain" OR server id like "@kwln.org"
+    const password = asStr(b.password); // do NOT trim passwords
+
+    if ((!username && !id) || !password) {
+      setStatus(400);
+      set("error", "username or id, and password are required");
+      return;
+    }
+
+    let result = null;
+
+    try {
+      if (username) {
+        // Primary: positional call expected by many legacy auth implementations
+        if (DEV) console.log("AUTH LOGIN: trying username positional");
+        result = await doLogin(username, password);
+      } else {
+        // id path
+        if (DEV) console.log("AUTH LOGIN: trying actorId object");
+        result = await doLogin({ actorId: id, password });
+
+        // Fallback: if id was "@user@domain", try positional username
+        if (result?.error) {
+          const unameFromId = usernameFromActorId(id);
+          if (unameFromId) {
+            if (DEV)
+              console.log(
+                "AUTH LOGIN: fallback to username positional from id"
+              );
+            const alt = await doLogin(unameFromId, password);
+            if (!alt?.error) result = alt;
+          }
+        }
+      }
+    } catch (err) {
+      // If the auth method actually threw (not just returned {error}), treat as 401
+      setStatus(401);
+      set("error", err?.message || "Invalid credentials");
+      return;
+    }
+
+    if (!result || result.error) {
+      // Clean 401 for any auth error ("Invalid credentials", "No password set", etc.)
+      setStatus(401);
+      set("error", result?.error || "Invalid credentials");
+      return;
+    }
+
+    const token = result.token ?? result.accessToken ?? result.jwt;
+    if (!token) {
+      setStatus(500);
+      set("error", "Login: missing token in response");
+      return;
+    }
+
+    setStatus(200);
+    set("token", token);
+    if (result.user) set("user", result.user);
+  },
+  {
+    allowUnauth: true, // login must not require req.user
+    label: "AUTH LOGIN",
   }
-  if (!password) {
-    throw new Error("password required");
-  }
-
-  // --- Your existing lookup/auth logic goes here ---
-  // Example sketch (replace with your real code):
-  //
-  // const user = username
-  //   ? await Users.findByUsername(username)
-  //   : await Users.findByActorId(actorId);
-  //
-  // if (!user) throw new Error("Invalid credentials");
-  // const ok = await Auth.verifyPassword(user, password);
-  // if (!ok) throw new Error("Invalid credentials");
-  //
-  // const token = await Auth.issueToken(user);
-  // return { token, user };
-
-  throw new Error(
-    "login() not wired: implement your existing lookup + token issuance here"
-  );
-}
+);

@@ -58,7 +58,7 @@ export default route(
       activity.actorId = user.id;
     }
 
-    // Ensure to/reactTo/replyTo exist on activity + object (don’t override if present)
+    // Ensure to/reactTo/replyTo exist on activity + object (don't override if present)
     if (!("to" in activity)) activity.to = "";
     if (!("reactTo" in activity)) activity.reactTo = "";
     if (!("replyTo" in activity)) activity.replyTo = "";

@@ -1,14 +1,14 @@
 // /schema/Event.js
 import mongoose from "mongoose";
 import Settings from "./Settings.js";
-import { Circle, User } from "./index.js";
+import { Circle, User, React, Reply } from "./index.js";
 
 const { Schema } = mongoose;
 
 // ---- Event Schema: circle references instead of embedded arrays ----
 const EventSchema = new Schema(
   {
-    id: { type: String, key: true }, // global stable id e.g. event:<_id>@<domain>
+    id: { type: String, key: true, index: true }, // global stable id e.g. event:<_id>@<domain>
     type: { type: String, default: "Event" },
     actor: { type: Object, default: undefined },
     actorId: { type: String, required: true }, // creator's @user@domain (local for local events)
@@ -36,11 +36,18 @@ const EventSchema = new Schema(
     interested: { type: String, default: "" }, // circle id
     attending: { type: String, default: "" }, // circle id
     blocked: { type: String, default: "" }, // circle id  <-- NEW
+    adminCount: { type: Number, default: 1 },
+    invitedCount: { type: Number, default: 0 },
+    interestedCount: { type: Number, default: 0 },
+    attendingCount: { type: Number, default: 1 },
+    blockedCount: { type: Number, default: 0 },
 
     // Denormalized counts (optional; keep for UI speed)
     replyCount: { type: Number, default: 0 },
     reactCount: { type: Number, default: 0 },
     shareCount: { type: Number, default: 0 },
+    inbox: { type: String, alias: "inboxUrl" },
+    outbox: { type: String, alias: "outboxUrl" },
 
     // Soft delete
     deletedAt: { type: Date, default: null },
@@ -62,6 +69,10 @@ EventSchema.pre("save", async function (next) {
     const domain = domainSetting?.value;
     const serverActorId = actorIdSetting?.value;
 
+    if (!this.inbox) this.inbox = `https://${domain}/events/${this.id}/inbox`;
+    if (!this.outbox)
+      this.outbox = `https://${domain}/events/${this.id}/outbox`;
+
     // normalize title/name
     if (this.title) this.title = this.title.trim();
     if (!this.title && this.name) this.title = String(this.name).trim();
@@ -72,6 +83,19 @@ EventSchema.pre("save", async function (next) {
       this.url = `https://${domain}/events/${this.id}`;
     }
     if (!this.server && serverActorId) this.server = serverActorId;
+
+    // Safe attendingCount update (only on updates and not during the moment we first set attending)
+    if (!this.isNew && this.attending && !this.isModified("attending")) {
+      const c = await Circle.findOne({ id: this.attending })
+        .select("members")
+        .lean();
+      this.attendingCount = Array.isArray(c?.members)
+        ? c.members.length
+        : this.attendingCount ?? 0;
+    }
+
+    this.reactCount = await React.find({ target: this.id }).countDocuments();
+    this.replyCount = await Reply.find({ target: this.id }).countDocuments();
 
     next();
   } catch (err) {
@@ -105,8 +129,13 @@ EventSchema.post("save", async function (doc) {
         reactTo: doc.id,
       });
       // Store back the circle id on the event document field that references it
-      doc[suffix.toLowerCase()] = created.id; // admins|invited|interested|attending|blocked
-      await doc.save(); // persist the circle id back to the Event
+      const field = suffix.toLowerCase(); // admins|invited|interested|attending|blocked
+      doc[field] = created.id;
+      // Persist without re-entering pre('save') hooks (avoid racing the attendingCount calc)
+      await doc.constructor.updateOne(
+        { _id: doc._id },
+        { $set: { [field]: created.id } }
+      );
       return created;
     }
 
@@ -153,6 +182,18 @@ EventSchema.post("save", async function (doc) {
         { $push: { members: member }, $set: { updatedAt: new Date() } },
         { new: true }
       );
+
+      // Finalize attendingCount now that the creator has been seeded
+      if (attendingCircle?.id) {
+        const c = await Circle.findOne({ id: attendingCircle.id })
+          .select("members")
+          .lean();
+        const count = Array.isArray(c?.members) ? c.members.length : 0;
+        await doc.constructor.updateOne(
+          { _id: doc._id },
+          { $set: { attendingCount: count } }
+        );
+      }
     }
 
     // No default seeds for invited/interested/attending/blocked

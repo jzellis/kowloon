@@ -9,6 +9,9 @@
 import { Activity } from "#schema";
 import ActivityParser from "#ActivityParser";
 import validateActivity from "#ActivityParser/validate.js";
+import ObjectById from "#methods/get/objectById.js";
+import toMember from "#methods/parse/toMember.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 
 export default async function createActivity(input) {
   try {
@@ -47,6 +50,13 @@ export default async function createActivity(input) {
     const valid = await validateActivity(activity);
     if (!valid?.success) {
       return { error: valid?.error || "Invalid activity" };
+    }
+
+    // Gets the activity User and sets it on the activity if not already set
+    if (!activity.actor && kowloonId(activity.actorId).type === "User") {
+      let actor = (await ObjectById(activity.actorId)).object;
+
+      activity.actor = toMember(actor);
     }
 
     // ---- Dispatch to the verb handler -------------------------------------
@@ -92,7 +102,7 @@ export default async function createActivity(input) {
       federate: Boolean(result?.federate), // convenience flag for /outbox caller
     };
   } catch (err) {
-    console.err(error);
+    console.error(err);
     return { error: err?.message || String(err) };
   }
 }

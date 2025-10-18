@@ -1,4 +1,4 @@
-// Leave: actor exits an Event or Group they’re part of.
+// Leave: actor exits an Event or Group they're part of.
 // Event: remove from Attending and Interested (and Invited, if present).
 // Group: remove from Members (and Invited, if present).
 // Idempotent; records which circles were touched in sideEffects.
@@ -70,7 +70,7 @@ export default async function Leave(activity) {
       if ((ops[1].modifiedCount || 0) > 0) removedFrom.push("interested");
       if ((ops[2].modifiedCount || 0) > 0) removedFrom.push("invited");
 
-      // annotate for Undo (note: “Leave” undo is optional / policy-dependent)
+      // annotate for Undo (note: "Leave" undo is optional / policy-dependent)
       activity.objectId = activity.actorId;
       activity.sideEffects = {
         removedFrom,

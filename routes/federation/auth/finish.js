@@ -2,7 +2,7 @@
 import route from "../../utils/route.js";
 import Kowloon from "#kowloon";
 
-// (Optional) You can verify a signature over the nonce here if you’re doing key-possession.
+// (Optional) You can verify a signature over the nonce here if you're doing key-possession.
 // For now we show JWT validation + (optional) DPoP or server HTTP Signature.
 
 export default route(async (api) => {

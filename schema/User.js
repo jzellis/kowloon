@@ -9,7 +9,7 @@ import { Settings, Circle, Group } from "./index.js";
 
 const UserSchemaDef = {
   // Existing fields
-  id: { type: String, unique: true }, // e.g., @alice@kwln.org (your current format—kept for compatibility)
+  id: { type: String, unique: true }, // e.g., @alice@kwln.org (your current format--kept for compatibility)
   server: { type: String },
   objectType: { type: String, default: "User" },
   type: { type: String, default: "Person" },

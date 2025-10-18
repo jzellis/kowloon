@@ -1,13 +1,13 @@
 // /schema/Group.js
 import mongoose from "mongoose";
 import Settings from "./Settings.js";
-import { Circle, User } from "./index.js";
+import { Circle, User, React, Reply } from "./index.js";
 
 const { Schema } = mongoose;
 
 const GroupSchema = new Schema(
   {
-    id: { type: String, key: true },
+    id: { type: String, key: true, index: true },
     objectType: { type: String, default: "Group" },
 
     // Ownership / actor
@@ -26,12 +26,13 @@ const GroupSchema = new Schema(
     replyTo: { type: String, default: "" },
     reactTo: { type: String, default: "" },
 
-    // Circle references (store the Circle IDs — ownerId of each is this group's id)
+    // Circle references (store the Circle IDs -- ownerId of each is this group's id)
     admins: { type: String, default: "" }, // circle id
     moderators: { type: String, default: "" }, // circle id
     members: { type: String, default: "" }, // circle id
     invited: { type: String, default: "" }, // circle id
     blocked: { type: String, default: "" }, // circle id
+    memberCount: { type: Number, default: 1 },
 
     // Denormalized counts (optional)
     replyCount: { type: Number, default: 0 },
@@ -44,6 +45,8 @@ const GroupSchema = new Schema(
 
     // Links
     url: { type: String, default: undefined },
+    inbox: { type: String, alias: "inboxUrl" },
+    outbox: { type: String, alias: "outboxUrl" },
   },
   {
     timestamps: true,
@@ -76,6 +79,20 @@ GroupSchema.pre("save", async function (next) {
     if (!this.icon && domain) this.icon = `https://${domain}/images/group.png`;
     if (!this.server && serverActorId) this.server = serverActorId;
 
+    if (!this.inbox) this.inbox = `https://${domain}/groups/${this.id}/inbox`;
+    if (!this.outbox)
+      this.outbox = `https://${domain}/groups/${this.id}/outbox`;
+
+    // Safe memberCount update (only on updates and not during the moment we first set members)
+    if (!this.isNew && this.members && !this.isModified("members")) {
+      const c = await Circle.findOne({ id: this.members })
+        .select("members")
+        .lean();
+      this.memberCount = Array.isArray(c?.members)
+        ? c.members.length
+        : this.memberCount ?? 0;
+    }
+
     next();
   } catch (err) {
     next(err);
@@ -89,7 +106,7 @@ GroupSchema.post("save", async function (doc) {
     const domainSetting = await Settings.findOne({ name: "domain" });
     const domain = domainSetting?.value;
     if (!domain || !doc?.id || !String(doc.id).endsWith(`@${domain}`)) {
-      return; // remote mirror or missing config — do nothing
+      return; // remote mirror or missing config -- do nothing
     }
 
     // Helper: ensure a circle exists and is linked to the group field
@@ -107,7 +124,11 @@ GroupSchema.post("save", async function (doc) {
         reactTo: doc.id,
       });
       doc[key] = created.id; // key ∈ {admins, moderators, members, invited, blocked}
-      await doc.save(); // persist the circle id back to the Group
+      // Persist without re-entering pre('save') hooks (avoid racing memberCount calc)
+      await doc.constructor.updateOne(
+        { _id: doc._id },
+        { $set: { [key]: created.id } }
+      );
       return created;
     }
 
@@ -158,10 +179,25 @@ GroupSchema.post("save", async function (doc) {
       ]);
     }
 
+    // Finalize memberCount now that the creator has been seeded
+    if (membersCircle?.id) {
+      const c = await Circle.findOne({ id: membersCircle.id })
+        .select("members")
+        .lean();
+      const count = Array.isArray(c?.members) ? c.members.length : 0;
+      await doc.constructor.updateOne(
+        { _id: doc._id },
+        { $set: { memberCount: count } }
+      );
+    }
+
     // (No default seeds for invited/blocked)
   } catch (err) {
     console.error("Group post-save circle ensure error:", err);
   }
+
+  this.reactCount = await React.find({ target: this.id }).countDocuments();
+  this.replyCount = await Reply.find({ target: this.id }).countDocuments();
 });
 
 export default mongoose.model("Group", GroupSchema);

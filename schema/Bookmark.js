@@ -41,12 +41,7 @@ const BookmarkSchema = new Schema(
     image: { type: String, default: undefined },
 
     // Visibility of the *bookmark record itself*
-    to: {
-      type: String,
-      enum: ["@public", "@server"],
-      default: "@public",
-      index: true,
-    },
+    to: { type: String, default: "" },
 
     // Optional metadata
     tags: { type: [String], default: [] },
@@ -169,6 +164,7 @@ BookmarkSchema.pre("save", async function (next) {
         throw new Error("Bookmark requires either target or href");
       }
     }
+
     next();
   } catch (err) {
     next(err);

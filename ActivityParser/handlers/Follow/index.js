@@ -34,7 +34,7 @@ export default async function Follow(activity) {
       return {
         activity,
         error:
-          'Follow: invalid activity.object — expected "@user@domain" or {actorId:"@user@domain"}',
+          'Follow: invalid activity.object -- expected "@user@domain" or {actorId:"@user@domain"}',
       };
     }
     activity.object = norm; // ensure downstream code always sees an object

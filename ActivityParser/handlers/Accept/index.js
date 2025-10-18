@@ -6,17 +6,6 @@ import kowloonId from "#methods/parse/kowloonId.js";
 
 export default async function Accept(activity) {
   try {
-    // ---- Validate basics ----
-    if (!activity?.actorId || typeof activity.actorId !== "string") {
-      return { activity, error: "Accept: missing activity.actorId" };
-    }
-    if (!activity?.target || typeof activity.target !== "string") {
-      return {
-        activity,
-        error: "Accept: missing or malformed activity.target",
-      };
-    }
-
     // Optional state hint for Events: "Attending" | "Interested" (default "Attending")
     const desiredState =
       (activity?.object &&

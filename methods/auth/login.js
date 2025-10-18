@@ -1,71 +1,53 @@
-// #methods/auth/login.js
-import getSettings from "#methods/settings/get.js";
+// /methods/auth/login.js
 import { User } from "#schema";
 import generateToken from "#methods/generate/token.js";
 
-/**
- * Login with username or Kowloon user id.
- * Returns: { user, token } on success, or { error: "Invalid credentials" }.
- */
-export default async function login(username, password = "") {
-  try {
-    const raw = (username || "").trim();
-    const pass = typeof password === "string" ? password : "";
+const S = (v) => (typeof v === "string" ? v : v == null ? "" : String(v));
 
-    if (!raw || !pass) {
-      return { error: "Missing parameter" };
-    }
+export default async function login(input, maybePassword = "") {
+  // Accept either style:
+  //   login({ username, actorId: id, password })
+  //   login(username, password)
+  const hasObj = input && typeof input === "object";
+  const username = hasObj ? S(input.username).trim() : S(input).trim();
+  const actorId = hasObj ? S(input.actorId || input.id).trim() : "";
+  const password = hasObj ? S(input.password) : S(maybePassword); // do NOT trim pw
 
-    // choose lookup field: "@user@domain" => id, else username
-    const lookup = raw.startsWith("@") ? { id: raw } : { username: raw };
-    // Pull exactly what we need for verify + response (password included for verify)
-    // If your schema has password with select:false, use +password to include it.
-    const userDoc = await User.findOne(lookup)
-      .select("+password id username type profile prefs publicKey lastLogin") // include password for verify
-      .lean(false); // need a Mongoose doc to call instance methods like verifyPassword
-
-    // Generic error to avoid user enumeration
-    if (!userDoc) {
-      // Optional: perform a dummy hash here to equalize timing
-      return { error: "No user found" };
-    }
-    console.log("Verifying password: ", await userDoc.verifyPassword(password));
-    const ok = await userDoc.verifyPassword(pass);
-    if (!ok) {
-      // No specific logs; keep responses uniform
-      return { error: "Password is wrong" };
-    }
-
-    // Fire-and-forget style update for last login (no version bump)
-    // If this throws, don't block login response.
-    try {
-      await User.updateOne(
-        { _id: userDoc._id },
-        { $set: { lastLogin: new Date() } }
-      );
-    } catch {}
-
-    // Create JWT tied to the user id (your generateToken handles signing)
-    const token = await generateToken(userDoc.id);
-
-    // Build safe user payload without password/private fields
-    const u = userDoc.toObject({ depopulate: true });
-    delete u._id;
-    delete u.__v;
-    delete u.password;
-
-    // Return minimal + useful profile (add/remove fields as you prefer)
-    const user = {
-      id: u.id,
-      username: u.username,
-      type: u.type,
-      profile: u.profile,
-      prefs: u.prefs,
-      publicKey: u.publicKey,
-    };
-
-    return { user, token };
-  } catch (e) {
-    console.error(e);
+  if ((!username && !actorId) || !password) {
+    return { error: "Missing parameter" };
   }
+
+  // Look up by actor id (id) OR username
+  const query = actorId ? { id: actorId } : { username };
+  const userDoc = await User.findOne(query)
+    .select("id username type profile prefs publicKey password lastLogin")
+    .lean(false); // need a Mongoose doc to call instance methods
+
+  if (!userDoc) return { error: "Invalid credentials" };
+
+  const ok = await userDoc.verifyPassword(password); // bcrypt compare via schema method
+  if (!ok) return { error: "Invalid credentials" };
+
+  // (optional) best-effort lastLogin update
+  try {
+    await User.updateOne(
+      { _id: userDoc._id },
+      { $set: { lastLogin: new Date() } }
+    );
+  } catch {}
+
+  const token = await generateToken(userDoc.id);
+
+  // Safe user payload
+  const uo = userDoc.toObject({ depopulate: true });
+  const user = {
+    id: uo.id,
+    username: uo.username,
+    type: uo.type,
+    profile: uo.profile,
+    prefs: uo.prefs,
+    publicKey: uo.publicKey,
+  };
+
+  return { user, token };
 }

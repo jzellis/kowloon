@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-import Settings from "./Settings.js";
+import { Settings, React, Reply } from "./index.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 import Member from "./subschema/Member.js";
@@ -42,11 +42,13 @@ CircleSchema.pre("save", async function (next) {
     this.title = this.title && this.title.trim();
     this.id = this.id || `circle:${this._id}@${domain}`;
     this.url = this.url || `https://${domain}/circles/${this.id}`;
-    this.memberCount = this.members.length;
+
     this.icon = this.icon || `https://${domain}/images/circle.png`;
     this.server =
       this.server || (await Settings.findOne({ name: "actorId" })).value;
   }
+  this.reactCount = (await React.find({ target: this.id }).lean()).length;
+  this.replyCount = (await Reply.find({ target: this.id }).lean()).length;
   next();
 });
 

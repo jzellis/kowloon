@@ -58,7 +58,7 @@ export default async function FlagHandler(activity) {
 
     if (existing) {
       activity.objectId = existing.id;
-      // no sideEffects on duplicate — Undo should not try to mutate anything
+      // no sideEffects on duplicate -- Undo should not try to mutate anything
       return {
         activity,
         flag: existing,

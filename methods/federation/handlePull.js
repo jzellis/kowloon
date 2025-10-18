@@ -123,7 +123,7 @@ function parseSince(since) {
 // Map a DB doc into the compact federation item we promised
 function toItem(d, fallbackType) {
   const type = d?.type || d?.objectType || fallbackType || "Post";
-  // Keep these minimal — the remote will store its own snapshot for display
+  // Keep these minimal -- the remote will store its own snapshot for display
   return {
     id: d.id, // e.g. "post:<uuid>@local.domain"
     type,
@@ -142,7 +142,7 @@ function toItem(d, fallbackType) {
 function inferVisibility(d) {
   // Very lightweight inference. If you encode visibility explicitly on your docs, use that instead.
   if (typeof d?.visibility === "string") return d.visibility;
-  // If addressed to a circle only, we’ll call it "circle"; else default to "public".
+  // If addressed to a circle only, we'll call it "circle"; else default to "public".
   const to = d?.to || [];
   if (Array.isArray(to) && to.length) return "circle";
   return "public";

@@ -13,8 +13,6 @@ const ActivitySchema = new Schema(
     actor: { type: Object, default: undefined },
     actorId: { type: String, required: true },
     to: { type: String, default: "" },
-    replyTo: { type: String, default: "" },
-    reactTo: { type: String, default: "" },
 
     // Object & target (verby payload)
     object: { type: Object, default: undefined },

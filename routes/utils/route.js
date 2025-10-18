@@ -4,33 +4,6 @@ const DEV =
   /^(1|true|yes)$/i.test(process.env.ROUTE_DEBUG || "");
 
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
-const redact = (value, seen = new WeakSet()) => {
-  const SENSITIVE = new Set([
-    "password",
-    "pass",
-    "token",
-    "authorization",
-    "auth",
-    "jwt",
-    "accessToken",
-  ]);
-  if (!isObj(value)) return value;
-  if (seen.has(value)) return "[Circular]";
-  seen.add(value);
-  const out = Array.isArray(value) ? [] : {};
-  for (const k of Object.keys(value)) {
-    const v = value[k];
-    out[k] = SENSITIVE.has(k) ? "[redacted]" : isObj(v) ? redact(v, seen) : v;
-  }
-  return out;
-};
-const safe = (v) => {
-  try {
-    return JSON.stringify(redact(v), null, 2);
-  } catch {
-    return "[unstringifiable]";
-  }
-};
 
 function isCreateUserActivity(body) {
   if (!isObj(body)) return false;
@@ -40,13 +13,87 @@ function isCreateUserActivity(body) {
   return typeof ot === "string" && /^(User|Person)$/i.test(ot);
 }
 
-/**
- * route(handler, options?)
- * options:
- *   - allowUnauth: boolean (default false)  <-- NEW
- *   - allowUnauthCreateUser: boolean (default false)
- *   - label: string for logs
- */
+// ---- token helpers ----------------------------------------------------------
+function findToken(req) {
+  const hdrs = req.headers || {};
+  const auth = hdrs.authorization || hdrs.Authorization || "";
+  // Accept "Bearer <t>", "Token <t>", "JWT <t>", or raw "<t>"
+  let m = auth.match(/^(?:Bearer|Token|JWT)\s+(.+)$/i);
+  if (m && m[1]) return m[1].trim();
+  if (auth && !/\s/.test(auth)) return auth.trim();
+  // common alt headers (just in case)
+  const alt =
+    hdrs["x-auth-token"] ||
+    hdrs["x-access-token"] ||
+    hdrs["x-token"] ||
+    hdrs["auth-token"] ||
+    hdrs["x-jwt"];
+  if (alt) return String(alt).trim();
+  return "";
+}
+
+async function attachUserFromToken(req) {
+  if (req.user && req.user.id) return true;
+
+  const rawAuth =
+    req.headers?.authorization || req.headers?.Authorization || "";
+  const token = findToken(req);
+
+  if (DEV) {
+    console.log(`ROUTE auth: Authorization header: ${rawAuth || "(none)"}`);
+    console.log(`ROUTE auth: extracted token: ${token || "(none)"}`);
+  }
+  if (!token) return false;
+
+  // Primary: use your project's RS256 verifier (jose)
+  try {
+    const mod = await import("#methods/auth/verifyUserJwt.js");
+    const verifyUserJwt = mod?.default || mod;
+    const expectedIssuer = `https://${
+      process.env.KOWLOON_DOMAIN || process.env.DOMAIN
+    }`;
+    const payload = await verifyUserJwt(token, {
+      expectedIssuer,
+      expectedAudience: undefined,
+    });
+    const id =
+      payload?.user?.id || payload?.id || payload?.sub || payload?.actorId;
+
+    if (id) {
+      req.user = payload.user ? payload.user : { id };
+      if (DEV)
+        console.log(`ROUTE auth: attached via verifyUserJwt → ${req.user.id}`);
+      return true;
+    }
+  } catch (e) {
+    if (DEV)
+      console.warn(`ROUTE auth: verifyUserJwt failed: ${e?.message || e}`);
+  }
+
+  // Dev-only fallback: decode without verifying so you can see what's inside
+  if (DEV) {
+    try {
+      const jwt = await import("jsonwebtoken");
+      if (jwt?.decode) {
+        const payload = jwt.decode(token);
+        const id =
+          payload?.user?.id || payload?.id || payload?.sub || payload?.actorId;
+        if (id) {
+          req.user = payload.user ? payload.user : { id };
+          console.log(
+            `ROUTE auth: attached via jwt.decode (DEV) → ${req.user.id}`
+          );
+          return true;
+        }
+      }
+    } catch {}
+  }
+
+  if (DEV) console.log("ROUTE auth: could not attach user from token");
+  return false;
+}
+
+// ---- wrapper ---------------------------------------------------------------
 export default function route(handler, options = {}) {
   const {
     allowUnauth = false,
@@ -61,8 +108,10 @@ export default function route(handler, options = {}) {
     const method = req?.method || "GET";
     const path = req?.originalUrl || req?.url || "";
     const ip = req?.ip || req?.connection?.remoteAddress || "";
-
     const body = req.body ?? {};
+
+    // Attach req.user BEFORE the auth gate
+    await attachUserFromToken(req);
     const user = req.user ?? null;
 
     const allow =
@@ -76,9 +125,7 @@ export default function route(handler, options = {}) {
         user: user?.id || null,
         allowUnauth: allow,
       });
-      if (Object.keys(body || {}).length) {
-        console.log(`${tag}: body\n${safe(body)}`);
-      }
+      if (Object.keys(body || {}).length) console.log(`${tag}: body`, body);
     }
 
     if (!user?.id && !allow) {

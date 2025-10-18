@@ -63,7 +63,7 @@ export default async function Update(activity) {
     // Pick previous values for fields being updated (shallow)
     const previous = {};
     for (const k of Object.keys(activity.object)) {
-      // only record primitive/object shallowly—this is a simple, safe snapshot
+      // only record primitive/object shallowly--this is a simple, safe snapshot
       previous[k] = current?.[k];
     }
 

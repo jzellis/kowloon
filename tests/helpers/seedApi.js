@@ -72,7 +72,7 @@ export async function addMemberToGroup(client, { userId, groupId }) {
   const meta = await (
     await fetch(client.baseURL + `/groups/${encodeURIComponent(groupId)}`)
   ).json();
-  // meta doesn’t include circle ids (by design), so in tests you can allow a test-only flag
+  // meta doesn't include circle ids (by design), so in tests you can allow a test-only flag
   // OR call a minimal internal endpoint. If not available, you can post a Join activity to the Group id:
   const res = await client.postOutbox({
     type: "Join",

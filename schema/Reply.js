@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { marked } from "marked";
 import crypto from "crypto";
-import { Settings, User } from "./index.js";
+import { Settings, User, React } from "./index.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -12,7 +12,6 @@ const ReplySchema = new Schema(
     actor: { type: Object, default: undefined },
     server: { type: String, default: undefined }, // The server of the actor
     target: { type: String, required: true },
-    targetActorId: { type: String, required: true },
 
     parent: { type: String, default: null },
     href: { type: String },
@@ -22,7 +21,7 @@ const ReplySchema = new Schema(
     },
     body: { type: String, default: "" },
     image: { type: String, default: undefined },
-    replyCount: { type: Number, default: 0 }, // The number of replies to this post
+
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     shareCount: { type: Number, default: 0 }, // The number of shares of this post
     deletedAt: { type: Date, default: null },
@@ -66,7 +65,7 @@ ReplySchema.pre("save", async function (next) {
   // const sign = crypto.createSign("RSA-SHA256");
   // sign.update(stringject);
   // this.signature = sign.sign(actor.privateKey, "base64");
-
+  this.reactCount = await React.find({ target: this.id }).countDocuments();
   next();
 });
 

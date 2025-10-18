@@ -117,6 +117,9 @@ PostSchema.pre("save", async function (next) {
       sign.end();
       this.signature = sign.sign(actor.privateKey, "base64");
     }
+
+    this.reactCount = await React.find({ target: this.id }).countDocuments();
+    this.replyCount = await Reply.find({ target: this.id }).countDocuments();
     next();
   } catch (e) {
     console.log(e);

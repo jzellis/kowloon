@@ -95,6 +95,10 @@ export default async function Create(activity) {
       activity.objectId = created.id;
       activity.sideEffects = { model: "User", createdId: created.id };
       return { activity, created };
+    } else {
+      // For everything but User, we need to ensure object.actor is present
+      if (activity.object.actorId && !activity.object.actor)
+        activity.object.actor = activity.actor || {};
     }
 
     // ---- Generic path for other object types -------------------------------

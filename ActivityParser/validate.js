@@ -56,7 +56,7 @@ function req(cond, msg) {
   if (!cond) throw new Error(msg);
 }
 
-// Merge-in helper set from “validate new.js” (kept local; no external deps)
+// Merge-in helper set from "validate new.js" (kept local; no external deps)
 const nonEmpty = (s) => typeof s === "string" && s.trim().length > 0;
 const isActorIdString = (s) =>
   nonEmpty(s) && s[0] === "@" && s.indexOf("@", 1) !== -1;
@@ -71,6 +71,15 @@ function isObjectWithOnlyActorId(v) {
 function isIdStringOrActorObj(v) {
   return isStr(v) || isObjectWithOnlyActorId(v);
 }
+
+// helper(s) near existing helpers:
+const isActorStr = (s) => typeof s === "string" && s.trim().startsWith("@");
+const actorFromObject = (obj) =>
+  typeof obj === "string"
+    ? obj
+    : obj && typeof obj === "object" && typeof obj.actorId === "string"
+    ? obj.actorId
+    : "";
 
 // ---- core validation -------------------------------------------------------
 
@@ -160,22 +169,32 @@ export default async function validateActivity(a) {
 
       case "Join":
       case "Leave": {
-        const obj = a.object;
-        const objIsString = typeof obj === "string" && obj.trim().length > 0;
+        // New rule: do NOT require objectType.
+        // Accept any of:
+        //   - activity.target: "<groupOrEventId>"
+        //   - activity.object: "<groupOrEventId>"
+        //   - activity.object: { id: "<groupOrEventId>" }
+        //
+        // If objectType is provided, it must be Group or Event, but it's optional.
+        const targetOk = isStr(a.target);
 
-        const objIsGroupOrEventObj =
-          obj &&
-          typeof obj === "object" &&
-          !Array.isArray(obj) &&
-          (obj.objectType === "Group" || obj.objectType === "Event") &&
-          typeof obj.id === "string" &&
-          obj.id.trim().length > 0;
+        const obj = a.object;
+        const objIdOk =
+          isStr(obj) || (obj && typeof obj === "object" && isStr(obj.id));
+
+        if (has(a.objectType)) {
+          req(
+            /^(Group|Event)$/i.test(a.objectType),
+            `${a.type}: objectType must be Group or Event when provided`
+          );
+        }
 
         req(
-          objIsString || objIsGroupOrEventObj,
-          `${a.type} requires objectType (Group/Event)`
+          targetOk || objIdOk,
+          `${a.type}: missing or malformed activity.target (or object id)`
         );
-        // If your handler demands target, the test now sends it; validator can stay lenient here.
+
+        // No further requirements here; the creator can infer objectType from target.
         break;
       }
 
@@ -188,15 +207,24 @@ export default async function validateActivity(a) {
         break;
       }
 
+      // ...inside the main switch(activity.type) { ... }
       case "Add":
       case "Remove": {
-        // For group role membership via Circles:
-        // target = circle id string; object = "@user@domain" or {actorId}
+        // target must be the circle id (string)
         req(isStr(a.target), `${a.type} requires target (circle id)`);
+
+        // subject must come from activity.object ONLY:
+        //   - object: "@user@domain"
+        //   - OR object: { actorId: "@user@domain" }
+        const actorId = actorFromObject(a.object);
         req(
-          isIdStringOrActorObj(a.object),
+          isActorStr(actorId),
           `${a.type} requires object ("@user@domain" or {actorId})`
         );
+
+        // IMPORTANT: do NOT accept subject via activity.to anymore
+        // (If present, it's just addressing, not subject.)
+
         break;
       }
 

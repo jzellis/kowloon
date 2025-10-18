@@ -9,6 +9,7 @@ const __dirname = path.dirname(__filename);
 
 // The singleton we'll populate and export
 const kowloon = {
+  domain: process.env.DOMAIN || "localhost",
   settings: {},
   connection: null, // set by utils/init.js
   mongoose: null, // set by utils/init.js
@@ -50,6 +51,6 @@ export async function attachMethodDomains(target = kowloon) {
 
 const Kowloon = kowloon;
 await attachMethodDomains(Kowloon);
-await Kowloon.utils.init(Kowloon);
+await Kowloon.utils.init(Kowloon, process.env);
 
 export default Kowloon;

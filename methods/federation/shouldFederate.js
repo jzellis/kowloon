@@ -15,11 +15,11 @@ function isRemote(val, localDomain) {
 }
 
 export default function shouldFederate(activity, localDomain) {
-  const { type, to, target, reactTo, object } = activity;
+  const { type, to, target, canReact, object } = activity;
 
   // Replies/React/Addressing to remote things
   if (object?.inReplyTo && isRemote(object.inReplyTo, localDomain)) return true;
-  if (reactTo && isRemote(reactTo, localDomain)) return true;
+  if (canReact && isRemote(canReact, localDomain)) return true;
   if (to && isRemote(to, localDomain)) return true;
   if (target && isRemote(target, localDomain)) return true;
 

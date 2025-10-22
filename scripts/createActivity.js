@@ -22,14 +22,14 @@ const postTypes = ["Note", "Article", "Link"];
 const t = randEl(postTypes);
 const actorId = "@admin@kwln.org";
 const to = "@public";
-const replyTo = "@public";
-const reactTo = "@public";
+const canReply = "@public";
+const canReact = "@public";
 const base = {
   actorId,
   type: t,
   to,
-  replyTo,
-  reactTo,
+  canReply,
+  canReact,
   //   meta: { runId: RUN_ID },
 };
 
@@ -55,8 +55,8 @@ const activity = {
   objectType: "Post",
   object: base,
   to,
-  reactTo,
-  replyTo,
+  canReact,
+  canReply,
 };
 
 // wherever you use it:

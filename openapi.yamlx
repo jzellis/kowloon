@@ -797,9 +797,9 @@ components:
           type: string
         to:
           type: string
-        replyTo:
+        canReply:
           type: string
-        reactTo:
+        canReact:
           type: string
         summary:
           type: string

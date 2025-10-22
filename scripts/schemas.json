@@ -68,14 +68,14 @@
         "unique": false,
         "index": false
       },
-      "replyTo": {
+      "canReply": {
         "kind": "String",
         "required": false,
         "default": "",
         "unique": false,
         "index": false
       },
-      "reactTo": {
+      "canReact": {
         "kind": "String",
         "required": false,
         "default": "",
@@ -492,14 +492,14 @@
         "unique": false,
         "index": false
       },
-      "replyTo": {
+      "canReply": {
         "kind": "String",
         "required": false,
         "default": "",
         "unique": false,
         "index": false
       },
-      "reactTo": {
+      "canReact": {
         "kind": "String",
         "required": false,
         "default": "",
@@ -629,14 +629,14 @@
         "unique": false,
         "index": false
       },
-      "replyTo": {
+      "canReply": {
         "kind": "String",
         "required": false,
         "default": "",
         "unique": false,
         "index": false
       },
-      "reactTo": {
+      "canReact": {
         "kind": "String",
         "required": false,
         "default": "",
@@ -1141,14 +1141,14 @@
         "unique": false,
         "index": false
       },
-      "replyTo": {
+      "canReply": {
         "kind": "String",
         "required": false,
         "default": "",
         "unique": false,
         "index": false
       },
-      "reactTo": {
+      "canReact": {
         "kind": "String",
         "required": false,
         "default": "",
@@ -1650,14 +1650,14 @@
         "unique": false,
         "index": false
       },
-      "replyTo": {
+      "canReply": {
         "kind": "String",
         "required": false,
         "default": "",
         "unique": false,
         "index": false
       },
-      "reactTo": {
+      "canReact": {
         "kind": "String",
         "required": false,
         "default": "",
@@ -1896,14 +1896,14 @@
         "unique": false,
         "index": false
       },
-      "replyTo": {
+      "canReply": {
         "kind": "String",
         "required": false,
         "default": "",
         "unique": false,
         "index": false
       },
-      "reactTo": {
+      "canReact": {
         "kind": "String",
         "required": false,
         "default": "",
@@ -2671,14 +2671,14 @@
         "unique": false,
         "index": false
       },
-      "replyTo": {
+      "canReply": {
         "kind": "String",
         "required": false,
         "default": "",
         "unique": false,
         "index": false
       },
-      "reactTo": {
+      "canReact": {
         "kind": "String",
         "required": false,
         "default": "",

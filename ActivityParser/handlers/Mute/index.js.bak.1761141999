@@ -16,13 +16,13 @@ export default async function Mute(activity) {
       return { activity, error: "Mute: cannot mute yourself" };
     }
 
-    // ---- Load actor & their muted circle id ----
+    // ---- Load actor & their muteed circle id ----
     const actor = await User.findOne({ id: activity.actorId })
-      .select("muted")
+      .select("muteed")
       .lean();
     if (!actor) return { activity, error: "Mute: actor not found" };
-    if (!actor.muted) {
-      return { activity, error: "Mute: muted circle not configured" };
+    if (!actor.muteed) {
+      return { activity, error: "Mute: muteed circle not configured" };
     }
 
     // ---- Resolve target & normalize to member subdoc ----
@@ -35,7 +35,7 @@ export default async function Mute(activity) {
 
     // ---- Atomic add (only if not already a member), bump memberCount ----
     const res = await Circle.updateOne(
-      { id: actor.muted, "members.id": { $ne: member.id } },
+      { id: actor.muteed, "members.id": { $ne: member.id } },
       {
         $push: { members: member },
         $inc: { memberCount: 1 },
@@ -45,8 +45,8 @@ export default async function Mute(activity) {
     const didAdd = (res.modifiedCount || 0) > 0;
     return {
       activity,
-      circleId: actor.muted,
-      muted: didAdd,
+      circleId: actor.muteed,
+      muteed: didAdd,
       federate: false,
     };
   } catch (err) {

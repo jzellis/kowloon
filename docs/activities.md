@@ -1,304 +1,247 @@
-Kowloon Activity Verbs — v1 Reference
+# Kowloon v1.0 — Activities
 
-Endpoint: POST /outbox
-Auth: RS256 JWT (issuer https://kwln.org), Authorization: Bearer <token>
-Addressing is single-recipient: to accepts exactly one of: @public, @<domain> (e.g. @kwln.org), a Circle ID, Group ID, or Event ID.
+_Last updated: 2025‑10‑22_
 
-Activity Envelope
+This document describes the **Activity** model and handlers in Kowloon v1.0. It covers:
+- Canonical activity types
+- Activity schema
+- Addressing & visibility
+- Federation & outbox/inbox
+- Validation & IDs
+- Examples
 
-Every Activity you POST follows this envelope. Fields not needed for a verb can be omitted.
+> **Scope notes**
+> - v1.0 supports **exactly** the types below; adding new types requires code changes.
+> - `Announce` and `Register` are **not supported.**
+> - `Upload` is **planned** but not implemented yet.
+> - Addressing fields (`to`, `replyTo`, `reactTo`) are **single strings** (not arrays).
 
+---
+
+## Canonical Activity Types
+
+Kowloon v1.0 allows *only* these types (case‑sensitive):
+
+- `Accept`
+- `Add`
+- `Block`
+- `Create`
+- `Delete`
+- `Flag`
+- `Follow`
+- `Invite`
+- `Join`
+- `Leave`
+- `Mute`
+- `React`
+- `Reject`
+- `Remove`
+- `Reply`
+- `Undo`
+- `Unfollow`
+- `Update`
+- `Upload` _(planned — not implemented)_
+
+> ⚠️ Do **not** emit other types in v1.0.
+
+---
+
+## Activity Schema (v1.0)
+
+All Activities conform to this base shape. Fields marked **(required)** must always be present; others are conditional on `type`.
+
+```jsonc
 {
-  "id": "activity:012345",
+  "id": "activity:01HX…",                       // (required) globally-unique Activity ID
+  "type": "Follow",                              // (required) one of the canonical types above
+  "objectType": "User|Post|Group|Event|Circle",  // (required) the primary object’s type
+  "actorId": "@admin@kwln.org",                  // (required) full actor handle (must match auth)
+  "object": { … } | "id-string",                 // (required) object payload or object ID string
+  "target": "id-string",                         // (optional) target ID (e.g., circle/group/event)
+  "summary": "optional human summary",           // (optional)
+  "to": "@public|@kwln.org|circle:…|group:…|event:…",    // (optional) **single string**
+  "replyTo": "@public|@kwln.org|circle:…|group:…|event:…",// (optional) **single string**
+  "reactTo": "@public|@kwln.org|circle:…|group:…|event:…",// (optional) **single string**
+  "federate": true,                              // (optional) hint to send to outbox
+  "createdAt": "2025-10-22T12:34:56.000Z",       // (server-set)
+  "updatedAt": "2025-10-22T12:34:56.000Z"        // (server-set via Mongoose timestamps)
+}
+```
+
+### Field notes
+- **`actorId`**: must equal the authenticated actor (derived from JWT). Use full handle like `@user@domain`.
+- **`object`**:
+  - May be a minimal object or a string ID, depending on the verb. For remote references, IDs are preferred.
+  - For `Follow`, the `object` is a `User` (ID string or `{actorId}` convenience form).
+- **`target`**: used by verbs like `Add`/`Remove` (e.g., add a member to a `Circle`) or group/event membership verbs.
+- **Addressing** (`to`, `replyTo`, `reactTo`): single string each. See rules below.
+- **`federate`**: explicit flag to push to the Outbox for federation when applicable.
+
+---
+
+## Addressing & Visibility
+
+### Addressing domains
+- **Public**: `to: "@public"` — visible to anyone.
+- **Server‑scoped**: `to: "@kwln.org"` — visible to authenticated users on that domain.
+- **Circle/Group/Event**: `to: "circle:<id>"`, `group:<id>`, or `event:<id>` — visible to members only.
+
+> A given Activity may set **at most one** of `to`, `replyTo`, `reactTo`. Each is a **single string** (no arrays).
+> - `to` — who may **view** the Activity
+> - `replyTo` — who may **reply**
+> - `reactTo` — who may **react**
+
+Servers enforce masking/redaction on fetch based on viewer + addressing.
+
+---
+
+## Federation & Outbox
+
+- Outbound federation is controlled by a `shouldFederate(activity)` check.
+- In v1.0, we treat federation by **queuing Activities to the Outbox**:
+  - `POST /outbox` (no `/post`) with `{ activity }` payload.
+  - If an entry already exists with the same `activity.id`, we upsert it.
+
+**Auth model for API and federation**
+- API uses **RS256 JWT** (issuer: `https://kwln.org`), signed with `settings.privateKey`; verification uses `settings.publicKey`.
+- Clients must send `Authorization: Bearer <token>`.
+- On load, middleware `attachUser` verifies the token and sets `req.user` (including `actorId`).
+
+**Collections**
+- Local Activities are stored in `Activities`.
+- Outbound queued items are stored in `Outbox` with the embedded `activity`.
+
+> Pull‑based federation (fetching remote timelines) is supported by request endpoints; masking remains server‑side based on addressing. Invitations and other directed Activities use explicit addressing to remote actors/resources.
+
+---
+
+## Collections & List Shapes
+
+All list endpoints return an ActivityStreams‑style **`OrderedCollection`** envelope:
+
+```jsonc
+{
+  "totalItems": 123,
+  "totalPages": 13,
+  "currentPage": 2,
+  "firstItem": "activity:…",
+  "lastItem": "activity:…",
+  "count": 10,
+  "items": [ { /* Activity */ }, … ]
+}
+```
+
+---
+
+## IDs & Validation
+
+- IDs use the project’s prefixed pattern (e.g., `activity:<ksuid>` / `circle:<ksuid>`).
+- JSON Schema via AJV validates Activities per verb with a shared base schema.
+- The incoming Activity validator must accept:
+  - `object` as **ID string** _or_ as `{ "actorId": "@user@domain" }` for user references (e.g., `Follow`).
+
+---
+
+## Common Verbs (Behavioral Notes)
+
+### Follow
+- `object`: remote or local user (`"@user@domain"` string or `{ "actorId": … }`).
+- Side‑effect: add the `object` user to the follower’s **`following` Circle** (or to `target` Circle if provided).
+- Implementation uses `$push` for ordered history and `memberCount` increment; ensure idempotence checks to avoid duplicates.
+
+### Unfollow
+- Mirror of `Follow`: remove the user from the `following` Circle (or from `target`).
+
+### Add / Remove
+- Manage membership in a container (`Circle`, `Group`, `Event`).
+- **Permissions**: actor must own the Circle or be an admin/mod of the Group/Event.
+
+### Invite / Join / Leave / Accept / Reject
+- Standard membership flow on `Group`/`Event`.
+
+### Create / Reply / React / Update / Delete / Undo / Block / Mute / Flag
+- Content and moderation primitives; addressing governs visibility and action rights (`replyTo`, `reactTo`).
+
+> **Note**: `Upload` not implemented yet; plan is for attachments to be uploaded first and referenced by URL(s) in `object` of subsequent `Create` Activities.
+
+---
+
+## Addressing Examples
+
+### Public Post
+```json
+{
   "type": "Create",
   "objectType": "Post",
   "actorId": "@alice@kwln.org",
-  "to": "@kwln.org",              // Circle ID | @domain | group:<id>@domain | event:<id>@domain | @public
-  "target": "",                   // Verb-specific (see table)
-  "summary": "optional",
-  "object": { /* varies by objectType */ }
+  "object": { "id": "post:01HX…", "content": "Hello world" },
+  "to": "@public"
 }
+```
 
-ID & Handle Conventions
-	•	Users: @username@domain (full actor ID everywhere the API expects a user)
-	•	Groups: group:<uuid>@domain
-	•	Events: event:<uuid>@domain
-	•	Circles: circle:<uuid>@domain
-	•	Posts/Pages/etc.: post:<uuid>@domain, page:<uuid>@domain, …
-
-Post object notes (important)
-	•	A reply is just a Post whose inReplyTo is set to the parent object ID.
-	•	Per-object permissions live on the object: canReply and canReact (Circle/Group/Server ID strings).
-	•	The Activity envelope no longer uses replyTo/reactTo.
-
-⸻
-
-Verbs Matrix (canonical)
-
-Verb	ObjectType	Object	To	Target	Permissions	Notes
-Accept	none	User ID (subject; defaults to actor for self-accept)		Group/Event ID	Creator/admins (mods for Groups) approve pending; invited users may self-accept	Moves from interested→attending (Event) or requests→members (Group). Removes from invited on self-accept.
-Add	none	User ID (to add)		Circle ID	Admin of owning Event/Group (or circle owner)	Idempotent add; bumps circle memberCount.
-Block	none	User ID / Server ID / Group ID (blocked entity)			Actor (self) or authorized admin	Enforced via policy/circles; prevents follows/joins/etc.
-Create	Bookmark | Event | Group | Page | Post | User	Same as ObjectType (full object)	Circle ID | @domain | Group ID | Event ID		Actor must be authorized to create the resource	A reply is Create→Post with object.inReplyTo (no type:"Reply").
-Delete	none	ID of object (Bookmark/Event/Group/Page/Post/React)			Owner or container admin	Usually soft-delete; federates when remote-visible.
-Flag	Flag	Flag object (incl. reason, target id)		ID of target (Bookmark/Event/Group/Page/Post/React/User)	Any user	Triggers moderation flow.
-Follow	none	User ID / Server ID / Group ID (to follow)		Circle ID (optional)	Actor	If Circle provided, add there; else actor’s following circle.
-Invite	none	User ID (invitee)		Event/Group ID	Creator/admins (mods for Groups)	Adds invitee to target’s invited circle.
-Join	none			Event/Group ID	Based on rsvpPolicy: open (anyone), invite_only (must be in invited), approval (queued)	Queues to interested (Event) or requests (Group); capacity/blocked enforced.
-Leave	none			Event/Group ID	Actor must be attending/member	Removes from attending/members; decrements counts.
-Mute	none	User ID / Server ID (to mute)			Actor	Local-only visibility control (non-federating).
-React	React	React object		Object ID (target)	Actor must be allowed by target’s canReact	Increments reactCount; federates to remote parents.
-Reject	none	User ID (subject; defaults to actor for self-decline)		Event/Group ID	Admins/mods (pending); invitee may self-decline; admins may rescind	Removes from requests/interested (pending) or invited (decline).
-Remove	none	User ID (to remove)		Circle ID	Admin of owning Event/Group (or circle owner)	Idempotent remove; bumps circle memberCount down.
-Reply	Post	Post with inReplyTo set			Actor must be allowed by canReply of parent	Alias of Create→Post with object.inReplyTo.
-Undo	none	ID of prior object/activity to undo			Owner/initiator (or authorized admin)	Reverts Follow/React/Delete/etc.; federates as needed.
-Unfollow	none	User ID / Server ID / Group ID (to unfollow)		Circle ID (optional)	Actor	If Circle provided, remove only there; else from all actor circles.
-Update	Bookmark | Event | Group | Page | Post | User	Updated object (must include id)		Object ID (optional if in object.id)	Owner or container admin	Partial updates allowed; same shapes as Create.
-Upload (planned)	File	File		Post ID (optional)	Actor	If Post ID provided, attach file to that Post. Verb exists in set; implementation TBD.
-
-
-⸻
-
-Minimal Examples
-
-(IDs are illustrative; use your server’s real IDs.)
-
-Accept (admin approves a pending Group join)
-
-{
-  "type": "Accept",
-  "actorId": "@admin@kwln.org",
-  "target": "group:72b1@kwln.org",
-  "object": "@josh@kwln.org"
-}
-
-Accept (self-accept an Event invite)
-
-{
-  "type": "Accept",
-  "actorId": "@josh@kwln.org",
-  "target": "event:aa55@kwln.org",
-  "object": "@josh@kwln.org"
-}
-
-Add (put a user in a Circle)
-
-{
-  "type": "Add",
-  "actorId": "@admin@kwln.org",
-  "target": "circle:friends@kwln.org",
-  "object": "@michelle@kwln.org"
-}
-
-Block (block a remote user)
-
-{
-  "type": "Block",
-  "actorId": "@josh@kwln.org",
-  "object": "@spammer@elsewhere.net"
-}
-
-Create → Post (public)
-
+### Server‑only Post
+```json
 {
   "type": "Create",
   "objectType": "Post",
-  "actorId": "@josh@kwln.org",
-  "to": "@public",
-  "object": {
-    "id": "post:99f1@kwln.org",
-    "actorId": "@josh@kwln.org",
-    type: "Note",   
-    "content": "Hello world",
-    "canReply": "@kwln.org",
-    "canReact": "@kwln.org"
-  }
+  "actorId": "@alice@kwln.org",
+  "object": "post:01HX…",
+  "to": "@kwln.org"
 }
+```
 
-Create → Post (reply)
-
+### Circle‑scoped Post
+```json
 {
   "type": "Create",
   "objectType": "Post",
-  "actorId": "@josh@kwln.org",
-  "to": "@kwln.org",
-  "object": {
-    "id": "post:abcd@kwln.org",
-    "actorId": "@josh@kwln.org",
-    type: "Reply",
-    "inReplyTo": "post:parent@remote.tld",
-    "content": "I agree",
-    "canReply": "@kwln.org",
-    "canReact": "@kwln.org"
-  }
+  "actorId": "@alice@kwln.org",
+  "object": "post:01HX…",
+  "to": "circle:01J0…"
 }
+```
 
-Delete (a post)
-
-{
-  "type": "Delete",
-  "actorId": "@josh@kwln.org",
-  "object": "post:99f1@kwln.org"
-}
-
-Flag (report a user)
-
-{
-  "type": "Flag",
-  "objectType": "Flag",
-  "actorId": "@josh@kwln.org",
-  "target": "@spammer@elsewhere.net",
-  "object": {
-    "reason": "Abuse",
-    "details": "DM spam",
-    "evidence": ["https://.../screenshot.png"]
-  }
-}
-
-Follow (remote user, into a specific circle)
-
+### Follow (object by actor handle)
+```json
 {
   "type": "Follow",
-  "actorId": "@josh@kwln.org",
-  "object": "@alice@remote.social",
+  "objectType": "User",
+  "actorId": "@alice@kwln.org",
+  "object": { "actorId": "@bob@remote.org" },
   "target": "circle:following@kwln.org"
 }
+```
 
-Invite (user to event)
-
-{
-  "type": "Invite",
-  "actorId": "@admin@kwln.org",
-  "target": "event:aa55@kwln.org",
-  "object": "@jane@kwln.org"
-}
-
-Join (open group)
-
-{
-  "type": "Join",
-  "actorId": "@josh@kwln.org",
-  "target": "group:72b1@kwln.org"
-}
-
-Join (approval event → goes to interested)
-
-{
-  "type": "Join",
-  "actorId": "@jane@kwln.org",
-  "target": "event:aa55@kwln.org"
-}
-
-Leave (event)
-
-{
-  "type": "Leave",
-  "actorId": "@josh@kwln.org",
-  "target": "event:aa55@kwln.org"
-}
-
-Mute (a server)
-
-{
-  "type": "Mute",
-  "actorId": "@josh@kwln.org",
-  "object": "@remote.social"
-}
-
-React (like a post)
-
-{
-  "type": "React",
-  "objectType": "React",
-  "actorId": "@josh@kwln.org",
-  "target": "post:99f1@kwln.org",
-  "object": { "react": "like" }
-}
-
-Reject (admin rejects pending group request)
-
-{
-  "type": "Reject",
-  "actorId": "@admin@kwln.org",
-  "target": "group:72b1@kwln.org",
-  "object": "@jane@kwln.org"
-}
-
-Remove (user from a circle)
-
-{
-  "type": "Remove",
-  "actorId": "@admin@kwln.org",
-  "target": "circle:friends@kwln.org",
-  "object": "@michelle@kwln.org"
-}
-
-Reply (alias of Create→Post with inReplyTo)
-
-{
-  "type": "Reply",
-  "objectType": "Post",
-  "actorId": "@josh@kwln.org",
-  "to": "@kwln.org",
-  "object": {
-    "id": "post:abcd@kwln.org",
-    "actorId": "@josh@kwln.org",
-    "inReplyTo": "post:parent@remote.tld",
-    "content": "Reply via alias",
-    "canReply": "@kwln.org",
-    "canReact": "@kwln.org"
-  }
-}
-
-Undo (a previous follow)
-
-{
-  "type": "Undo",
-  "actorId": "@josh@kwln.org",
-  "object": "activity:follow-1234"
-}
-
-Unfollow (remove from all circles)
-
+### Unfollow (remove from Circle)
+```json
 {
   "type": "Unfollow",
-  "actorId": "@josh@kwln.org",
-  "object": "@alice@remote.social"
+  "objectType": "User",
+  "actorId": "@alice@kwln.org",
+  "object": "@bob@remote.org",
+  "target": "circle:following@kwln.org"
 }
+```
 
-Update (edit a post)
+---
 
-{
-  "type": "Update",
-  "objectType": "Post",
-  "actorId": "@josh@kwln.org",
-  "object": {
-    "id": "post:99f1@kwln.org",
-    "content": "Edited content",
-    "canReply": "@kwln.org",
-    "canReact": "@kwln.org"
-  }
-}
+## Routes (selected)
 
-Upload (planned)
+- `POST /outbox` — enqueue federated Activities via `route()` wrapper (debug ping at `GET /outbox/__ping`).
+- `GET  /__routes` — development route: returns mounted route tree.
+- `GET  /users/:id` — expects full actor handle `@user@domain`. (A local-username convenience may be added later.)
 
-{
-  "type": "Upload",
-  "objectType": "File",
-  "actorId": "@josh@kwln.org",
-  "target": "post:99f1@kwln.org",
-  "object": { "name": "photo.png", "mime": "image/png", "size": 123456 }
-}
+---
 
+## Notes & Pitfalls
 
-⸻
+- **Single‑string addressing** is easy to break if your seeders still use arrays — update seeds and validators.
+- Ensure `attachUser` enforces that **`actorId` equals the authenticated actor**.
+- When mutating membership arrays (e.g., `Circle.members`), update counters (`memberCount`) atomically.
+- Upserts to `Outbox` should be keyed by `activity.id` to avoid duplicates.
+- Avoid introducing unsupported verbs; validation should reject them early.
 
-Federation Quick Rules (summary)
+---
 
-We federate when the actor is local and any of these is true:
-	•	object.inReplyTo points to a remote object
-	•	Following/unfollowing/blocking a remote actor/server/group
-	•	to/target references a remote Group or Event
-	•	Undo/Delete/Invite/Join/Leave affect remote objects or recipients
-
-(Your shouldFederate(activity, localDomain) helper encapsulates the checks.)
+## Changelog
+- **2025‑10‑22**: Consolidated v1.0 notes, clarified single‑string addressing, Outbox rules, and verb set.

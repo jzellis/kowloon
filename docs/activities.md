@@ -79,6 +79,65 @@ All Activities conform to this base shape. Fields marked **(required)** must alw
 
 ---
 
+## Object Subtypes
+
+Every object includes a required `object.type` that determines rendering, sorting, and filtering.
+Some object types currently have a single subtype that is auto-set by the schema.
+
+| `objectType` | Allowed `object.type` values | Notes |
+|---|---|---|
+| **Post** | `Note`, `Article`, `Media`, `Link`, `Reply`* | *`Reply` requires `object.inReplyTo` (ID string).* |
+| **Bookmark** | `Folder`, `Bookmark` |  |
+| **Page** | `Folder`, `Page` |  |
+| **Event** | `Event` | _We may add more specific subtypes later._ |
+| **Group** | `Group` | _Options may expand later._ |
+| **User** | `Person` |  |
+| **Circle** | `Circle` | _Only one subtype; currently auto-set by schema on creation._ |
+
+> **Auto-set subtypes**: Circles (→ `Circle`). For `React` Activities, the created reaction object’s `type` is fixed to `React` and set server-side.
+
+### Proposed subtype catalogs
+_These are **descriptive only** for discovery/search/filtering; they **do not** change permissions or behavior._
+
+#### Event
+- Event (default)
+- Meetup
+- Workshop
+- Talk
+- Panel
+- Performance
+- Livestream
+- Release
+- Exhibit
+- Festival
+- Screening
+- Hackathon
+- Game
+
+#### Group
+- Group (default)
+- Community
+- Team
+- Organization
+- Collective
+- Club
+- Class
+- Committee
+- Guild
+- Crew
+
+#### Circle
+- Circle (default)
+- Following
+- Followers
+- Friends
+- Family
+- Colleagues
+- Favorites
+- Muted
+- Blocked
+- Test
+
 ## Addressing & Visibility
 
 ### Addressing domains
@@ -168,6 +227,54 @@ All list endpoints return an ActivityStreams‑style **`OrderedCollection`** env
 ---
 
 ## Addressing Examples
+
+### Subtype Examples
+
+**Create Post (Note)**
+```json
+{
+  "type": "Create",
+  "objectType": "Post",
+  "actorId": "@alice@kwln.org",
+  "object": { "type": "Note", "content": "Hello world" },
+  "to": "@public"
+}
+```
+
+**Reply to a Post**
+```json
+{
+  "type": "Reply",
+  "objectType": "Post",
+  "actorId": "@alice@kwln.org",
+  "object": { "type": "Reply", "inReplyTo": "post:01HX…", "content": "+1" },
+  "to": "@public",
+  "canReply": "@public",
+  "canReact": "@public"
+}
+```
+
+**Create Bookmark Folder**
+```json
+{
+  "type": "Create",
+  "objectType": "Bookmark",
+  "actorId": "@alice@kwln.org",
+  "object": { "type": "Folder", "name": "Reading List" },
+  "to": "@kwln.org"
+}
+```
+
+**Create Page**
+```json
+{
+  "type": "Create",
+  "objectType": "Page",
+  "actorId": "@alice@kwln.org",
+  "object": { "type": "Page", "title": "Docs", "body": "…" },
+  "to": "@kwln.org"
+}
+```
 
 ### Public Post
 ```json

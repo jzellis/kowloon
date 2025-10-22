@@ -1,8 +1,6 @@
 // #ActivityParser/handlers/Accept/index.js
 // Accepts a pending join for an Event/Group (admin/mod approval), OR
 // (optionally) lets an invited user self-accept by moving from `invited` to membership.
-// For Events: pending circle = `interested`, membership = `attending`
-// For Groups: pending circle = `requests`,   membership = `members`
 
 import { Event, Group, Circle, User } from "#schema";
 
@@ -88,7 +86,8 @@ export default async function Accept(activity, ctx = {}) {
   }
 
   // Determine source (pending) and destination (membership) circles
-  const pendingCircle = kind === "Event" ? target.interested : target.requests;
+  const pendingCircle =
+    kind === "Event" ? target.interested : target.requests;
   const memberCircle = kind === "Event" ? target.attending : target.members;
 
   if (!memberCircle) {

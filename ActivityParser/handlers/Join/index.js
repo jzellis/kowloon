@@ -3,34 +3,21 @@ import { Event, Group, Circle, User } from "#schema";
 
 export default async function Join(activity, ctx = {}) {
   const actorId = activity.actorId;
-  const targetRef =
+  const targetId =
     activity.target ||
     (typeof activity.object === "string"
       ? activity.object
       : activity.object?.id);
 
-  if (!actorId || !targetRef) {
+  if (!actorId || !targetId) {
     return { activity, error: "Join: missing actorId or target id" };
   }
 
-  // Resolve target: Event or Group (by prefix or by lookup)
-  let kind = null;
-  let target = null;
-
-  if (typeof targetRef === "string" && targetRef.startsWith("event:")) {
-    target = await Event.findOne({ id: targetRef }).lean();
-    kind = target ? "Event" : null;
-  } else if (typeof targetRef === "string" && targetRef.startsWith("group:")) {
-    target = await Group.findOne({ id: targetRef }).lean();
-    kind = target ? "Group" : null;
-  }
-
+  // Resolve target: Event or Group
+  let target = await Event.findOne({ id: targetId }).lean();
+  let kind = "Event";
   if (!target) {
-    target = await Event.findOne({ id: targetRef }).lean();
-    kind = target ? "Event" : null;
-  }
-  if (!target) {
-    target = await Group.findOne({ id: targetRef }).lean();
+    target = await Group.findOne({ id: targetId }).lean();
     kind = target ? "Group" : null;
   }
   if (!target) return { activity, error: "Join: target not found" };
@@ -41,12 +28,11 @@ export default async function Join(activity, ctx = {}) {
       id: target.blocked,
       "members.id": actorId,
     });
-    if (isBlocked) {
+    if (isBlocked)
       return {
         activity,
         error: `Join: user is blocked from this ${kind.toLowerCase()}`,
       };
-    }
   }
 
   // Capacity check (events only)
@@ -59,8 +45,8 @@ export default async function Join(activity, ctx = {}) {
     return { activity, error: "Join: event is at capacity" };
   }
 
-  // Policy (Event: rsvpPolicy; Group: rsvpPolicy)
-  const policy = target.rsvpPolicy || "invite_only";
+  // Policy
+  const policy = (target.rsvpPolicy) || "invite_only";
 
   if (policy === "invite_only") {
     const invitedCircle = target.invited;
@@ -81,33 +67,30 @@ export default async function Join(activity, ctx = {}) {
       };
     }
   } else if (policy === "approval") {
-    // Queue a pending request
+    // enqueue request/pending
     const pendingCircle =
       kind === "Event" ? target.interested : target.requests;
-
-    if (!pendingCircle) {
-      return {
-        activity,
-        error: `Join: approval pending queue not configured for this ${kind.toLowerCase()}`,
-      };
-    }
-
-    await Circle.updateOne(
-      { id: pendingCircle, "members.id": { $ne: actorId } },
-      { $push: { members: { id: actorId } }, $inc: { memberCount: 1 } }
-    );
-
-    if (kind === "Event") {
-      await Event.updateOne(
-        { id: target.id },
-        { $inc: { interestedCount: 1 } }
+    if (pendingCircle) {
+      await Circle.updateOne(
+        { id: pendingCircle, "members.id": { $ne: actorId } },
+        { $push: { members: { id: actorId } }, $inc: { memberCount: 1 } }
       );
+      if (kind === "Event") {
+        await Event.updateOne(
+          { id: target.id },
+          { $inc: { interestedCount: 1 } }
+        );
+      }
+      return { activity, result: { type: kind, status: "pending" } };
     }
-    return { activity, result: { type: kind, status: "pending" } };
+    return {
+      activity,
+      error: `Join: approval pending queue not configured for this ${kind.toLowerCase()}`,
+    };
   } else if (policy !== "open") {
     return { activity, error: `Join: unsupported policy "${policy}"` };
   }
-  // proceed for open and invite_only
+  // Proceed for open and invite_only
 
   // Build member object (light enrichment if local user exists)
   const u = await User.findOne({ id: actorId }).lean();

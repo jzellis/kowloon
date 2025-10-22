@@ -1,7 +1,5 @@
 // #ActivityParser/handlers/Invite/index.js
 // Invites a user to an Event or Group by adding them to the target's `invited` circle.
-// Permissions: creator or admin/mods (Group); creator or admins (Event).
-// Notes: no sideEffects stored; writes happen directly here.
 
 import { Event, Group, Circle, User } from "#schema";
 
@@ -20,10 +18,7 @@ export default async function Invite(activity, ctx = {}) {
       : activity.object?.actorId || activity.object?.id;
 
   if (!inviterId || !targetRef || !inviteeId) {
-    return {
-      activity,
-      error: "Invite: missing inviterId, target, or inviteeId",
-    };
+    return { activity, error: "Invite: missing inviterId, target, or inviteeId" };
   }
 
   // Resolve target: Event or Group
@@ -59,15 +54,11 @@ export default async function Invite(activity, ctx = {}) {
   const canInvite =
     isCreator ||
     (kind === "Group" &&
-      ((await inCircle(target.admins)) ||
-        (await inCircle(target.moderators)))) ||
+      ((await inCircle(target.admins)) || (await inCircle(target.moderators)))) ||
     (kind === "Event" && (await inCircle(target.admins)));
 
   if (!canInvite) {
-    return {
-      activity,
-      error: `Invite: actor not permitted to invite to this ${kind.toLowerCase()}`,
-    };
+    return { activity, error: `Invite: actor not permitted to invite to this ${kind.toLowerCase()}` };
   }
 
   // Blocked check (cannot invite blocked users)

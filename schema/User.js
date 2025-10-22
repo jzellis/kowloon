@@ -30,8 +30,8 @@ const UserSchemaDef = {
   prefs: {
     defaultPostType: { type: String, default: "Note" },
     defaultTo: { type: String, default: "@public" },
-    defaultReplyTo: { type: String, default: "@public" },
-    defaultReactTo: { type: String, default: "@public" },
+    defaultcanReply: { type: String, default: "@public" },
+    defaultcanReact: { type: String, default: "@public" },
     defaultPostView: {
       type: [String],
       default: ["Note", "Article", "Media", "Link"],
@@ -61,8 +61,8 @@ const UserSchemaDef = {
 
   // Addressing defaults (unchanged)
   to: { type: String, default: "" },
-  replyTo: { type: String, default: "" },
-  reactTo: { type: String, default: "" },
+  canReply: { type: String, default: "" },
+  canReact: { type: String, default: "" },
 
   // Actor/web metadata
   url: { type: String }, // your existing profile URL
@@ -216,8 +216,8 @@ UserSchema.pre("save", async function (next) {
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Following`,
       to: this.id,
-      replyTo: this.id,
-      reactTo: this.id,
+      canReply: this.id,
+      canReact: this.id,
       members: [selfMember],
     });
     this.following = followingCircle.id;
@@ -227,8 +227,8 @@ UserSchema.pre("save", async function (next) {
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | All Following`,
       to: this.id,
-      replyTo: this.id,
-      reactTo: this.id,
+      canReply: this.id,
+      canReact: this.id,
       members: [selfMember],
     });
     this.allFollowing = allFollowingCircle.id;
@@ -238,8 +238,8 @@ UserSchema.pre("save", async function (next) {
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Blocked`,
       to: this.id,
-      replyTo: this.id,
-      reactTo: this.id,
+      canReply: this.id,
+      canReact: this.id,
     });
     this.blocked = blockedCircle.id;
 
@@ -248,8 +248,8 @@ UserSchema.pre("save", async function (next) {
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Muted`,
       to: this.id,
-      replyTo: this.id,
-      reactTo: this.id,
+      canReply: this.id,
+      canReact: this.id,
     });
     this.muted = mutedCircle.id;
 

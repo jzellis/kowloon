@@ -45,13 +45,11 @@ export default async function Undo(activity) {
     }
 
     // Helpful locals
-    const fx = original.sideEffects || {};
     const inverse = { ofType: original.type, did: [] };
 
     // ---------------- Dispatch by original.type ----------------
     switch (original.type) {
       case "Block": {
-        // sideEffects: { circleId, memberId }
         const { circleId, memberId } = fx;
         if (circleId && memberId) {
           await Circle.updateOne(

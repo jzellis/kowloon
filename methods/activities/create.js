@@ -12,6 +12,7 @@ import validateActivity from "#ActivityParser/validate.js";
 import ObjectById from "#methods/get/objectById.js";
 import toMember from "#methods/parse/toMember.js";
 import kowloonId from "#methods/parse/kowloonId.js";
+import shouldFederate from "#methods/federation/shouldFederate.js";
 
 export default async function createActivity(input) {
   try {
@@ -48,8 +49,8 @@ export default async function createActivity(input) {
 
     // ---- Validate with the dynamic verbs validator ------------------------
     const valid = await validateActivity(activity);
-    if (!valid?.success) {
-      return { error: valid?.error || "Invalid activity" };
+    if (!v.valid) {
+      return { activity, error: `Validation failed: ${v.message}` };
     }
 
     // Gets the activity User and sets it on the activity if not already set
@@ -58,6 +59,10 @@ export default async function createActivity(input) {
 
       activity.actor = toMember(actor);
     }
+
+    // ---- Should the Activity federate?
+
+    activity.federated = activity.federated || shouldFederate(activity);
 
     // ---- Dispatch to the verb handler -------------------------------------
     const parser = await ActivityParser();
@@ -76,7 +81,6 @@ export default async function createActivity(input) {
     const toSave = {
       ...activity,
       objectId: result?.activity?.objectId,
-      sideEffects: result?.activity?.sideEffects,
 
       // If the handler signals federation is needed, mark here so
       // the caller (e.g., /outbox) can enqueue; you can flip this to true AFTER

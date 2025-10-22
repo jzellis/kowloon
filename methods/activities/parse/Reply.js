@@ -9,8 +9,8 @@ export default function Reply(activity = {}) {
     objectType: "Reply",
     object: {
       ...obj,
-      // prefer explicit object.target; fall back to replyTo (singular)
-      target: obj.target || activity.replyTo,
+      // prefer explicit object.target; fall back to canReply (singular)
+      target: obj.target || activity.canReply,
       // optional: set a type for downstream UI
       type: obj.type || "Reply",
     },

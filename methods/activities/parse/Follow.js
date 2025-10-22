@@ -30,8 +30,8 @@ function encodedUserUrl(canonicalId) {
 export default async function Follow(activity) {
   // Keep private/local (no federation by design)
   activity.to = activity.actorId;
-  activity.replyTo = activity.actorId;
-  activity.reactTo = activity.actorId;
+  activity.canReply = activity.actorId;
+  activity.canReact = activity.actorId;
 
   // Actor
   const me = await User.findOne({ id: activity.actorId })

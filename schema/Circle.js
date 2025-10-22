@@ -17,8 +17,8 @@ const CircleSchema = new Schema(
     members: { type: [Member], default: [] },
     memberCount: { type: Number, default: 0 },
     to: { type: String, default: "" },
-    replyTo: { type: String, default: "" },
-    reactTo: { type: String, default: "" },
+    canReply: { type: String, default: "" },
+    canReact: { type: String, default: "" },
     replyCount: { type: Number, default: 0 }, // The number of replies to this post
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     shareCount: { type: Number, default: 0 }, // The number of shares of this post

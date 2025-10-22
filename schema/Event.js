@@ -2,6 +2,7 @@
 import mongoose from "mongoose";
 import Settings from "./Settings.js";
 import { Circle, User, React, Reply } from "./index.js";
+import GeoPoint from "./subschema/GeoPoint.js";
 
 const { Schema } = mongoose;
 
@@ -16,8 +17,8 @@ const EventSchema = new Schema(
 
     // Addressing / vis
     to: { type: String, default: "" },
-    replyTo: { type: String, default: "" },
-    reactTo: { type: String, default: "" },
+    canReply: { type: String, default: "" },
+    canReact: { type: String, default: "" },
 
     // Content
     title: { type: String, default: undefined },
@@ -25,14 +26,22 @@ const EventSchema = new Schema(
     description: { type: String, default: undefined },
     startTime: { type: Date, required: true },
     endTime: { type: Date },
-    location: { type: Object, default: undefined },
+    timezone: String,
+    location: { type: GeoPoint, default: undefined },
     ageRestricted: { type: Boolean, default: false },
     href: { type: String, default: undefined },
     url: { type: String, default: undefined },
+    rsvpPolicy: {
+      type: String,
+      enum: ["invite_only", "open", "approval"],
+      default: "invite_only",
+    },
+    capacity: { type: Number, default: 0 }, // 0 = unlimited
 
     // Circle references (IDs; each circle's ownerId will be this event's id)
     admins: { type: String, default: "" }, // circle id
     invited: { type: String, default: "" }, // circle id
+    moderators: { type: String, default: "" }, // circle id
     interested: { type: String, default: "" }, // circle id
     attending: { type: String, default: "" }, // circle id
     blocked: { type: String, default: "" }, // circle id  <-- NEW
@@ -125,8 +134,8 @@ EventSchema.post("save", async function (doc) {
         actorId: doc.id, // owner is the event itself
         description: description || `${doc.title || "Event"} | ${suffix}`,
         to: doc.id, // default addressing: to the event
-        replyTo: doc.id,
-        reactTo: doc.id,
+        canReply: doc.id,
+        canReact: doc.id,
       });
       // Store back the circle id on the event document field that references it
       const field = suffix.toLowerCase(); // admins|invited|interested|attending|blocked
@@ -142,6 +151,11 @@ EventSchema.post("save", async function (doc) {
     // Ensure all five circles exist
     const adminsCircle = await ensureCircle(doc.admins, "Admins", "Admins");
     const invitedCircle = await ensureCircle(doc.invited, "Invited", "Invited");
+    const modCircle = await ensureCircle(
+      doc.invited,
+      "Moderators",
+      "Moderators"
+    );
     const interestedCircle = await ensureCircle(
       doc.interested,
       "Interested",

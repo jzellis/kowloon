@@ -2,6 +2,7 @@
 import mongoose from "mongoose";
 import Settings from "./Settings.js";
 import { Circle, User, React, Reply } from "./index.js";
+import GeoPoint from "./subschema/GeoPoint.js";
 
 const { Schema } = mongoose;
 
@@ -19,19 +20,28 @@ const GroupSchema = new Schema(
     name: { type: String, default: undefined },
     description: { type: String, default: undefined },
     icon: { type: String, default: undefined },
-    location: { type: Object, default: undefined },
+    location: { type: GeoPoint, default: undefined },
+
+    // Membership policy
+    rsvpPolicy: {
+      type: String,
+      enum: ["invite_only", "open", "approval"],
+      default: "invite_only",
+    },
 
     // Addressing defaults
     to: { type: String, default: "" },
-    replyTo: { type: String, default: "" },
-    reactTo: { type: String, default: "" },
+    canReply: { type: String, default: "" },
+    canReact: { type: String, default: "" },
 
-    // Circle references (store the Circle IDs -- ownerId of each is this group's id)
+    // Circle references (ownerId of each circle is this group's id)
     admins: { type: String, default: "" }, // circle id
     moderators: { type: String, default: "" }, // circle id
     members: { type: String, default: "" }, // circle id
     invited: { type: String, default: "" }, // circle id
     blocked: { type: String, default: "" }, // circle id
+    requests: { type: String, default: "" }, // circle id for approval requests (NEW)
+
     memberCount: { type: Number, default: 1 },
 
     // Denormalized counts (optional)
@@ -56,7 +66,7 @@ const GroupSchema = new Schema(
   }
 );
 
-// Keep your reacts virtual
+// Virtuals
 GroupSchema.virtual("reacts", {
   ref: "React",
   localField: "id",
@@ -120,10 +130,10 @@ GroupSchema.post("save", async function (doc) {
         actorId: doc.id, // owner is this group
         description: `${doc.name || "Group"} | ${label}`,
         to: doc.id,
-        replyTo: doc.id,
-        reactTo: doc.id,
+        canReply: doc.id,
+        canReact: doc.id,
       });
-      doc[key] = created.id; // key ∈ {admins, moderators, members, invited, blocked}
+      doc[key] = created.id; // key ∈ {admins, moderators, members, invited, blocked, requests}
       // Persist without re-entering pre('save') hooks (avoid racing memberCount calc)
       await doc.constructor.updateOne(
         { _id: doc._id },
@@ -132,7 +142,7 @@ GroupSchema.post("save", async function (doc) {
       return created;
     }
 
-    // Ensure all five circles exist
+    // Ensure all six circles exist (added: Requests)
     const adminsCircle = await ensureCircle(doc.admins, "admins", "Admins");
     const moderatorsCircle = await ensureCircle(
       doc.moderators,
@@ -142,6 +152,11 @@ GroupSchema.post("save", async function (doc) {
     const membersCircle = await ensureCircle(doc.members, "members", "Members");
     const invitedCircle = await ensureCircle(doc.invited, "invited", "Invited");
     const blockedCircle = await ensureCircle(doc.blocked, "blocked", "Blocked");
+    const requestsCircle = await ensureCircle(
+      doc.requests,
+      "requests",
+      "Requests"
+    );
 
     // Seed creator into admins + moderators + members once
     if (doc.actorId) {
@@ -191,13 +206,10 @@ GroupSchema.post("save", async function (doc) {
       );
     }
 
-    // (No default seeds for invited/blocked)
+    // (No default seeds for invited/blocked/requests)
   } catch (err) {
     console.error("Group post-save circle ensure error:", err);
   }
-
-  this.reactCount = await React.find({ target: this.id }).countDocuments();
-  this.replyCount = await Reply.find({ target: this.id }).countDocuments();
 });
 
 export default mongoose.model("Group", GroupSchema);

@@ -5,8 +5,8 @@ import kowloonId from "#methods/parse/kowloonId.js";
 
 export default async function (activity) {
   activity.to = activity.actorId;
-  activity.replyTo = activity.actorId;
-  activity.reactTo = activity.actorId;
+  activity.canReply = activity.actorId;
+  activity.canReact = activity.actorId;
   let user = await User.findOne({ id: activity.actorId });
   let target = await getObjectById(activity.target);
 

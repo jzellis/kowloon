@@ -30,8 +30,8 @@ export function sanitizeAudience(obj, ctx) {
     out.to = "@private";
   }
 
-  out.canReply = canInteract(obj.replyTo || to, obj.actorId, ctx);
-  out.canReact = canInteract(obj.reactTo || to, obj.actorId, ctx);
+  out.canReply = canInteract(obj.canReply || to, obj.actorId, ctx);
+  out.canReact = canInteract(obj.canReact || to, obj.actorId, ctx);
   return out;
 }
 

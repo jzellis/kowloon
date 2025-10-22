@@ -1,124 +1,78 @@
 // /ActivityParser/handlers/Follow/index.js
 import { Circle, User } from "#schema";
-import getObjectById from "#methods/get/objectById.js";
-
-function normalizeObjectAsActorId(obj) {
-  // Accepts either "@user@domain" or { actorId: "@user@domain" } (and ONLY actorId)
-  if (typeof obj === "string") {
-    const actorId = obj.trim();
-    return actorId ? { actorId } : null;
-  }
-  if (obj && typeof obj === "object") {
-    const keys = Object.keys(obj).filter((k) => obj[k] !== undefined);
-    if (keys.length !== 1 || keys[0] !== "actorId") return null;
-    const actorId = String(obj.actorId || "").trim();
-    return actorId ? { actorId } : null;
-  }
-  return null;
-}
+import objectById from "#methods/get/objectById.js";
+import toMember from "#methods/parse/toMember.js";
 
 export default async function Follow(activity) {
   try {
-    // ---- Basic validation ----
-    if (!activity || typeof activity !== "object") {
-      return { activity, error: "Follow: missing activity" };
-    }
-    const actorId =
-      typeof activity.actorId === "string" ? activity.actorId.trim() : "";
-    if (!actorId)
+    // ---- Validate basics ----
+    if (!activity?.actorId || typeof activity.actorId !== "string") {
       return { activity, error: "Follow: missing activity.actorId" };
-
-    // object must be a string id or {actorId}
-    const norm = normalizeObjectAsActorId(activity.object);
-    if (!norm) {
+    }
+    if (!activity?.object || typeof activity.object !== "string") {
       return {
         activity,
         error:
-          'Follow: invalid activity.object -- expected "@user@domain" or {actorId:"@user@domain"}',
+          "Follow: missing or malformed activity.object (actorId to follow)",
       };
     }
-    activity.object = norm; // ensure downstream code always sees an object
-    if (norm.actorId === actorId) {
+
+    // ---- Load actor & resolve target circle ----
+    const actor = await User.findOne({ id: activity.actorId }).lean();
+    if (!actor) return { activity, error: "Follow: actor not found" };
+
+    const target = activity.target || actor.following;
+    if (!target || typeof target !== "string") {
+      return {
+        activity,
+        error:
+          "Follow: no target circle provided and no default following circle on actor",
+      };
+    }
+    if (!target.startsWith("circle:")) {
+      return { activity, error: "Follow: target must be a circle id" };
+    }
+
+    // ---- Load target circle and enforce ownership (actors may only edit their own circles) ----
+    const targetCircle = await Circle.findOne({ id: target }).lean();
+    if (!targetCircle)
+      return { activity, error: "Follow: target circle not found" };
+    if (targetCircle.actorId !== actor.id) {
+      return {
+        activity,
+        error: "Follow: cannot add members to a circle you do not own",
+      };
+    }
+
+    // ---- Prevent self-follow ----
+    if (activity.object === activity.actorId) {
       return { activity, error: "Follow: cannot follow yourself" };
     }
 
-    // ---- Acting user must exist (to read default 'following' circle) ----
-    const follower = await User.findOne({ id: actorId }).lean(false);
-    if (!follower)
-      return { activity, error: `Follow: follower not found: ${actorId}` };
-
-    // target circle: empty string or falsy -> use follower.following
-    const requestedTarget =
-      typeof activity.target === "string" ? activity.target.trim() : "";
-    const circleId = requestedTarget || follower.following;
-    if (!circleId)
-      return {
-        activity,
-        error: "Follow: follower has no 'following' circle set",
-      };
-
-    const circle = await Circle.findOne({ id: circleId }).lean(false);
-    if (!circle)
-      return {
-        activity,
-        error: `Follow: target circle not found: ${circleId}`,
-      };
-    // MUST be a user-owned circle
-    if (circle.actorId !== actorId) {
-      return {
-        activity,
-        error: `Follow: target circle not owned by actor (${circle.actorId} != ${actorId})`,
-      };
+    // ---- Resolve followed object & normalize to circle member subdoc ----
+    const followedObj = await objectById(activity.object);
+    if (!followedObj) {
+      return { activity, error: "Follow: followed object not found" };
+    }
+    const member = toMember(followedObj);
+    if (!member || !member.id) {
+      return { activity, error: "Follow: invalid followed object" };
     }
 
-    // ---- Resolve the followed user (local or remote) ----
-    // Uses #methods/get/objectById which will do prefer-local and, if needed, remote resolve+hydrate.
-    let resolved = null;
-    try {
-      const result = await getObjectById(norm.actorId, {
-        mode: "prefer-local",
-        hydrateRemoteIntoDB: true,
-      });
-      resolved = result?.object || null;
-    } catch (e) {
-      // Treat resolution failure as an error (require retrievable user)
-      return {
-        activity,
-        error: `Follow: could not resolve user ${norm.actorId} (${
-          e?.message || "lookup failed"
-        })`,
-      };
-    }
-    if (!resolved) {
-      return { activity, error: `Follow: user not found: ${norm.actorId}` };
-    }
-
-    // ---- Build member record from resolved User ----
-    const member = {
-      id: resolved.id, // always the Kowloon user id: "@user@domain"
-      name: resolved?.profile?.name,
-      icon: resolved?.profile?.icon,
-      url: resolved?.url,
-      inbox: resolved?.inbox,
-      outbox: resolved?.outbox,
-      server: resolved?.server, // ok if undefined for local
-    };
-
-    // ---- Insert if not already present (idempotent) ----
+    // ---- Atomic add (only if not already a member), bump memberCount ----
     const res = await Circle.updateOne(
-      { id: circle.id, actorId, "members.id": { $ne: member.id } },
-      { $push: { members: member }, $set: { updatedAt: new Date() } }
+      { id: target, "members.id": { $ne: member.id } },
+      { $push: { members: member }, $inc: { memberCount: 1 } }
     );
-    const added = res.modifiedCount > 0;
 
-    // ---- Annotate for downstream/logs ----
-    activity.target = circle.id; // the circle we touched
-    activity.objectId = member.id; // who we followed
-    activity.sideEffects = { circleId: circle.id, memberId: member.id, added };
-
-    return { activity, following: circle, added };
+    const didAdd = (res.modifiedCount || 0) > 0;
+    return {
+      activity,
+      circleId: target,
+      followed: didAdd,
+      federate: false,
+    };
   } catch (err) {
-    console.error(err);
     return { activity, error: err?.message || String(err) };
   }
 }

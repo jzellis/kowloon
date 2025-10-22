@@ -86,11 +86,6 @@ export default async function Update(activity) {
 
     // annotate for downstreams + (optional) Undo
     activity.objectId = updated.id;
-    activity.sideEffects = {
-      model: parsed.type,
-      updatedId: updated.id,
-      previous, // for potential Undo of Update (optional use by your Undo handler)
-    };
 
     return { activity, updated };
   } catch (err) {

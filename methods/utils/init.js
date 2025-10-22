@@ -55,16 +55,16 @@ export default async function init(Kowloon, ctx = {}) {
     const adminCircle = await Circle.create({
       name: `${ctx.SITE_TITLE || "Kowloon"} Admins`,
       to: "",
-      reactTo: "",
-      replyTo: "",
+      canReact: "",
+      canReply: "",
       actorId: `@${process.env.DOMAIN}`,
     });
 
     const modCircle = await Circle.create({
       name: `${ctx.SITE_TITLE || "Kowloon"} Moderators`,
       to: "",
-      reactTo: "",
-      replyTo: "",
+      canReact: "",
+      canReply: "",
       actorId: `@${process.env.DOMAIN}`,
     });
 

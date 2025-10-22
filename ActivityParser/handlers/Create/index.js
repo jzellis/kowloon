@@ -93,7 +93,6 @@ export default async function Create(activity) {
       const created = await User.create(obj);
 
       activity.objectId = created.id;
-      activity.sideEffects = { model: "User", createdId: created.id };
       return { activity, created };
     } else {
       // For everything but User, we need to ensure object.actor is present
@@ -107,7 +106,7 @@ export default async function Create(activity) {
     const created = await Model.create(activity.object);
 
     activity.objectId = created.id;
-    activity.sideEffects = { model: type, createdId: created.id };
+
     return { activity, created };
   } catch (err) {
     // Surface useful info for E11000 etc.

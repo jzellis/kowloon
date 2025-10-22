@@ -5,11 +5,11 @@ export default function (activity) {
     case !activity.to:
       throw new Error("No recipients provided");
       break;
-    // case !activity.replyTo:
-    //   throw new Error("No replyTo provided");
+    // case !activity.canReply:
+    //   throw new Error("No canReply provided");
     //   break;
-    // case !activity.reactTo:
-    //   throw new Error("No reactTo provided");
+    // case !activity.canReact:
+    //   throw new Error("No canReact provided");
     //   break;
     case !activity.type:
       throw new Error("No activity type provided");

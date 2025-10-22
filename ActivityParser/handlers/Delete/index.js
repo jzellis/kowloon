@@ -69,10 +69,6 @@ export default async function Delete(activity) {
 
     // annotate for downstreams + Undo
     activity.objectId = deleted.id;
-    activity.sideEffects = {
-      model: parsed.type,
-      softDeletedId: deleted.id,
-    };
 
     return { activity, deleted };
   } catch (err) {

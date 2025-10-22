@@ -46,8 +46,8 @@ export default route(async ({ query, set }) => {
     icon: g.icon,
     url: g.url,
     to: g.to,
-    replyTo: g.replyTo,
-    reactTo: g.reactTo,
+    canReply: g.canReply,
+    canReact: g.canReact,
     updatedAt: g.updatedAt,
   }));
 

@@ -41,8 +41,8 @@ export default route(async ({ req, params, set, setStatus }) => {
     icon: group.icon,
     url: group.url,
     to: group.to,
-    replyTo: group.replyTo,
-    reactTo: group.reactTo,
+    canReply: group.canReply,
+    canReact: group.canReact,
     memberCount,
     updatedAt: group.updatedAt,
   });

@@ -1,105 +1,67 @@
 // /ActivityParser/handlers/Unfollow/index.js
 import { Circle, User } from "#schema";
 
-function normalizeUnfollowObject(obj) {
-  if (typeof obj === "string") return { actorId: obj, id: obj, type: "User" };
-  if (obj && typeof obj === "object") {
-    const actorId = obj.actorId || obj.id;
-    if (typeof actorId === "string" && actorId.trim()) {
-      return {
-        ...obj,
-        actorId,
-        id: obj.id || actorId,
-        type: obj.type || "User",
-      };
-    }
-  }
-  return null;
-}
-
 export default async function Unfollow(activity) {
   try {
-    // ---- Basics ----
+    // ---- Validate basics ----
     if (!activity?.actorId || typeof activity.actorId !== "string") {
       return { activity, error: "Unfollow: missing activity.actorId" };
     }
-    const norm = normalizeUnfollowObject(activity.object);
-    if (!norm) {
+    if (!activity?.object || typeof activity.object !== "string") {
       return {
         activity,
         error:
-          "Unfollow: missing/malformed activity.object (string or {actorId})",
+          "Unfollow: missing or malformed activity.object (actorId to unfollow)",
       };
     }
-    activity.object = norm;
 
-    // Ensure actor exists (and to make owner checks clearer)
+    // ---- Load actor & resolve target circle ----
     const actor = await User.findOne({ id: activity.actorId }).lean();
-    if (!actor) {
+    if (!actor) return { activity, error: "Unfollow: actor not found" };
+
+    const target = activity.target || actor.following;
+    if (!target || typeof target !== "string") {
       return {
         activity,
-        error: `Unfollow: actor not found: ${activity.actorId}`,
+        error:
+          "Unfollow: no target circle provided and no default following circle on actor",
+      };
+    }
+    if (!target.startsWith("circle:")) {
+      return { activity, error: "Unfollow: target must be a circle id" };
+    }
+
+    // ---- Load target circle and enforce ownership (actors may only edit their own circles) ----
+    const targetCircle = await Circle.findOne({ id: target }).lean();
+    if (!targetCircle)
+      return { activity, error: "Unfollow: target circle not found" };
+    if (targetCircle.actorId !== actor.id) {
+      return {
+        activity,
+        error: "Unfollow: cannot remove members from a circle you do not own",
       };
     }
 
-    const memberId = norm.actorId;
-
-    // ---- Case A: specific circle (must be user-owned) ----
-    if (activity.target) {
-      if (typeof activity.target !== "string") {
-        return {
-          activity,
-          error:
-            "Unfollow: malformed activity.target (circle id string expected)",
-        };
-      }
-
-      const circle = await Circle.findOne({ id: activity.target }).lean(false);
-      if (!circle) {
-        return {
-          activity,
-          error: `Unfollow: target circle not found: ${activity.target}`,
-        };
-      }
-      if (circle.actorId !== activity.actorId) {
-        return {
-          activity,
-          error: `Unfollow: target circle not owned by actor (${circle.actorId} != ${activity.actorId})`,
-        };
-      }
-
-      const res = await Circle.updateOne(
-        { id: circle.id, actorId: activity.actorId, "members.id": memberId },
-        {
-          $pull: { members: { id: memberId } },
-          $set: { updatedAt: new Date() },
-        }
-      );
-
-      const removed = res.modifiedCount > 0;
-
-      activity.target = circle.id;
-      activity.objectId = memberId;
-      activity.sideEffects = { circleId: circle.id, memberId, removed };
-
-      return { activity, circle, removed };
+    // ---- Prevent self-unfollow (no-op or explicit error)
+    if (activity.object === activity.actorId) {
+      return { activity, error: "Unfollow: cannot unfollow yourself" };
     }
 
-    // ---- Case B: no target → remove from ALL circles owned by the actor ----
-    const res = await Circle.updateMany(
-      { actorId: activity.actorId, "members.id": memberId },
-      { $pull: { members: { id: memberId } }, $set: { updatedAt: new Date() } }
+    const memberId = activity.object;
+
+    // ---- Atomic remove (only if present), decrement memberCount ----
+    const res = await Circle.updateOne(
+      { id: target, "members.id": memberId },
+      { $pull: { members: { id: memberId } }, $inc: { memberCount: -1 } }
     );
 
-    const removedCount = res.modifiedCount || 0;
-    activity.objectId = memberId;
-    activity.sideEffects = {
-      ownerActorId: activity.actorId,
-      memberId,
-      removedCount,
+    const didRemove = (res.modifiedCount || 0) > 0;
+    return {
+      activity,
+      circleId: target,
+      unfollowed: didRemove,
+      federate: false,
     };
-
-    return { activity, removedCount };
   } catch (err) {
     return { activity, error: err?.message || String(err) };
   }

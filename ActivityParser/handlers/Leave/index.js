@@ -72,11 +72,6 @@ export default async function Leave(activity) {
 
       // annotate for Undo (note: "Leave" undo is optional / policy-dependent)
       activity.objectId = activity.actorId;
-      activity.sideEffects = {
-        removedFrom,
-        eventId: eventDoc.id,
-        memberId: activity.actorId,
-      };
 
       return {
         activity,
@@ -104,11 +99,6 @@ export default async function Leave(activity) {
     if ((ops[1].modifiedCount || 0) > 0) removedFrom.push("invited");
 
     activity.objectId = activity.actorId;
-    activity.sideEffects = {
-      removedFrom,
-      groupId: groupDoc.id,
-      memberId: activity.actorId,
-    };
 
     return {
       activity,

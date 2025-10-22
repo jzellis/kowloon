@@ -1,117 +1,134 @@
-// /ActivityParser/handlers/Reject/index.js
+// #ActivityParser/handlers/Reject/index.js
+// Rejects a pending join (approval flow) or declines/rescinds an invite.
+// - Events: pending circle = `interested`, membership = `attending`
+// - Groups: pending circle = `requests`,   membership = `members`
+// Permissions:
+//   • Pending rejection: creator/admins (and moderators for Groups).
+//   • Invite decline: invitee may self-decline; admins may rescind.
 
-import { Event, Group, Circle } from "#schema";
-import objectById from "#methods/get/objectById.js";
-import kowloonId from "#methods/parse/kowloonId.js";
+import { Event, Group, Circle, User } from "#schema";
 
-export default async function Reject(activity) {
-  try {
-    // ---- Basic validation ----
-    if (!activity?.actorId || typeof activity.actorId !== "string") {
-      return { activity, error: "Reject: missing activity.actorId" };
-    }
-    if (!activity?.target || typeof activity.target !== "string") {
+export default async function Reject(activity, ctx = {}) {
+  const actorId = activity.actorId;
+  const targetRef =
+    activity.target ||
+    (typeof activity.object === "string"
+      ? activity.object
+      : activity.object?.id);
+
+  // Who is being rejected? If omitted, assume self (actorId).
+  const subjectId =
+    typeof activity.object === "string"
+      ? activity.object
+      : activity.object?.actorId || activity.object?.id || actorId;
+
+  if (!actorId || !targetRef) {
+    return { activity, error: "Reject: missing actorId or target" };
+  }
+
+  // Resolve target: Event or Group
+  let kind = null;
+  let target = null;
+
+  if (typeof targetRef === "string" && targetRef.startsWith("event:")) {
+    target = await Event.findOne({ id: targetRef }).lean();
+    kind = target ? "Event" : null;
+  } else if (typeof targetRef === "string" && targetRef.startsWith("group:")) {
+    target = await Group.findOne({ id: targetRef }).lean();
+    kind = target ? "Group" : null;
+  }
+
+  if (!target) {
+    target = await Event.findOne({ id: targetRef }).lean();
+    kind = target ? "Event" : null;
+  }
+  if (!target) {
+    target = await Group.findOne({ id: targetRef }).lean();
+    kind = target ? "Group" : null;
+  }
+  if (!target) return { activity, error: "Reject: target not found" };
+
+  const isSelf = actorId === subjectId;
+
+  async function actorHasAdminPower() {
+    const isCreator = target.actorId === actorId;
+    const inAdmins =
+      target.admins &&
+      (await Circle.exists({ id: target.admins, "members.id": actorId }));
+    const inMods =
+      kind === "Group" &&
+      target.moderators &&
+      (await Circle.exists({ id: target.moderators, "members.id": actorId }));
+    return isCreator || inAdmins || !!inMods;
+  }
+
+  const invitedCircle = target.invited;
+  const pendingCircle = kind === "Event" ? target.interested : target.requests;
+
+  // Determine what we're rejecting by checking circle membership
+  const subjectInvited =
+    invitedCircle &&
+    (await Circle.exists({ id: invitedCircle, "members.id": subjectId }));
+  const subjectPending =
+    pendingCircle &&
+    (await Circle.exists({ id: pendingCircle, "members.id": subjectId }));
+
+  // Case 1: Reject pending join (requires admin/mod permissions)
+  if (subjectPending) {
+    if (!(await actorHasAdminPower())) {
       return {
         activity,
-        error: "Reject: missing or malformed activity.target",
+        error: "Reject: actor not permitted to reject pending request",
       };
     }
 
-    // ---- Resolve local target (Event or Group). If not found → federate only. ----
-    let targetType = null;
-    let eventDoc = await Event.findOne({ id: activity.target });
-    let groupDoc = null;
+    // Remove from pending
+    const res = await Circle.updateOne(
+      { id: pendingCircle },
+      { $pull: { members: { id: subjectId } }, $inc: { memberCount: -1 } }
+    );
 
-    if (eventDoc) targetType = "Event";
-    else {
-      groupDoc = await Group.findOne({ id: activity.target });
-      if (groupDoc) targetType = "Group";
-    }
-
-    if (!targetType) {
-      // Remote target → no local mutation; let upstream federate.
-      return { activity, federate: true };
-    }
-
-    // ---- Deleted guard ----
-    if (eventDoc?.deletedAt)
-      return { activity, error: "Reject: event is deleted" };
-    if (groupDoc?.deletedAt)
-      return { activity, error: "Reject: group is deleted" };
-
-    // Actor locality (for federate flag only; we still mutate local targets)
-    const actorLocal = await objectById(activity.actorId);
-    const parsedActor = kowloonId(activity.actorId);
-
-    // Helpers
-    const pullMember = async (circleId, userId, label, removed) => {
-      if (!circleId) return removed;
-      const res = await Circle.updateOne(
-        { id: circleId, "members.id": userId },
-        { $pull: { members: { id: userId } }, $set: { updatedAt: new Date() } }
+    // If you track interestedCount on Events, decrement it too
+    if (kind === "Event") {
+      await Event.updateOne(
+        { id: target.id },
+        { $inc: { interestedCount: -1 } }
       );
-      if (res.modifiedCount > 0) removed.push(label);
-      return removed;
-    };
-
-    const removedFrom = [];
-    const actorId = activity.actorId;
-
-    if (targetType === "Event") {
-      // Remove from participation-like circles
-      const { invited, interested, attending } = eventDoc;
-      if (!invited && !interested && !attending) {
-        return { activity, error: "Reject: event circles not initialized" };
-      }
-
-      await pullMember(invited, actorId, "invited", removedFrom);
-      await pullMember(interested, actorId, "interested", removedFrom);
-      await pullMember(attending, actorId, "attending", removedFrom);
-
-      // annotate for Undo & downstreams
-      activity.objectId = actorId;
-      activity.sideEffects = {
-        removedFrom,
-        memberId: actorId,
-        eventId: eventDoc.id,
-        circleIds: { invited, interested, attending },
-      };
-
-      return {
-        activity,
-        event: eventDoc,
-        rejected: removedFrom.length > 0,
-        removedFrom,
-        federate: !actorLocal, // if actor isn't local, ask upstream to federate this Reject
-      };
     }
 
-    // Group: remove from invited & members (do not touch admins/moderators/blocked)
-    const { invited, members } = groupDoc;
-    if (!invited && !members) {
-      return { activity, error: "Reject: group circles not initialized" };
-    }
-
-    await pullMember(invited, actorId, "invited", removedFrom);
-    await pullMember(members, actorId, "members", removedFrom);
-
-    // annotate for Undo & downstreams
-    activity.objectId = actorId;
-    activity.sideEffects = {
-      removedFrom,
-      memberId: actorId,
-      groupId: groupDoc.id,
-      circleIds: { invited, members },
-    };
-
+    const status = res.modifiedCount > 0 ? "rejected" : "not_found";
     return {
       activity,
-      group: groupDoc,
-      rejected: removedFrom.length > 0,
-      removedFrom,
-      federate: !actorLocal,
+      result: { type: kind, action: "pending", status, subjectId },
     };
-  } catch (err) {
-    return { activity, error: err?.message || String(err) };
   }
+
+  // Case 2: Decline/rescind an invitation
+  if (subjectInvited) {
+    // Self-decline allowed; admins/mods may rescind as well
+    if (!isSelf && !(await actorHasAdminPower())) {
+      return {
+        activity,
+        error: "Reject: actor not permitted to rescind invitation",
+      };
+    }
+
+    const res = await Circle.updateOne(
+      { id: invitedCircle },
+      { $pull: { members: { id: subjectId } }, $inc: { memberCount: -1 } }
+    );
+
+    const mode = isSelf ? "self" : "admin";
+    const status = res.modifiedCount > 0 ? "declined" : "not_found";
+    return {
+      activity,
+      result: { type: kind, action: "invite", mode, status, subjectId },
+    };
+  }
+
+  // Nothing to reject
+  return {
+    activity,
+    error: "Reject: no pending request or invitation found for subject",
+  };
 }

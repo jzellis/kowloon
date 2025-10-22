@@ -81,9 +81,6 @@ export default async function FlagHandler(activity) {
 
     // annotate for downstreams + Undo
     activity.objectId = flag.id;
-    activity.sideEffects = {
-      flagId: flag.id,
-    };
 
     return { activity, flag, federate: isTargetRemote };
   } catch (err) {

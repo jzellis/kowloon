@@ -33,7 +33,16 @@ const ActivitySchema = new Schema(
     federated: { type: Boolean, default: false },
 
     undoOf: { type: String, default: undefined }, // id (or remoteId) being undone
-    sideEffects: { type: Schema.Types.Mixed, default: undefined }, // { circleId, memberId, reactId, ... }
+
+    // Minimal audit trail (do NOT store raw sideEffects)
+    audit: {
+      effects: {
+        kinds: { type: [String], default: undefined }, // e.g. ["write","counter","invalidate"]
+        reasons: { type: [String], default: undefined }, // e.g. ["CreatePost","ReplyAdded"]
+      },
+      handledBy: { type: String, default: undefined }, // e.g., handler name: "Create"
+      appliedAt: { type: Date, default: undefined },
+    },
 
     // Optional idempotency
     dedupeKey: { type: String, default: undefined },
@@ -79,5 +88,6 @@ ActivitySchema.index({ remoteId: 1 }, { sparse: true });
 ActivitySchema.index({ dedupeKey: 1 }, { sparse: true });
 ActivitySchema.index({ actorId: 1, id: 1 });
 ActivitySchema.index({ actorId: 1, type: 1 });
+ActivitySchema.index({ "audit.appliedAt": 1 }, { sparse: true });
 
 export default mongoose.model("Activity", ActivitySchema);

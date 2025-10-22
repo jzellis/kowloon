@@ -1,4 +1,4 @@
-// Create.js (refactored for singular addressing: to/replyTo/reactTo are strings)
+// Create.js (refactored for singular addressing: to/canReply/canReact are strings)
 import {
   Post,
   Page,
@@ -251,11 +251,11 @@ export default async function create(activity) {
 
   //     /* ----------------------------- Reply ---------------------------- */
   //     case "Reply": {
-  //       // Prefer explicit object.target; fall back to legacy replyTo
-  //       const targetId = activity.object?.target || activity.replyTo;
+  //       // Prefer explicit object.target; fall back to legacy canReply
+  //       const targetId = activity.object?.target || activity.canReply;
   //       if (!targetId || typeof targetId !== "string") {
   //         throw new Error(
-  //           "Reply requires a target (string) in object.target or replyTo"
+  //           "Reply requires a target (string) in object.target or canReply"
   //         );
   //       }
 

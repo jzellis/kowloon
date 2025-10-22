@@ -58,14 +58,14 @@ export default route(
       activity.actorId = user.id;
     }
 
-    // Ensure to/reactTo/replyTo exist on activity + object (don't override if present)
+    // Ensure to/canReact/canReply exist on activity + object (don't override if present)
     if (!("to" in activity)) activity.to = "";
-    if (!("reactTo" in activity)) activity.reactTo = "";
-    if (!("replyTo" in activity)) activity.replyTo = "";
+    if (!("canReact" in activity)) activity.canReact = "";
+    if (!("canReply" in activity)) activity.canReply = "";
     if (isObj(activity.object)) {
       if (!("to" in activity.object)) activity.object.to = "";
-      if (!("reactTo" in activity.object)) activity.object.reactTo = "";
-      if (!("replyTo" in activity.object)) activity.object.replyTo = "";
+      if (!("canReact" in activity.object)) activity.object.canReact = "";
+      if (!("canReply" in activity.object)) activity.object.canReply = "";
     }
 
     if (DEV) {

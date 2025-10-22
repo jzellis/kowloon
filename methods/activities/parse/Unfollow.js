@@ -17,8 +17,8 @@ function canon(target) {
 export default async function Unfollow(activity) {
   // self-address to avoid leaking context
   activity.to = activity.actorId;
-  activity.replyTo = activity.actorId;
-  activity.reactTo = activity.actorId;
+  activity.canReply = activity.actorId;
+  activity.canReact = activity.actorId;
 
   // Resolve actor
   const me = await User.findOne({ id: activity.actorId })

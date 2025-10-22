@@ -1,245 +1,164 @@
-// /ActivityParser/handlers/Accept/index.js
+// #ActivityParser/handlers/Accept/index.js
+// Accepts a pending join for an Event/Group (admin/mod approval), OR
+// (optionally) lets an invited user self-accept by moving from `invited` to membership.
+// For Events: pending circle = `interested`, membership = `attending`
+// For Groups: pending circle = `requests`,   membership = `members`
 
-import { Event, Group, Circle } from "#schema";
-import objectById from "#methods/get/objectById.js";
-import kowloonId from "#methods/parse/kowloonId.js";
+import { Event, Group, Circle, User } from "#schema";
 
-export default async function Accept(activity) {
-  try {
-    // Optional state hint for Events: "Attending" | "Interested" (default "Attending")
-    const desiredState =
-      (activity?.object &&
-        typeof activity.object === "object" &&
-        activity.object.state) ||
-      (activity?.objectType &&
-        /^(Attending|Interested)$/i.test(activity.objectType) &&
-        activity.objectType) ||
-      "Attending";
-    const state =
-      String(desiredState).toLowerCase() === "interested"
-        ? "Interested"
-        : "Attending";
+export default async function Accept(activity, ctx = {}) {
+  const actorId = activity.actorId;
+  const targetRef =
+    activity.target ||
+    (typeof activity.object === "string"
+      ? activity.object
+      : activity.object?.id);
 
-    // ---- Resolve local target (Event or Group). If not found → federate only. ----
-    let targetType = null;
-    let eventDoc = await Event.findOne({ id: activity.target });
-    let groupDoc = null;
+  // Who is being accepted? (subject of acceptance)
+  // If omitted, assume self-accept (actorId).
+  let subjectId =
+    typeof activity.object === "string"
+      ? activity.object
+      : activity.object?.actorId || activity.object?.id || actorId;
 
-    if (eventDoc) targetType = "Event";
-    else {
-      groupDoc = await Group.findOne({ id: activity.target });
-      if (groupDoc) targetType = "Group";
-    }
+  if (!actorId || !targetRef) {
+    return { activity, error: "Accept: missing actorId or target" };
+  }
 
-    if (!targetType) {
-      // Remote target → do not mutate locally; let upstream federate.
-      return { activity, federate: true };
-    }
+  // Resolve target: Event or Group
+  let kind = null;
+  let target = null;
 
-    // ---- Deleted guard ----
-    if (eventDoc?.deletedAt)
-      return { activity, error: "Accept: event is deleted" };
-    if (groupDoc?.deletedAt)
-      return { activity, error: "Accept: group is deleted" };
+  if (typeof targetRef === "string" && targetRef.startsWith("event:")) {
+    target = await Event.findOne({ id: targetRef }).lean();
+    kind = target ? "Event" : null;
+  } else if (typeof targetRef === "string" && targetRef.startsWith("group:")) {
+    target = await Group.findOne({ id: targetRef }).lean();
+    kind = target ? "Group" : null;
+  }
 
-    // ---- Locality of actor: used only for federate flag (mutations still proceed if target is local) ----
-    const actorLocal = await objectById(activity.actorId); // null if remote/unknown
-    const parsedActor = kowloonId(activity.actorId);
+  if (!target) {
+    target = await Event.findOne({ id: targetRef }).lean();
+    kind = target ? "Event" : null;
+  }
+  if (!target) {
+    target = await Group.findOne({ id: targetRef }).lean();
+    kind = target ? "Group" : null;
+  }
+  if (!target) return { activity, error: "Accept: target not found" };
 
-    // Helper to build a Member payload for circle pushes
-    const asMember = actorLocal
-      ? {
-          id: actorLocal.id,
-          name: actorLocal?.profile?.name,
-          url: actorLocal?.url,
-          icon: actorLocal?.profile?.icon,
-          inbox: actorLocal?.inbox,
-          outbox: actorLocal?.outbox,
-          server: actorLocal?.server ?? parsedActor?.domain,
-        }
-      : {
-          id: activity.actorId,
-          server: parsedActor?.domain,
-          url: parsedActor?.type === "URL" ? activity.actorId : undefined,
-        };
+  // Two acceptance modes:
+  // A) Admin/mod approves a pending request (actorId ≠ subjectId)
+  // B) Invitee self-accepts an invitation (actorId === subjectId)
 
-    // ---- Circle helpers ----
-    const isMember = async (circleId, userId) =>
-      !!(
-        circleId &&
-        userId &&
-        (await Circle.findOne({ id: circleId, "members.id": userId }).lean())
-      );
-    const pullMember = async (circleId, userId) =>
-      circleId
-        ? Circle.updateOne(
-            { id: circleId, "members.id": userId },
-            {
-              $pull: { members: { id: userId } },
-              $set: { updatedAt: new Date() },
-            }
-          )
-        : { modifiedCount: 0 };
-    const addMemberIfMissing = async (circleId, m) =>
-      circleId
-        ? Circle.findOneAndUpdate(
-            { id: circleId, "members.id": { $ne: m.id } },
-            { $push: { members: m }, $set: { updatedAt: new Date() } },
-            { new: true }
-          )
-        : null;
+  const isSelfAccept = actorId === subjectId;
 
-    // ========================================================================
-    // EVENT ACCEPT
-    // - Move from invited → attending|interested
-    // - Also allow interested → attending
-    // - Blocked users cannot accept
-    // - Record sideEffects for Undo
-    // ========================================================================
-    if (targetType === "Event") {
-      const adminsId = eventDoc.admins;
-      const invitedId = eventDoc.invited;
-      const interestedId = eventDoc.interested;
-      const attendingId = eventDoc.attending;
-      const blockedId = eventDoc.blocked;
+  async function actorHasAdminPower() {
+    const isCreator = target.actorId === actorId;
+    const inAdmins =
+      target.admins &&
+      (await Circle.exists({ id: target.admins, "members.id": actorId }));
+    const inMods =
+      kind === "Group" &&
+      target.moderators &&
+      (await Circle.exists({ id: target.moderators, "members.id": actorId }));
+    return isCreator || inAdmins || !!inMods;
+  }
 
-      if (!invitedId || !interestedId || !attendingId) {
-        return { activity, error: "Accept: event circles not initialized" };
-      }
-
-      if (blockedId && (await isMember(blockedId, activity.actorId))) {
-        return { activity, error: "Accept: you are blocked from this event" };
-      }
-
-      const inInvited = await isMember(invitedId, activity.actorId);
-      const inInterested = await isMember(interestedId, activity.actorId);
-      const inAttending = await isMember(attendingId, activity.actorId);
-
-      // Already at destination → idempotent no-op
-      if (
-        (state === "Interested" && inInterested) ||
-        (state === "Attending" && inAttending)
-      ) {
-        activity.objectId = activity.actorId;
-        return {
-          activity,
-          event: eventDoc,
-          accepted: false,
-          movedTo: state,
-          federate: false,
-        };
-      }
-
-      // Allowed sources:
-      // - invited → interested|attending
-      // - interested → attending
-      const allowed = inInvited || (state === "Attending" && inInterested);
-      if (!allowed) {
-        return {
-          activity,
-          error: "Accept: no pending invite found for this transition",
-        };
-      }
-
-      // Pull from source circles as needed, push to destination
-      let from = null;
-      let fromCircleId = null;
-      if (inInvited) {
-        await pullMember(invitedId, activity.actorId);
-        from = "invited";
-        fromCircleId = invitedId;
-      }
-      if (state === "Attending" && inInterested) {
-        await pullMember(interestedId, activity.actorId);
-        from = from || "interested";
-        fromCircleId = fromCircleId || interestedId;
-      }
-
-      const toCircleId = state === "Interested" ? interestedId : attendingId;
-      const pushed = await addMemberIfMissing(toCircleId, asMember);
-      if (!pushed) {
-        return { activity, error: "Accept: failed to update event circles" };
-      }
-
-      // annotate for downstreams + Undo
-      activity.objectId = activity.actorId;
-      activity.sideEffects = {
-        from: from || "invited",
-        to: state, // "Interested" | "Attending"
-        fromCircleId: fromCircleId || invitedId,
-        toCircleId,
-        memberId: activity.actorId,
-      };
-
+  // Self-accept path: ensure subject was invited
+  if (isSelfAccept) {
+    if (!target.invited) {
       return {
         activity,
-        event: eventDoc,
-        accepted: true,
-        movedTo: state,
-        federate: !actorLocal, // federate if the accepting actor isn't local
+        error: `Accept: ${kind.toLowerCase()} has no 'invited' circle configured`,
       };
     }
-
-    // ========================================================================
-    // GROUP ACCEPT
-    // - Move from invited → members
-    // - Blocked users cannot accept
-    // - Record sideEffects for Undo
-    // ========================================================================
-    const adminsId = groupDoc.admins;
-    const membersId = groupDoc.members;
-    const invitedId = groupDoc.invited;
-    const blockedId = groupDoc.blocked;
-
-    if (!membersId || !invitedId) {
-      return { activity, error: "Accept: group circles not initialized" };
+    const isInvited = await Circle.exists({
+      id: target.invited,
+      "members.id": subjectId,
+    });
+    if (!isInvited) {
+      return { activity, error: "Accept: not invited" };
     }
-
-    if (blockedId && (await isMember(blockedId, activity.actorId))) {
-      return { activity, error: "Accept: you are blocked from this group" };
+  } else {
+    // Admin approval path: check permissions
+    if (!(await actorHasAdminPower())) {
+      return { activity, error: "Accept: actor not permitted to approve" };
     }
+  }
 
-    const inMembers = await isMember(membersId, activity.actorId);
-    const inInvited = await isMember(invitedId, activity.actorId);
+  // Determine source (pending) and destination (membership) circles
+  const pendingCircle = kind === "Event" ? target.interested : target.requests;
+  const memberCircle = kind === "Event" ? target.attending : target.members;
 
-    if (inMembers) {
-      activity.objectId = activity.actorId;
-      return {
-        activity,
-        group: groupDoc,
-        accepted: false,
-        movedTo: "Members",
-        federate: false,
-      };
-    }
-    if (!inInvited) {
-      return { activity, error: "Accept: no pending invite found" };
-    }
-
-    await pullMember(invitedId, activity.actorId);
-    const pushed = await addMemberIfMissing(membersId, asMember);
-    if (!pushed) {
-      return { activity, error: "Accept: failed to update group circles" };
-    }
-
-    // annotate for downstreams + Undo
-    activity.objectId = activity.actorId;
-    activity.sideEffects = {
-      from: "invited",
-      to: "Members",
-      fromCircleId: invitedId,
-      toCircleId: membersId,
-      memberId: activity.actorId,
-    };
-
+  if (!memberCircle) {
     return {
       activity,
-      group: groupDoc,
-      accepted: true,
-      movedTo: "Members",
-      federate: !actorLocal, // federate if the accepting actor isn't local
+      error: `Accept: ${kind.toLowerCase()} has no ${
+        kind === "Event" ? "attending" : "members"
+      } circle`,
     };
-  } catch (err) {
-    return { activity, error: err?.message || String(err) };
+  }
+
+  // If self-accept, remove from invited; if admin-accept, remove from pending
+  if (isSelfAccept) {
+    if (target.invited) {
+      await Circle.updateOne(
+        { id: target.invited },
+        { $pull: { members: { id: subjectId } }, $inc: { memberCount: -1 } }
+      );
+    }
+  } else if (pendingCircle) {
+    await Circle.updateOne(
+      { id: pendingCircle },
+      { $pull: { members: { id: subjectId } }, $inc: { memberCount: -1 } }
+    );
+  }
+
+  // Add to membership circle (no dupes)
+  // Enrich member if local
+  const u = await User.findOne({ id: subjectId }).lean();
+  const member = u
+    ? {
+        id: u.id,
+        name: u?.profile?.name,
+        icon: u?.profile?.icon,
+        url: u?.url,
+        inbox: u?.inbox,
+        outbox: u?.outbox,
+        server: u?.server,
+      }
+    : { id: subjectId };
+
+  const res = await Circle.updateOne(
+    { id: memberCircle, "members.id": { $ne: member.id } },
+    { $push: { members: member }, $inc: { memberCount: 1 } }
+  );
+
+  if (res.modifiedCount > 0) {
+    if (kind === "Event") {
+      await Event.updateOne({ id: target.id }, { $inc: { attendingCount: 1 } });
+    } else {
+      await Group.updateOne({ id: target.id }, { $inc: { memberCount: 1 } });
+    }
+    return {
+      activity,
+      result: {
+        type: kind,
+        mode: isSelfAccept ? "self" : "admin",
+        status: "accepted",
+        subjectId,
+      },
+    };
+  } else {
+    return {
+      activity,
+      result: {
+        type: kind,
+        mode: isSelfAccept ? "self" : "admin",
+        status: "already_member",
+        subjectId,
+      },
+    };
   }
 }

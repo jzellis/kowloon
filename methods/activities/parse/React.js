@@ -36,8 +36,8 @@ export default async function ReactVerb(activity) {
 
   // keep private/local addressing by default (no noisy fanout)
   activity.to = activity.actorId;
-  activity.replyTo = activity.actorId;
-  activity.reactTo = activity.actorId;
+  activity.canReply = activity.actorId;
+  activity.canReact = activity.actorId;
 
   // 1) Normalize the object payload
   ensureObject(activity);

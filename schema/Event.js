@@ -218,3 +218,23 @@ EventSchema.post("save", async function (doc) {
 });
 
 export default mongoose.model("Event", EventSchema);
+
+let activity = {
+  activity: {
+    actorId: "@you@server.com",
+    type: "Create",
+    objectType: "Post",
+    object: {
+      actorId: "@you@server.com",
+      type: "Article",
+      title: "Hello, world!",
+      content: "This is my first post!",
+      to: "@public",
+      canReply: "@server.com",
+      canReact: "@public",
+    },
+    to: "@public",
+    canReply: "@server.com",
+    canReact: "@public",
+  },
+};

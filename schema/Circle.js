@@ -7,7 +7,7 @@ import Member from "./subschema/Member.js";
 const CircleSchema = new Schema(
   {
     id: { type: String, key: true },
-    objectType: { type: String, default: "Circle" },
+    type: { type: String, default: "Circle" },
     name: { type: String, default: undefined },
     actorId: { type: String, required: true },
     actor: { type: Object, default: undefined },

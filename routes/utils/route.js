@@ -1,7 +1,15 @@
 // /routes/utils/route.js
+// Route wrapper: unauthenticated GET/HEAD/OPTIONS allowed by default.
+// Passes { query, params } to handlers (in addition to { req, body, user, set, setStatus }).
+// Verifies RS256 JWTs using settings.publicKey and settings.domain as issuer.
+
+import jwt from "jsonwebtoken";
+
 const DEV =
   process.env.NODE_ENV === "development" ||
   /^(1|true|yes)$/i.test(process.env.ROUTE_DEBUG || "");
+
+const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 
@@ -13,91 +21,82 @@ function isCreateUserActivity(body) {
   return typeof ot === "string" && /^(User|Person)$/i.test(ot);
 }
 
-// ---- token helpers ----------------------------------------------------------
-function findToken(req) {
-  const hdrs = req.headers || {};
+function normalizePem(s) {
+  return typeof s === "string" ? s.replace(/\\n/g, "\n").trim() : s;
+}
+
+function extractToken(req) {
+  const hdrs = req?.headers || {};
   const auth = hdrs.authorization || hdrs.Authorization || "";
-  // Accept "Bearer <t>", "Token <t>", "JWT <t>", or raw "<t>"
-  let m = auth.match(/^(?:Bearer|Token|JWT)\s+(.+)$/i);
-  if (m && m[1]) return m[1].trim();
-  if (auth && !/\s/.test(auth)) return auth.trim();
-  // common alt headers (just in case)
-  const alt =
-    hdrs["x-auth-token"] ||
-    hdrs["x-access-token"] ||
-    hdrs["x-token"] ||
-    hdrs["auth-token"] ||
-    hdrs["x-jwt"];
-  if (alt) return String(alt).trim();
-  return "";
+  let token = "";
+  const m = auth.match(/^(?:Bearer|Token|JWT)\s+(.+)$/i);
+  if (m && m[1]) token = m[1].trim();
+  if (!token && auth && !/\s/.test(auth)) token = auth.trim();
+  if (!token) {
+    const alt =
+      hdrs["x-auth-token"] ||
+      hdrs["x-access-token"] ||
+      hdrs["x-token"] ||
+      hdrs["auth-token"] ||
+      hdrs["x-jwt"];
+    if (alt) token = String(alt).trim();
+  }
+  return token || "";
 }
 
 async function attachUserFromToken(req) {
   if (req.user && req.user.id) return true;
-
-  const rawAuth =
-    req.headers?.authorization || req.headers?.Authorization || "";
-  const token = findToken(req);
-
-  if (DEV) {
-    console.log(`ROUTE auth: Authorization header: ${rawAuth || "(none)"}`);
-    console.log(`ROUTE auth: extracted token: ${token || "(none)"}`);
-  }
+  const token = extractToken(req);
   if (!token) return false;
 
-  // Primary: use your project's RS256 verifier (jose)
   try {
-    const mod = await import("#methods/auth/verifyUserJwt.js");
-    const verifyUserJwt = mod?.default || mod;
-    const expectedIssuer = `https://${
-      process.env.KOWLOON_DOMAIN || process.env.DOMAIN
-    }`;
-    const payload = await verifyUserJwt(token, {
-      expectedIssuer,
-      expectedAudience: undefined,
+    const getSettingsMod = await import("#methods/settings/get.js");
+    const getSettings = getSettingsMod?.default || getSettingsMod;
+    const settings =
+      typeof getSettings === "function" ? await getSettings() : {};
+    const pub = normalizePem(settings?.publicKey || process.env.JWT_PUBLIC_KEY);
+    const issuerDomain =
+      settings?.domain || process.env.KOWLOON_DOMAIN || process.env.DOMAIN;
+    const issuer = issuerDomain ? `https://${issuerDomain}` : undefined;
+
+    if (!pub) throw new Error("Missing public key for JWT verification");
+    const payload = jwt.verify(token, pub, {
+      algorithms: ["RS256"],
+      ...(issuer ? { issuer } : {}),
     });
+
     const id =
       payload?.user?.id || payload?.id || payload?.sub || payload?.actorId;
-
     if (id) {
       req.user = payload.user ? payload.user : { id };
-      if (DEV)
-        console.log(`ROUTE auth: attached via verifyUserJwt → ${req.user.id}`);
+      if (DEV) console.log(`ROUTE auth: attached (RS256) → ${req.user.id}`);
       return true;
     }
   } catch (e) {
-    if (DEV)
-      console.warn(`ROUTE auth: verifyUserJwt failed: ${e?.message || e}`);
+    if (DEV) console.warn("ROUTE auth: RS256 verify failed:", e.message);
   }
 
-  // Dev-only fallback: decode without verifying so you can see what's inside
-  if (DEV) {
-    try {
-      const jwt = await import("jsonwebtoken");
-      if (jwt?.decode) {
-        const payload = jwt.decode(token);
-        const id =
-          payload?.user?.id || payload?.id || payload?.sub || payload?.actorId;
-        if (id) {
-          req.user = payload.user ? payload.user : { id };
-          console.log(
-            `ROUTE auth: attached via jwt.decode (DEV) → ${req.user.id}`
-          );
-          return true;
-        }
+  try {
+    const secret = process.env.JWT_SECRET || process.env.JWT_KEY;
+    if (secret) {
+      const payload = jwt.verify(token, secret);
+      const id =
+        payload?.user?.id || payload?.id || payload?.sub || payload?.actorId;
+      if (id) {
+        req.user = payload.user ? payload.user : { id };
+        if (DEV) console.log(`ROUTE auth: attached (HMAC) → ${req.user.id}`);
+        return true;
       }
-    } catch {}
-  }
+    }
+  } catch {}
 
-  if (DEV) console.log("ROUTE auth: could not attach user from token");
   return false;
 }
 
-// ---- wrapper ---------------------------------------------------------------
 export default function route(handler, options = {}) {
   const {
-    allowUnauth = false,
-    allowUnauthCreateUser = false,
+    allowUnauth = undefined,
+    allowUnauthCreateUser = true,
     label = "ROUTE",
   } = options;
 
@@ -105,47 +104,58 @@ export default function route(handler, options = {}) {
     const rid = Math.random().toString(36).slice(2, 8);
     const tag = `${label} ${rid}`;
 
-    const method = req?.method || "GET";
+    const method = (req?.method || "GET").toUpperCase();
     const path = req?.originalUrl || req?.url || "";
     const ip = req?.ip || req?.connection?.remoteAddress || "";
-    const body = req.body ?? {};
 
-    // Attach req.user BEFORE the auth gate
+    // Ensure these are always defined for handlers
+    const query = (req && req.query) || {};
+    const params = (req && req.params) || {};
+    const body = (req && req.body) || {};
+
     await attachUserFromToken(req);
-    const user = req.user ?? null;
 
+    const defaultAllow = SAFE_METHODS.has(method);
     const allow =
-      allowUnauth || (allowUnauthCreateUser && isCreateUserActivity(body));
+      (allowUnauth !== undefined ? !!allowUnauth : defaultAllow) ||
+      (allowUnauthCreateUser &&
+        method === "POST" &&
+        isCreateUserActivity(body));
+
+    const out = {};
+    const set = (k, v) => {
+      if (k === "error" && !v) return;
+      out[k] = v;
+    };
+    const setStatus = (code) => res.status(code);
 
     if (DEV) {
       console.log(`${tag}: enter`, {
         method,
         path,
         ip,
-        user: user?.id || null,
+        user: req.user?.id || null,
         allowUnauth: allow,
+        q: query,
+        p: params,
       });
-      if (Object.keys(body || {}).length) console.log(`${tag}: body`, body);
     }
 
-    if (!user?.id && !allow) {
+    if (!req.user?.id && !allow) {
       if (DEV) console.warn(`${tag}: 401 Unauthorized (no req.user)`);
-      res.status(401).json({ error: "Unauthorized" });
-      return;
+      return res.status(401).json({ error: "Unauthorized" });
     }
-
-    const out = {};
-    const set = (k, v) => {
-      out[k] = v;
-    };
-    const setStatus = (code) => {
-      try {
-        res.status(code);
-      } catch {}
-    };
 
     try {
-      await handler({ req, body, user, set, setStatus });
+      await handler({
+        req,
+        query,
+        params,
+        body,
+        user: req.user || null,
+        set,
+        setStatus,
+      });
       if (!res.statusCode || res.statusCode < 100) res.status(200);
       if (DEV) console.log(`${tag}: exit ${res.statusCode}`);
       res.json(out);

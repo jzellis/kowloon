@@ -2,15 +2,17 @@ import mongoose from "mongoose";
 import Settings from "./Settings.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
+import GeoPoint from "./subschema/GeoPoint.js";
 
 const FileSchema = new Schema(
   {
     id: { type: String, key: true },
     originalFileName: { type: String, default: undefined },
+    type: { type: String, default: "File" },
     title: { type: String, default: undefined },
     summary: { type: String, default: undefined },
     url: { type: String, default: undefined },
-    location: { type: String, default: undefined },
+    location: { type: GeoPoint, default: undefined },
     mimeType: { type: String, default: undefined },
     extension: { type: String, default: undefined },
     size: { type: Number, default: undefined },

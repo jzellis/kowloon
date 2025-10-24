@@ -8,6 +8,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const router = express.Router({ mergeParams: true });
 
+// Record mounted subrouters for listing later
+const mounted = [];
+
 // --- parse JSON early -------------------------------------------------------
 const JSON_LIMIT = process.env.JSON_LIMIT || "2mb";
 const jsonTypes = [
@@ -48,81 +51,8 @@ router.use((req, _res, next) => {
   next();
 });
 
-// === NEW: attach req.user from Authorization: Bearer <token> ================
-// Tries your own auth helpers if present; otherwise falls back to JWT verify.
-router.use(async (req, _res, next) => {
-  if (req.user && req.user.id) return next();
-
-  const auth = req.headers.authorization || "";
-  const m = auth.match(/^Bearer\s+(.+)$/i);
-  if (!m) return next();
-  const token = m[1];
-
-  // Try your project methods first (optional imports; won't throw if missing)
-  try {
-    // 1) whoami(token) -> { id, ... }
-    try {
-      const mod = await import("#methods/auth/whoami.js");
-      const whoami = mod?.default || mod?.whoami || mod;
-      if (typeof whoami === "function") {
-        const u = await whoami(token);
-        if (u && u.id) {
-          req.user = { id: u.id, ...u };
-          if (API_LOG) console.log(`API auth user (whoami): ${req.user.id}`);
-          return next();
-        }
-      }
-    } catch {}
-
-    // 2) verify(token) -> { id, ... }
-    try {
-      const mod = await import("#methods/auth/verify.js");
-      const verify = mod?.default || mod?.verify || mod;
-      if (typeof verify === "function") {
-        const u = await verify(token);
-        if (u && u.id) {
-          req.user = { id: u.id, ...u };
-          if (API_LOG) console.log(`API auth user (verify): ${req.user.id}`);
-          return next();
-        }
-      }
-    } catch {}
-
-    // 3) fallback: decode JWT if available
-    try {
-      const jwtMod = await import("jsonwebtoken");
-      const getSettingsMod = await import("#methods/settings/get.js");
-      const getSettings = getSettingsMod?.default || getSettingsMod;
-
-      const settings =
-        typeof getSettings === "function"
-          ? await getSettings().catch(() => ({}))
-          : {};
-      const secret =
-        settings?.jwtSecret ||
-        settings?.jwt?.secret ||
-        process.env.JWT_SECRET ||
-        process.env.JWT_KEY;
-
-      if (secret && jwtMod?.verify) {
-        const payload = jwtMod.verify(token, secret);
-        const id = payload?.id || payload?.sub || payload?.actorId;
-        if (id) {
-          req.user = { id };
-          if (API_LOG) console.log(`API auth user (jwt): ${req.user.id}`);
-        }
-      }
-    } catch {
-      // ignore JWT errors; req.user stays undefined
-    }
-  } catch {
-    // never block the request on auth attach
-  }
-  next();
-});
-
 // ---------------------------------------------------------------------------
-// existing dynamic route mounting (unchanged)
+// dynamic route mounting
 function isFile(p) {
   try {
     return fs.statSync(p).isFile();
@@ -130,6 +60,7 @@ function isFile(p) {
     return false;
   }
 }
+
 const routesRoot = __dirname;
 const entries = fs.readdirSync(routesRoot, { withFileTypes: true });
 
@@ -154,10 +85,89 @@ for (const dirent of entries) {
       continue;
     }
     router.use(mountPath, subrouter);
+    mounted.push({ mountPath, subrouter }); // record for listing
     console.log(`routes: mounted ${mountPath}`);
   } catch (e) {
     console.error(`routes: failed to mount ${name}:`, e.message);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Route listing utilities (no regex parsing of layer.regexp)
+
+function joinPaths(a = "", b = "") {
+  const s = `${a}${b}`;
+  const n = s.replace(/\/+/g, "/");
+  return n !== "/" ? n.replace(/\/$/, "") : "/";
+}
+
+function addRoute(out, seen, methods, path) {
+  const keyBase = `${path}`;
+  for (const m of methods) {
+    const key = `${m} ${keyBase}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({ methods: [m], path });
+  }
+}
+
+function collectFromRouter(prefix, rtr, out, seen) {
+  const stack = rtr && rtr.stack;
+  if (!Array.isArray(stack)) return;
+
+  for (const layer of stack) {
+    if (layer && layer.route) {
+      const rawPath = layer.route.path; // string or array
+      const methods = Object.keys(layer.route.methods || {}).map((m) =>
+        m.toUpperCase()
+      );
+
+      if (Array.isArray(rawPath)) {
+        for (const p of rawPath) {
+          addRoute(out, seen, methods, joinPaths(prefix, p));
+        }
+      } else {
+        addRoute(out, seen, methods, joinPaths(prefix, rawPath));
+      }
+    } else if (
+      layer &&
+      layer.name === "router" &&
+      layer.handle &&
+      layer.handle.stack
+    ) {
+      // nested router; recurse with same prefix (child paths are relative)
+      collectFromRouter(prefix, layer.handle, out, seen);
+    }
+  }
+}
+
+function listAllRoutes() {
+  const out = [];
+  const seen = new Set();
+
+  for (const { mountPath, subrouter } of mounted) {
+    collectFromRouter(mountPath === "/" ? "" : mountPath, subrouter, out, seen);
+  }
+
+  // Sort for readability
+  out.sort(
+    (a, b) =>
+      a.path.localeCompare(b.path) || a.methods[0].localeCompare(b.methods[0])
+  );
+  return out;
+}
+
+// GET /__routes -> JSON list of all routes (skip listing __routes itself)
+router.get("/__routes", (_req, res) => {
+  const routes = listAllRoutes().filter((r) => r.path !== "/__routes");
+  res.json({ total: routes.length, routes });
+});
+
+// Optional: log at boot
+if (process.env.ROUTE_DEBUG) {
+  const routes = listAllRoutes();
+  console.log(`Loaded ${routes.length} routes:`);
+  for (const r of routes) console.log(`${r.methods[0].padEnd(6)} ${r.path}`);
 }
 
 export default router;

@@ -1,108 +1,67 @@
 // #ActivityParser/handlers/Invite/index.js
-// Invites a user to an Event or Group by adding them to the target's `invited` circle.
-
 import { Event, Group, Circle, User } from "#schema";
+import objectById from "#methods/get/objectById.js";
+import toMember from "#methods/parse/toMember.js";
 
-export default async function Invite(activity, ctx = {}) {
-  const inviterId = activity.actorId;
-  const targetRef =
-    activity.target ||
-    (typeof activity.object === "string"
-      ? activity.object
-      : activity.object?.id);
+export default async function Invite(activity) {
+  try {
+    const { actorId, object, target } = activity;
+    if (!actorId || !object || !target) {
+      return { activity, error: "Invite: missing actorId, object, or target" };
+    }
 
-  // Who is being invited?
-  const inviteeId =
-    typeof activity.object === "string"
-      ? activity.object
-      : activity.object?.actorId || activity.object?.id;
+    // Resolve target (Event/Group)
+    let kind = null;
+    let tgt = await Event.findOne({ id: target }).lean();
+    if (tgt) kind = "Event";
+    if (!tgt) {
+      tgt = await Group.findOne({ id: target }).lean();
+      if (tgt) kind = "Group";
+    }
+    if (!tgt) return { activity, error: "Invite: target not found" };
 
-  if (!inviterId || !targetRef || !inviteeId) {
-    return { activity, error: "Invite: missing inviterId, target, or inviteeId" };
-  }
-
-  // Resolve target: Event or Group
-  let kind = null;
-  let target = null;
-
-  if (typeof targetRef === "string" && targetRef.startsWith("event:")) {
-    target = await Event.findOne({ id: targetRef }).lean();
-    kind = target ? "Event" : null;
-  } else if (typeof targetRef === "string" && targetRef.startsWith("group:")) {
-    target = await Group.findOne({ id: targetRef }).lean();
-    kind = target ? "Group" : null;
-  }
-
-  if (!target) {
-    target = await Event.findOne({ id: targetRef }).lean();
-    kind = target ? "Event" : null;
-  }
-  if (!target) {
-    target = await Group.findOne({ id: targetRef }).lean();
-    kind = target ? "Group" : null;
-  }
-  if (!target) return { activity, error: "Invite: target not found" };
-
-  // Permission check
-  const isCreator = target.actorId === inviterId;
-
-  async function inCircle(id) {
-    if (!id) return false;
-    return !!(await Circle.exists({ id, "members.id": inviterId }));
-  }
-
-  const canInvite =
-    isCreator ||
-    (kind === "Group" &&
-      ((await inCircle(target.admins)) || (await inCircle(target.moderators)))) ||
-    (kind === "Event" && (await inCircle(target.admins)));
-
-  if (!canInvite) {
-    return { activity, error: `Invite: actor not permitted to invite to this ${kind.toLowerCase()}` };
-  }
-
-  // Blocked check (cannot invite blocked users)
-  if (target.blocked) {
-    const isBlocked = await Circle.exists({
-      id: target.blocked,
-      "members.id": inviteeId,
-    });
-    if (isBlocked) {
+    // Require an invited circle on the target
+    if (!tgt.invited) {
       return {
         activity,
-        error: `Invite: user is blocked from this ${kind.toLowerCase()}`,
+        error: `Invite: ${kind.toLowerCase()} has no 'invited' circle`,
       };
     }
-  }
 
-  const invitedCircle = target.invited;
-  if (!invitedCircle) {
+    // Normalize the invitee to a member subdoc
+    let inviteeId =
+      typeof object === "string" ? object : object?.actorId || object?.id;
+    if (!inviteeId)
+      return { activity, error: "Invite: invalid object (user to invite)" };
+
+    const u = await User.findOne({ id: inviteeId }).lean();
+    const member = u
+      ? {
+          id: u.id,
+          name: u?.profile?.name,
+          icon: u?.profile?.icon,
+          url: u?.url,
+          inbox: u?.inbox,
+          outbox: u?.outbox,
+          server: u?.server,
+        }
+      : { id: inviteeId };
+
+    // Add to invited circle (no duplicates)
+    const res = await Circle.updateOne(
+      { id: tgt.invited, "members.id": { $ne: member.id } },
+      { $push: { members: member }, $inc: { memberCount: 1 } }
+    );
+
     return {
       activity,
-      error: `Invite: this ${kind.toLowerCase()} has no 'invited' circle configured`,
+      result: {
+        type: kind,
+        invited: res.modifiedCount > 0 ? "added" : "already_invited",
+        subjectId: member.id,
+      },
     };
+  } catch (err) {
+    return { activity, error: err?.message || String(err) };
   }
-
-  // Build member object (enrich if local)
-  const u = await User.findOne({ id: inviteeId }).lean();
-  const member = u
-    ? {
-        id: u.id,
-        name: u?.profile?.name,
-        icon: u?.profile?.icon,
-        url: u?.url,
-        inbox: u?.inbox,
-        outbox: u?.outbox,
-        server: u?.server,
-      }
-    : { id: inviteeId };
-
-  // Add to invited (no dupes)
-  const res = await Circle.updateOne(
-    { id: invitedCircle, "members.id": { $ne: member.id } },
-    { $push: { members: member }, $inc: { memberCount: 1 } }
-  );
-
-  const status = res.modifiedCount > 0 ? "invited" : "already_invited";
-  return { activity, result: { type: kind, status, inviteeId } };
 }

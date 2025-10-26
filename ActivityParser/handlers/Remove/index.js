@@ -83,14 +83,42 @@ export default async function Remove(activity) {
     }
 
     // ---- Normalize subject (user to remove) into cached actor shape ----
-    const member =
-      typeof activity.object === "string"
-        ? toMember(await objectById(activity.object))
-        : toMember(activity.object);
+    // Normalize the "user to add" so we accept:
+    //  1) "@user@domain" (actorId string)
+    //  2) { actorId: "@user@domain" }
+    //  3) DB id / full object (legacy paths)
+    async function resolveActorToMember(ref) {
+      // String case
+      if (typeof ref === "string") {
+        const s = ref.trim();
+        if (/^@[^@]+@[^@]+$/.test(s)) {
+          // actorId string → try local User, else fall back to minimal actor ref
+          const u = await User.findOne({ id: s }).lean();
+          return toMember(u || { actorId: s });
+        }
+        // not an actorId string → treat as DB id / other resolvable id
+        const o = await objectById(s);
+        return toMember(o);
+      }
 
-    if (!member || !member.id) {
-      return { activity, error: "Remove: invalid object (user to remove)" };
+      // Object case
+      if (ref && typeof ref === "object") {
+        if (
+          typeof ref.actorId === "string" &&
+          /^@[^@]+@[^@]+$/.test(ref.actorId)
+        ) {
+          const s = ref.actorId.trim();
+          const u = await User.findOne({ id: s }).lean();
+          return toMember(u || { actorId: s });
+        }
+        // If it already looks like a User/Actor object, let toMember handle it
+        return toMember(ref);
+      }
+
+      return null;
     }
+
+    const member = await resolveActorToMember(activity.object);
 
     activity.object = member;
 

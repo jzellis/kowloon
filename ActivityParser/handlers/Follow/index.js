@@ -8,18 +8,25 @@ export default async function Follow(activity) {
       return { activity, error: "Follow: missing activity.actorId" };
     }
     if (!activity?.object || typeof activity.object !== "string") {
-      return { activity, error: "Follow: object must be '@user@domain' string" };
+      return {
+        activity,
+        error: "Follow: object must be '@user@domain' string",
+      };
     }
 
-    const actor = await User.findOne({ actorId: activity.actorId });
+    const actor = await User.findOne({ id: activity.actorId });
     if (!actor) return { activity, error: "Follow: actor not found" };
 
-    const member = await toMember(activity.object);
-    if (!member || !member.id) return { activity, error: "Follow: could not resolve member" };
+    const member = toMember(actor);
+    if (!member || !member.id)
+      return { activity, error: "Follow: could not resolve member" };
 
     let targetId = activity.target;
     if (!targetId) {
-      const followingCircle = await Circle.findOne({ "owner.id": actor.id, subtype: "Following" });
+      const followingCircle = await Circle.findOne({
+        "owner.id": actor.id,
+        subtype: "Following",
+      });
       targetId = followingCircle?.id;
     }
     if (!targetId) return { activity, error: "Follow: no target circle found" };
@@ -30,7 +37,13 @@ export default async function Follow(activity) {
     );
 
     const added = !!(res && (res.modifiedCount > 0 || res.upsertedCount > 0));
-    return { activity, result: { status: added ? "followed" : "already_following", target: targetId } };
+    return {
+      activity,
+      result: {
+        status: added ? "followed" : "already_following",
+        target: targetId,
+      },
+    };
   } catch (err) {
     return { activity, error: `Follow: ${err.message}` };
   }

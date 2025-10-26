@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { marked } from "marked";
 import crypto from "crypto";
-import { Settings, User } from "./index.js";
+import { Settings, User, Reply, React } from "./index.js";
 import { type } from "os";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;

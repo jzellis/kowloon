@@ -48,7 +48,7 @@ export default async function createActivity(input) {
     }
 
     // ---- Validate with the dynamic verbs validator ------------------------
-    const valid = await validateActivity(activity);
+    const v = await validateActivity(activity);
     if (!v.valid) {
       return { activity, error: `Validation failed: ${v.message}` };
     }

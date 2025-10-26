@@ -20,13 +20,7 @@ const BookmarkSchema = new Schema(
     },
 
     // 🔐 Ownership (NEW)
-    ownerId: { type: String, required: true, index: true }, // "@user@domain" | "group:uuid@domain" | "@server@domain"
-    ownerType: {
-      type: String,
-      enum: ["User", "Group", "Server"],
-      required: true,
-      index: true,
-    },
+    actorId: { type: String, required: true },
 
     // Folder hierarchy
     parentFolder: { type: String, default: undefined, index: true }, // id of a Folder

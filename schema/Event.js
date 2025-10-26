@@ -22,7 +22,6 @@ const EventSchema = new Schema(
 
     // Content
     title: { type: String, default: undefined },
-    name: { type: String, default: undefined }, // keep both for backward compat, prefer 'title'
     description: { type: String, default: undefined },
     startTime: { type: Date, required: true },
     endTime: { type: Date },

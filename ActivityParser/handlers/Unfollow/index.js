@@ -8,21 +8,29 @@ export default async function Unfollow(activity) {
       return { activity, error: "Unfollow: missing activity.actorId" };
     }
     if (!activity?.object || typeof activity.object !== "string") {
-      return { activity, error: "Unfollow: object must be '@user@domain' string" };
+      return {
+        activity,
+        error: "Unfollow: object must be '@user@domain' string",
+      };
     }
 
-    const actor = await User.findOne({ actorId: activity.actorId });
+    const actor = await User.findOne({ id: activity.actorId });
     if (!actor) return { activity, error: "Unfollow: actor not found" };
 
-    const member = await toMember(activity.object);
-    if (!member || !member.id) return { activity, error: "Unfollow: could not resolve member" };
+    const member = toMember(actor);
+    if (!member || !member.id)
+      return { activity, error: "Unfollow: could not resolve member" };
 
     let targetId = activity.target;
     if (!targetId) {
-      const followingCircle = await Circle.findOne({ "owner.id": actor.id, subtype: "Following" });
+      const followingCircle = await Circle.findOne({
+        "owner.id": actor.id,
+        subtype: "Following",
+      });
       targetId = followingCircle?.id;
     }
-    if (!targetId) return { activity, error: "Unfollow: no target circle found" };
+    if (!targetId)
+      return { activity, error: "Unfollow: no target circle found" };
 
     const res = await Circle.updateOne(
       { id: targetId, "members.id": member.id },
@@ -30,7 +38,13 @@ export default async function Unfollow(activity) {
     );
 
     const removed = !!(res && res.modifiedCount > 0);
-    return { activity, result: { status: removed ? "unfollowed" : "not_following", target: targetId } };
+    return {
+      activity,
+      result: {
+        status: removed ? "unfollowed" : "not_following",
+        target: targetId,
+      },
+    };
   } catch (err) {
     return { activity, error: `Unfollow: ${err.message}` };
   }

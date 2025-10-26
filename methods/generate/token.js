@@ -46,7 +46,7 @@ export default async function (actorId) {
     settings.privateKey,
     {
       algorithm: "RS256",
-      issuer: `https://${process.env.KOWLOON_DOMAIN}`,
+      issuer: `https://${process.env.DOMAIN}`,
       keyid: createHash("sha256")
         .update(settings.publicKey)
         .digest("base64url"),

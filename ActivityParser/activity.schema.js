@@ -15,12 +15,24 @@ const patterns = {
 
 const toRecipient = {
   anyOf: [
+    { type: "string", pattern: "^$" },
     { type: "string", pattern: patterns.publicToken },
     { type: "string", pattern: patterns.serverHandle },
     { type: "string", pattern: patterns.circleId },
     { type: "string", pattern: patterns.groupId },
     { type: "string", pattern: patterns.eventId },
-  ]
+  ],
+};
+
+const replyReactRecipient = {
+  anyOf: [
+    { type: "string", pattern: "^$" },
+    { type: "string", pattern: patterns.publicToken },
+    { type: "string", pattern: patterns.serverHandle },
+    { type: "string", pattern: patterns.circleId },
+    { type: "string", pattern: patterns.groupId },
+    { type: "string", pattern: patterns.eventId },
+  ],
 };
 
 const schema = {
@@ -31,16 +43,47 @@ const schema = {
   properties: {
     id: { type: "string" },
     type: {
-      enum: ["Accept","Add","Block","Create","Delete","Flag","Follow","Invite","Join","Leave","Mute","React","Reject","Remove","Reply","Undo","Unfollow","Update"],
+      enum: [
+        "Accept",
+        "Add",
+        "Block",
+        "Create",
+        "Delete",
+        "Flag",
+        "Follow",
+        "Invite",
+        "Join",
+        "Leave",
+        "Mute",
+        "React",
+        "Reject",
+        "Remove",
+        "Reply",
+        "Undo",
+        "Unfollow",
+        "Update",
+      ],
     },
     actorId: { type: "string", pattern: patterns.actorId },
-    objectType: { type: "string", enum: ["Bookmark","Event","Group","Page","Post","User"] },
+    objectType: {
+      type: "string",
+      enum: [
+        "Bookmark",
+        "Circle",
+        "Event",
+        "Group",
+        "Page",
+        "Post",
+        "React",
+        "User",
+      ],
+    },
     object: {},
     target: { type: "string" },
     summary: { type: "string" },
     to: toRecipient,
-    canReply: toRecipient,
-    canReact: toRecipient,
+    canReply: replyReactRecipient,
+    canReact: replyReactRecipient,
   },
   allOf: [
     {
@@ -48,9 +91,13 @@ const schema = {
       then: {
         required: ["objectType", "object"],
         properties: {
-          object: { type: "object", required: ["type"], not: { required: ["id"] } }
-        }
-      }
+          object: {
+            type: "object",
+            required: ["type"],
+            not: { required: ["id"] },
+          },
+        },
+      },
     },
     {
       if: { properties: { type: { const: "Reply" } } },
@@ -60,16 +107,16 @@ const schema = {
           objectType: { const: "Post" },
           object: {
             type: "object",
-            required: ["type","inReplyTo"],
+            required: ["type", "inReplyTo"],
             properties: {
               type: { const: "Reply" },
-              inReplyTo: { type: "string", pattern: patterns.objectId }
-            }
-          }
-        }
-      }
-    }
-  ]
+              inReplyTo: { type: "string", pattern: patterns.objectId },
+            },
+          },
+        },
+      },
+    },
+  ],
 };
 
 export default schema;

@@ -6,7 +6,10 @@ const ObjectId = mongoose.Types.ObjectId;
 import GeoPointSchema from "./subschema/GeoPoint.js";
 import ProfileSchema from "./subschema/Profile.js";
 import { Settings, Circle, Group } from "./index.js";
-import { getServerSettings, getSetting } from "#methods/settings/schemaHelpers.js";
+import {
+  getServerSettings,
+  getSetting,
+} from "#methods/settings/schemaHelpers.js";
 
 const UserSchemaDef = {
   // Existing fields
@@ -61,7 +64,7 @@ const UserSchemaDef = {
   keyRotationAt: { type: Date }, // NEW: track rotations
 
   // Addressing defaults (unchanged)
-  to: { type: String, default: "" },
+  to: { type: String, default: "@public" },
   canReply: { type: String, default: "" },
   canReact: { type: String, default: "" },
 

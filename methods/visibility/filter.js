@@ -36,6 +36,6 @@ export function buildVisibilityQuery(ctx) {
       $nin: [...ctx.blockedActorIds].filter((a) => a !== ctx.viewerId),
     };
   }
-
+  console.log(filter);
   return filter;
 }

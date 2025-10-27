@@ -92,6 +92,7 @@ export default route(
       password: input.password,
       email: input.email,
       profile: input.profile,
+      to: input.to,
     });
 
     // Sign RS256 JWT shaped for routes/middleware/attachUser.js

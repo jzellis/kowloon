@@ -1,7 +1,7 @@
-// This just retrieves the server settings from the DB and returns them as an object of key-value pairs.
+// This just retrieves the server settings from the cache and returns them as an object of key-value pairs.
 
-import { Settings } from "#schema";
+import { getSetting } from "#methods/settings/cache.js";
 
 export default async function () {
-  return (await Settings.findOne({ name: "adminUsers" })).value;
+  return getSetting("adminUsers");
 }

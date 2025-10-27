@@ -1,47 +1,38 @@
-// routes/activities/index.js
-import Activity from "#schema/Activity.js"; // or wherever your model is
-import { orderedCollection, toInt } from "../utils/oc.js";
-import route from "../utils/route.js"; // your wrapper
+// routes/activities/collection.js
+import route from "../utils/route.js";
+import getVisibleCollection from "#methods/get/visibleCollection.js";
+import { activityStreamsCollection } from "../utils/oc.js";
+import { getSetting } from "#methods/settings/cache.js";
 
-export default route(async ({ query, set, setStatus }) => {
-  // read paging params (support both page + pageSize, default to 0/20)
-  const page = toInt(query.page, 0);
-  const pageSize = Math.min(toInt(query.pageSize, 20), 100);
+export default route(async ({ req, query, set }) => {
+  const { before, page, itemsPerPage, sort, select, actorId } = query;
 
-  // your existing filter (adjust as needed)
-  const filter = {}; // e.g. visibility, actorId, etc.
-
-  // compute totals
-  const totalItems = await Activity.countDocuments(filter);
-
-  // page slice (keep your sort)
-  const sort = { createdAt: -1 };
-  const items = await Activity.find(filter)
-    .sort(sort)
-    .skip(page * pageSize)
-    .limit(pageSize)
-    .lean();
-
-  // optional: also keep your cursor if you want both styles
-  const nextCursor = items.length
-    ? items[items.length - 1].createdAt.toISOString()
-    : null;
-
-  const oc = orderedCollection({
-    items,
-    totalItems,
-    page,
-    pageSize,
-    nextCursor,
+  const result = await getVisibleCollection("activity", {
+    viewerId: req.user?.id || null,
+    before,
+    page: page ? Number(page) : undefined,
+    itemsPerPage: itemsPerPage ? Number(itemsPerPage) : 20,
+    sort: sort || "-createdAt",
+    select,
+    query: actorId ? { actorId } : {},
   });
 
-  set("ok", true);
-  setStatus(200);
-  set("items", oc.items);
-  set("count", oc.count);
-  set("totalItems", oc.totalItems);
-  set("currentPage", oc.currentPage);
-  set("totalPages", oc.totalPages);
-  set("pageSize", oc.pageSize);
-  set("nextCursor", oc.nextCursor); // optional
+  // Build collection URL
+  const domain = getSetting("domain");
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const baseUrl = `${protocol}://${domain}${req.path}`;
+  const fullUrl = page ? `${baseUrl}?page=${page}` : baseUrl;
+
+  for (const [index, activity] of Object.entries(
+    activityStreamsCollection({
+      id: fullUrl,
+      orderedItems: result.items,
+      totalItems: result.totalItems,
+      page: result.page,
+      itemsPerPage: result.itemsPerPage,
+      baseUrl: baseUrl + "activities",
+    })
+  )) {
+    set(index, activity);
+  }
 });

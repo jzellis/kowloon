@@ -2,6 +2,7 @@
 import mongoose from "mongoose";
 import Settings from "./Settings.js";
 import { marked } from "marked";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 const { Schema } = mongoose;
 
@@ -92,8 +93,7 @@ BookmarkSchema.pre("save", async function (next) {
   try {
     if (this.isNew) {
       // Load domain + default server actor
-      const domainSetting = await Settings.findOne({ name: "domain" }).lean();
-      const domain = domainSetting?.value;
+      const { domain, actorId } = getServerSettings();
       if (!domain) throw new Error("Bookmark: missing Settings.domain");
 
       // id + url

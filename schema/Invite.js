@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Settings from "./Settings.js";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 const Schema = mongoose.Schema;
 import { randomBytes } from "crypto";
 import QRCode from "qrcode";
@@ -25,10 +26,9 @@ const InviteSchema = new Schema(
 InviteSchema.pre("save", async function (next) {
   if (!this.key) this.key = randomBytes(32).toString("hex");
   if (!this.url) {
-    const domain = (await Settings.findOne({ name: "domain" })).value;
+    const { domain, actorId } = getServerSettings();
     this.url = `https://${domain}/invites/${this.key}`;
-    this.server =
-      this.server || (await Settings.findOne({ name: "actorId" })).value;
+    this.server = this.server || actorId;
   }
   this.qrCode = await QRCode.toDataURL(this.url);
   next();

@@ -1,15 +1,16 @@
 import route from "#routes/utils/route.js";
 import { Group, Circle } from "#schema";
+import { activityStreamsCollection } from "#routes/utils/oc.js";
+import { getSetting } from "#methods/settings/cache.js";
 
-export default route(async ({ req, params, query, set, setStatus }) => {
+export default route(async ({ req, params, query, setStatus }) => {
   const viewerId = req.user?.id || null;
   const groupId = decodeURIComponent(params.id || "");
 
   const group = await Group.findOne({ id: groupId, deletedAt: null }).lean();
   if (!group) {
     setStatus(404);
-    set("error", "Not found");
-    return;
+    return { error: "Not found" };
   }
 
   const isAdmin = !!req.user?.isAdmin;
@@ -20,8 +21,7 @@ export default route(async ({ req, params, query, set, setStatus }) => {
 
   if (!isMember && !isAdmin) {
     setStatus(403);
-    set("error", "Forbidden");
-    return;
+    return { error: "Forbidden" };
   }
 
   const [membersCircle, adminsCircle, modsCircle] = await Promise.all([
@@ -50,11 +50,20 @@ export default route(async ({ req, params, query, set, setStatus }) => {
     Math.min(200, Number(query.itemsPerPage || 50))
   );
   const start = (page - 1) * itemsPerPage;
-  const items = allMembers.slice(start, start + itemsPerPage);
+  const orderedItems = allMembers.slice(start, start + itemsPerPage);
 
-  set("items", items);
-  set("count", items.length);
-  set("page", page);
-  set("itemsPerPage", itemsPerPage);
-  set("totalItems", allMembers.length);
+  // Build collection URL
+  const domain = getSetting("domain");
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const baseUrl = `${protocol}://${domain}${req.path}`;
+  const fullUrl = page ? `${baseUrl}?page=${page}` : baseUrl;
+
+  return activityStreamsCollection({
+    id: fullUrl,
+    orderedItems,
+    totalItems: allMembers.length,
+    page,
+    itemsPerPage,
+    baseUrl,
+  });
 });

@@ -1,6 +1,9 @@
 // /routes/utils/makeGetById.js
 import route from "../utils/route.js";
 import Kowloon from "#kowloon";
+import { getViewerContext } from "#methods/visibility/context.js";
+import { canSeeObject } from "#methods/visibility/helpers.js";
+
 /**
  * Creates a GET-by-id route handler that uses Kowloon.get.objectById
  *
@@ -23,8 +26,11 @@ export default function makeGetById({
         viewerId,
         mode,
         enforceLocalVisibility,
-        // If your objectById supports projection, you can pass select:
-        // select: query.select,
+        // Use proper visibility checking with viewer context
+        canView: async (viewerId, doc) => {
+          const ctx = await getViewerContext(viewerId);
+          return canSeeObject(doc, ctx);
+        },
       });
 
       if (!result || !result.object) {

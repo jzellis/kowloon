@@ -40,7 +40,7 @@ export function canSeeObject(obj, ctx) {
   const to = obj.to;
   if (to === "@public") return true;
   if (isDomain(to))
-    return ctx?.viewerDomain && to.slice(1) === ctx.viewerDomain;
+    return !!(ctx?.viewerDomain && to.slice(1) === ctx.viewerDomain);
   if (to?.startsWith("circle:")) return !!ctx?.circleIds?.has?.(to);
   if (to?.startsWith("group:")) return !!ctx?.groupIds?.has?.(to);
   return false;

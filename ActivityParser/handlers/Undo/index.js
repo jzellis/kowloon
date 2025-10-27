@@ -58,7 +58,7 @@ export default async function Undo(activity) {
       };
     }
 
-    // Fallback for types you haven’t wired yet
+    // Fallback for types you haven't wired yet
     return {
       activity,
       error: `Undo: unsupported original type (${original.type})`,

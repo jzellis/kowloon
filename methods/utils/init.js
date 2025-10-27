@@ -5,6 +5,7 @@ import defaultSettings from "#config/defaultSettings.js";
 import defaultUser from "#config/defaultUser.js";
 import { Settings, User, Circle } from "#schema";
 import toMember from "#methods/parse/toMember.js";
+import { loadSettings } from "#methods/settings/cache.js";
 
 function pickDbUri() {
   return (
@@ -75,11 +76,15 @@ export default async function init(Kowloon, ctx = {}) {
     await Settings.updateOne({ name: "modCircle" }, { value: modCircle.id });
   }
 
+  // Load all settings into cache for fast access
+  await loadSettings(Settings);
+
+  // Also populate Kowloon.settings for backwards compatibility
   const settingsDocs = await Settings.find().lean();
   for (const s of settingsDocs) {
     Kowloon.settings[s.name] = s.value;
   }
-  console.log("Kowloon settings loaded");
+  console.log("Kowloon settings loaded and cached");
 
   // 3) Ensure default admin user exists
   let firstUser = await User.findOne().lean();

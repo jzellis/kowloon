@@ -76,7 +76,7 @@ export default async function getVisibleCollection(objectType, opts = {}) {
     sort = "-createdAt",
     select,
     before,
-    page,
+    page = 1,
     itemsPerPage = 20,
     deleted = false,
     maskAudience = true,
@@ -104,39 +104,21 @@ export default async function getVisibleCollection(objectType, opts = {}) {
 
   // Two pagination modes:
   // 1) Cursor (before+limit) -- default when 'page' is not provided
-  if (!page) {
-    const items = await Model.find(filter)
-      .sort(sort)
-      .limit(Number(itemsPerPage))
-      .select(projection)
-      .lean();
-
-    const out = maskAudience
-      ? items.map((i) => sanitizeAudience(i, ctx))
-      : items;
-    const nextCursor = out.length
-      ? new Date(out[out.length - 1].createdAt).toISOString()
-      : null;
-
-    return { items: out, count: out.length, nextCursor };
-  }
 
   // 2) Page-based (skip/limit + total)
   const p = Math.max(1, parseInt(page, 10));
   const ipp = Math.max(1, parseInt(itemsPerPage, 10));
 
-  const [items, totalItems] = await Promise.all([
-    Model.find(filter)
-      .sort(sort)
-      .skip((p - 1) * ipp)
-      .limit(ipp)
-      .select(projection)
-      .lean(),
-    Model.countDocuments(filter),
-  ]);
+  const items = await Model.find(filter)
+    .sort(sort)
+    .skip((p - 1) * ipp)
+    .limit(ipp)
+    .select(projection)
+    .lean();
+  const totalItems = await Model.countDocuments(filter);
 
   const out = maskAudience ? items.map((i) => sanitizeAudience(i, ctx)) : items;
-
+  console.log("Total Items: ", totalItems);
   return {
     items: out,
     count: out.length,

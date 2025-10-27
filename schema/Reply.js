@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { marked } from "marked";
 import crypto from "crypto";
 import { Settings, User, React } from "./index.js";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -38,11 +39,10 @@ const ReplySchema = new Schema(
 );
 
 ReplySchema.pre("save", async function (next) {
-  const domain = (await Settings.findOne({ name: "domain" })).value;
+  const { domain, actorId } = getServerSettings();
   this.id = this.id || `reply:${this._id}@${domain}`;
   this.url = this.url || `https://${domain}/posts/${this.id}`;
-  this.server =
-    this.server || (await Settings.findOne({ name: "actorId" })).value;
+  this.server = this.server || actorId;
   this.source.mediaType = this.source.mediaType || "text/html";
 
   switch (this.source.mediaType) {

@@ -1,10 +1,10 @@
-import { TestClient } from "../helpers/client.mjs";
+import { TestClient } from "../helpers/client.js";
 import {
   seedAdminAndLogin,
   createUser,
   createGroup,
   addMemberToGroup,
-} from "../helpers/seedApi.mjs";
+} from "../helpers/seedApi.js";
 
 let admin;
 

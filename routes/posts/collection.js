@@ -1,5 +1,7 @@
 import route from "../utils/route.js";
 import getVisibleCollection from "#methods/get/visibleCollection.js";
+import { activityStreamsCollection } from "../utils/oc.js";
+import { getSetting } from "#methods/settings/cache.js";
 
 export default route(async ({ req, query, set }) => {
   const { before, page, itemsPerPage, sort, select, actorId } = query;
@@ -14,12 +16,22 @@ export default route(async ({ req, query, set }) => {
     query: actorId ? { actorId } : {}, // any extra filters for this resource
   });
 
-  set("items", result.items);
-  set("count", result.count);
-  if (result.nextCursor) set("nextCursor", result.nextCursor);
-  if (result.totalItems !== undefined) {
-    set("page", result.page);
-    set("itemsPerPage", result.itemsPerPage);
-    set("totalItems", result.totalItems);
+  // Build collection URL
+  const domain = getSetting("domain");
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const baseUrl = `${protocol}://${domain}${req.path}`;
+  const fullUrl = page ? `${baseUrl}?page=${page}` : baseUrl;
+
+  for (const [index, activity] of Object.entries(
+    activityStreamsCollection({
+      id: fullUrl,
+      orderedItems: result.items,
+      totalItems: result.totalItems,
+      page: result.page,
+      itemsPerPage: result.itemsPerPage,
+      baseUrl: baseUrl + "activities",
+    })
+  )) {
+    set(index, activity);
   }
 });

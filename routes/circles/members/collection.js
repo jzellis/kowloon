@@ -1,7 +1,9 @@
 import route from "../../utils/route.js";
 import getMembers from "#methods/get/members.js";
+import { activityStreamsCollection } from "../../utils/oc.js";
+import { getSetting } from "#methods/settings/cache.js";
 
-export default route(async ({ req, params, query, set, setStatus }) => {
+export default route(async ({ req, params, query, setStatus }) => {
   const circleId = decodeURIComponent(params.id);
   const { before, limit = 100 } = query;
 
@@ -16,11 +18,17 @@ export default route(async ({ req, params, query, set, setStatus }) => {
     // either not found OR not visible; differentiate only if you want to
     // here we say 404 to avoid leaking existence
     setStatus(404);
-    set("error", "Circle not found or not visible");
-    return;
+    return { error: "Circle not found or not visible" };
   }
 
-  set("items", items);
-  set("count", count);
-  if (nextCursor) set("nextCursor", nextCursor);
+  // Build collection URL
+  const domain = getSetting("domain");
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const fullUrl = `${protocol}://${domain}${req.path}`;
+
+  return activityStreamsCollection({
+    id: fullUrl,
+    orderedItems: items,
+    totalItems: count,
+  });
 });

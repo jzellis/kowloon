@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import Settings from "./Settings.js";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 import GeoPoint from "./subschema/GeoPoint.js";
@@ -32,12 +33,11 @@ FileSchema.virtual("actor", {
 
 FileSchema.pre("save", async function (next) {
   if (this.isNew) {
-    const domain = (await Settings.findOne({ name: "domain" })).value;
+    const { domain, actorId } = getServerSettings();
     this.id = this.id || `file:${this._id}@${domain}`;
     this.url =
       this.url || `https://${domain}/files/${this.id}.${this.extension}`;
-    this.server =
-      this.server || (await Settings.findOne({ name: "actorId" })).value;
+    this.server = this.server || actorId;
   }
   next();
 });

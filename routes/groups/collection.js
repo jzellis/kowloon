@@ -1,44 +1,44 @@
 // /routes/groups/collection.js
 import route from "../utils/route.js";
-import { Group } from "#schema";
+import getVisibleCollection from "#methods/get/visibleCollection.js";
+import { activityStreamsCollection } from "../utils/oc.js";
+import { getSetting } from "#methods/settings/cache.js";
 
 /**
  * GET /groups
- * Lists discoverable groups. Returns an OrderedCollection-like payload:
- *  - totalItems, totalPages, currentPage, count, firstItem, lastItem, items[]
+ * Lists discoverable groups. Returns an ActivityStreams OrderedCollection
  * Query:
  *  - page (default 1)
  *  - itemsPerPage (default 50, max 200)
  *  - q (optional text search; name/description)
  */
-export default route(async ({ query, set }) => {
-  const page = Math.max(1, Number(query.page || 1));
+export default route(async ({ req, query, set }) => {
+  const page = Number(query.page || 1);
   const itemsPerPage = Math.max(
     1,
     Math.min(200, Number(query.itemsPerPage || 50))
   );
   const q = (query.q || "").toString().trim();
 
-  // Only list discoverable groups; start with @public for now.
-  // (You can extend this with server-scoped visibility if desired.)
-  const filter = { deletedAt: null, to: "@public" };
-
-  // Optional naive text search
+  // Build search filter if query is provided
+  const searchFilter = {};
   if (q) {
-    filter.$or = [
+    searchFilter.$or = [
       { name: { $regex: q, $options: "i" } },
       { description: { $regex: q, $options: "i" } },
     ];
   }
 
-  const totalItems = await Group.countDocuments(filter);
-  const docs = await Group.find(filter)
-    .sort({ updatedAt: -1, _id: 1 })
-    .skip((page - 1) * itemsPerPage)
-    .limit(itemsPerPage)
-    .lean();
+  const result = await getVisibleCollection("group", {
+    viewerId: req.user?.id || null,
+    page,
+    itemsPerPage,
+    sort: "-updatedAt",
+    query: searchFilter,
+  });
 
-  const items = docs.map((g) => ({
+  // Map to expected format
+  const orderedItems = result.items.map((g) => ({
     id: g.id,
     type: "Group",
     name: g.name,
@@ -51,15 +51,18 @@ export default route(async ({ query, set }) => {
     updatedAt: g.updatedAt,
   }));
 
-  const totalPages = Math.max(1, Math.ceil(totalItems / itemsPerPage));
+  // Build collection URL
+  const domain = getSetting("domain");
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const baseUrl = `${protocol}://${domain}${req.path}`;
+  const fullUrl = page ? `${baseUrl}?page=${page}` : baseUrl;
 
-  set("totalItems", totalItems);
-  set("totalPages", totalPages);
-  set("currentPage", page);
-  set("count", items.length);
-  if (items.length) {
-    set("firstItem", items[0].id);
-    set("lastItem", items[items.length - 1].id);
-  }
-  set("items", items);
+  return activityStreamsCollection({
+    id: fullUrl,
+    orderedItems,
+    totalItems: result.totalItems,
+    page,
+    itemsPerPage,
+    baseUrl,
+  });
 });

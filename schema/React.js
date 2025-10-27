@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 import { Settings } from "./index.js";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 const ReactSchema = new Schema(
   {
@@ -23,10 +24,9 @@ const ReactSchema = new Schema(
 );
 
 ReactSchema.pre("save", async function (next) {
-  const domain = (await Settings.findOne({ name: "domain" })).value;
+  const { domain, actorId } = getServerSettings();
   this.id = this.id || `react:${this._id}@${domain}`;
-  this.server =
-    this.server || (await Settings.findOne({ name: "actorId" })).value;
+  this.server = this.server || actorId;
   next();
 });
 export default mongoose.model("React", ReactSchema);

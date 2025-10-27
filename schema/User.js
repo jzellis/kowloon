@@ -6,6 +6,7 @@ const ObjectId = mongoose.Types.ObjectId;
 import GeoPointSchema from "./subschema/GeoPoint.js";
 import ProfileSchema from "./subschema/Profile.js";
 import { Settings, Circle, Group } from "./index.js";
+import { getServerSettings, getSetting } from "#methods/settings/schemaHelpers.js";
 
 const UserSchemaDef = {
   // Existing fields
@@ -154,8 +155,7 @@ UserSchema.virtual("icon")
 
 /** ---------- Hooks ---------- */
 UserSchema.pre("save", async function (next) {
-  const domainSetting = await Settings.findOne({ name: "domain" });
-  const domain = domainSetting?.value;
+  const { domain, actorId } = getServerSettings();
   if (!domain) return next(new Error("Missing Settings: domain"));
   if (this.isModified("password"))
     this.password = bcrypt.hashSync(this.password, 10);
@@ -176,8 +176,7 @@ UserSchema.pre("save", async function (next) {
     this.url = this.url || `https://${domain}/users/${this.id}`;
 
     // Server / JWKS
-    this.server =
-      this.server || (await Settings.findOne({ name: "actorId" }))?.value;
+    this.server = this.server || actorId;
     this.domain = this.domain || domain;
     this.jwksUrl = this.jwksUrl || `https://${domain}/.well-known/jwks.json`;
 
@@ -254,8 +253,7 @@ UserSchema.pre("save", async function (next) {
     this.muted = mutedCircle.id;
 
     if (!this.profile.pronouns) {
-      const pronouns = await Settings.findOne({ name: "defaultPronouns" });
-      this.profile.pronouns = pronouns?.value;
+      this.profile.pronouns = getSetting("defaultPronouns");
     }
   }
 

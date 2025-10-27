@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Settings } from "./index.js";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 const Schema = mongoose.Schema;
 
 const OutboxSchema = new Schema(
@@ -26,7 +27,7 @@ const OutboxSchema = new Schema(
 
 OutboxSchema.pre("save", async function (next) {
   // Create the activity id and url
-  const domain = (await Settings.findOne({ name: "domain" })).value;
+  const { domain } = getServerSettings();
   this.id = this.id || `outbox:${this._id}@${domain}`;
   next();
 });

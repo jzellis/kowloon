@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import Settings from "./Settings.js";
 import { Circle, User, React, Reply } from "./index.js";
 import GeoPoint from "./subschema/GeoPoint.js";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 const { Schema } = mongoose;
 
@@ -72,10 +73,7 @@ const EventSchema = new Schema(
 // ---------- pre('save'): mint id/url/server like your current style ----------
 EventSchema.pre("save", async function (next) {
   try {
-    const domainSetting = await Settings.findOne({ name: "domain" });
-    const actorIdSetting = await Settings.findOne({ name: "actorId" });
-    const domain = domainSetting?.value;
-    const serverActorId = actorIdSetting?.value;
+    const { domain, actorId } = getServerSettings();
 
     if (!this.inbox) this.inbox = `https://${domain}/events/${this.id}/inbox`;
     if (!this.outbox)
@@ -90,7 +88,7 @@ EventSchema.pre("save", async function (next) {
     if (!this.url && domain && this.id) {
       this.url = `https://${domain}/events/${this.id}`;
     }
-    if (!this.server && serverActorId) this.server = serverActorId;
+    if (!this.server && actorId) this.server = actorId;
 
     // Safe attendingCount update (only on updates and not during the moment we first set attending)
     if (!this.isNew && this.attending && !this.isModified("attending")) {

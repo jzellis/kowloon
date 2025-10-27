@@ -1,6 +1,7 @@
 // /schema/Activity.js
 import mongoose from "mongoose";
 import Settings from "./Settings.js";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 const { Schema } = mongoose;
 
@@ -65,8 +66,7 @@ ActivitySchema.virtual("reacts", {
 // Mint id/url/server like before
 ActivitySchema.pre("save", async function (next) {
   try {
-    const domain = (await Settings.findOne({ name: "domain" }).lean())?.value;
-    const actorId = (await Settings.findOne({ name: "actorId" }).lean())?.value;
+    const { domain, actorId } = getServerSettings();
 
     if (domain) {
       this.id = this.id || `activity:${this._id}@${domain}`;

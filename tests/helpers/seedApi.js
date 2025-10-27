@@ -1,4 +1,4 @@
-import { TestClient } from "./client.mjs";
+import { TestClient } from "./client.js";
 
 export async function seedAdminAndLogin() {
   const baseURL = global.__TEST_BASE_URL__;

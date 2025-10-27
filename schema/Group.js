@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import Settings from "./Settings.js";
 import { Circle, User, React, Reply } from "./index.js";
 import GeoPoint from "./subschema/GeoPoint.js";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 const { Schema } = mongoose;
 
@@ -76,10 +77,7 @@ GroupSchema.virtual("reacts", {
 // -------- pre('save'): mint id/url/server/icon (no member/admin pushes here) --------
 GroupSchema.pre("save", async function (next) {
   try {
-    const domainSetting = await Settings.findOne({ name: "domain" });
-    const actorIdSetting = await Settings.findOne({ name: "actorId" });
-    const domain = domainSetting?.value;
-    const serverActorId = actorIdSetting?.value;
+    const { domain, actorId } = getServerSettings();
 
     if (this.name) this.name = this.name.trim();
 
@@ -87,7 +85,7 @@ GroupSchema.pre("save", async function (next) {
     if (!this.url && domain && this.id)
       this.url = `https://${domain}/groups/${this.id}`;
     if (!this.icon && domain) this.icon = `https://${domain}/images/group.png`;
-    if (!this.server && serverActorId) this.server = serverActorId;
+    if (!this.server && actorId) this.server = actorId;
 
     if (!this.inbox) this.inbox = `https://${domain}/groups/${this.id}/inbox`;
     if (!this.outbox)

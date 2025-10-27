@@ -3,6 +3,7 @@ import { Settings, React, Reply } from "./index.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 import Member from "./subschema/Member.js";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 const CircleSchema = new Schema(
   {
@@ -38,14 +39,13 @@ CircleSchema.virtual("reacts", {
 
 CircleSchema.pre("save", async function (next) {
   if (this.isNew) {
-    const domain = (await Settings.findOne({ name: "domain" })).value;
+    const { domain, actorId } = getServerSettings();
     this.title = this.title && this.title.trim();
     this.id = this.id || `circle:${this._id}@${domain}`;
     this.url = this.url || `https://${domain}/circles/${this.id}`;
 
     this.icon = this.icon || `https://${domain}/images/circle.png`;
-    this.server =
-      this.server || (await Settings.findOne({ name: "actorId" })).value;
+    this.server = this.server || actorId;
   }
   this.reactCount = (await React.find({ target: this.id }).lean()).length;
   this.replyCount = (await Reply.find({ target: this.id }).lean()).length;

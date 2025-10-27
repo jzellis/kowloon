@@ -1,4 +1,4 @@
-# Kowloon v1.0 — Activities
+# Kowloon v1.0 -- Activities
 
 _Last updated: 2025‑10‑22_
 
@@ -40,7 +40,7 @@ Kowloon v1.0 allows *only* these types (case‑sensitive):
 - `Undo`
 - `Unfollow`
 - `Update`
-- `Upload` _(planned — not implemented)_
+- `Upload` _(planned -- not implemented)_
 
 > ⚠️ Do **not** emit other types in v1.0.
 
@@ -53,7 +53,7 @@ All Activities conform to this base shape. Fields marked **(required)** must alw
 ```jsonc
 {
   "type": "Follow",                              // (required) one of the canonical types above
-  "objectType": "User|Post|Group|Event|Circle",  // (required) the primary object’s type
+  "objectType": "User|Post|Group|Event|Circle",  // (required) the primary object's type
   "actorId": "@admin@example.org",                  // (required) full actor handle (must match auth)
   "object": { … } | "id-string",                 // (required) object payload for NEW objects (no client-provided ids) or an ID string for EXISTING objects
   "target": "id-string",                         // (optional) target ID (e.g., circle/group/event)
@@ -94,7 +94,7 @@ Some object types currently have a single subtype that is auto-set by the schema
 | **User** | `Person` |  |
 | **Circle** | `Circle` | _Only one subtype; currently auto-set by schema on creation._ |
 
-> **Auto-set subtypes**: Circles (→ `Circle`). For `React` Activities, the created reaction object’s `type` is fixed to `React` and set server-side.
+> **Auto-set subtypes**: Circles (→ `Circle`). For `React` Activities, the created reaction object's `type` is fixed to `React` and set server-side.
 
 ### Proposed subtype catalogs
 _These are **descriptive only** for discovery/search/filtering; they **do not** change permissions or behavior._
@@ -141,14 +141,14 @@ _These are **descriptive only** for discovery/search/filtering; they **do not** 
 ## Addressing & Visibility
 
 ### Addressing domains
-- **Public**: `to: "@public"` — visible to anyone.
-- **Server‑scoped**: `to: "@example.org"` — visible to authenticated users on that domain. A user can only address server-wide objects to their *own* server; e.g., `alice@server1.net` can only address `@server1.net` objects, not `@server2.net` or any other server she does not belong to.
-- **Circle/Group/Event**: `to: "circle:<id>"`, `group:<id>`, or `event:<id>` — visible to members only.
+- **Public**: `to: "@public"` -- visible to anyone.
+- **Server‑scoped**: `to: "@example.org"` -- visible to authenticated users on that domain. A user can only address server-wide objects to their *own* server; e.g., `alice@server1.net` can only address `@server1.net` objects, not `@server2.net` or any other server she does not belong to.
+- **Circle/Group/Event**: `to: "circle:<id>"`, `group:<id>`, or `event:<id>` -- visible to members only.
 
 > A given Activity may set **at most one** of `to`, `canReply`, `canReact`. Each is a **single string** (no arrays).
-> - `to` — who may **view** the Activity
-> - `canReply` — who may **reply**
-> - `canReact` — who may **react**
+> - `to` -- who may **view** the Activity
+> - `canReply` -- who may **reply**
+> - `canReact` -- who may **react**
 
 Servers enforce masking/redaction on fetch based on viewer + addressing.
 
@@ -206,7 +206,7 @@ All list endpoints return an ActivityStreams‑style **`OrderedCollection`** env
 
 ### Follow
 - `object`: remote or local user (`"@user@domain"` string or `{ "actorId": … }`).
-- Side‑effect: add the `object` user to the follower’s **`following` Circle** (or to `target` Circle if provided).
+- Side‑effect: add the `object` user to the follower's **`following` Circle** (or to `target` Circle if provided).
 - Implementation uses `$push` for ordered history and `memberCount` increment; ensure idempotence checks to avoid duplicates.
 
 ### Unfollow
@@ -335,16 +335,16 @@ All list endpoints return an ActivityStreams‑style **`OrderedCollection`** env
 
 ## Routes (selected)
 
-- `POST /outbox` — enqueue federated Activities via `route()` wrapper (debug ping at `GET /outbox/__ping`).
-- `GET  /__routes` — development route: returns mounted route tree.
-- `GET  /users/:id` — expects full actor handle `@user@domain`. (A local-username convenience may be added later.)
+- `POST /outbox` -- enqueue federated Activities via `route()` wrapper (debug ping at `GET /outbox/__ping`).
+- `GET  /__routes` -- development route: returns mounted route tree.
+- `GET  /users/:id` -- expects full actor handle `@user@domain`. (A local-username convenience may be added later.)
 
 ---
 
 ## Notes & Pitfalls
 
-- **Single‑string addressing** is easy to break if your seeders still use arrays — update seeds and validators.
-- **Client-supplied IDs are ignored** — both for `activity.id` and any `object.id` on create; the server always assigns IDs.
+- **Single‑string addressing** is easy to break if your seeders still use arrays -- update seeds and validators.
+- **Client-supplied IDs are ignored** -- both for `activity.id` and any `object.id` on create; the server always assigns IDs.
 - Ensure `attachUser` enforces that **`actorId` equals the authenticated actor**.
 - When mutating membership arrays (e.g., `Circle.members`), update counters (`memberCount`) atomically.
 - Upserts to `Outbox` should be keyed by `activity.id` to avoid duplicates.

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { marked } from "marked";
 import crypto from "crypto";
 import { Settings, User, Reply, React } from "./index.js";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 import { type } from "os";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
@@ -87,12 +88,11 @@ PageSchema.pre("save", async function (next) {
   try {
     this.slug = this.slug || slugify(this.title);
 
-    const domain = (await Settings.findOne({ name: "domain" })).value;
+    const { domain, actorId } = getServerSettings();
     this.title = this.title && this.title.trim();
     this.id = this.id || `page:${this._id}@${domain}`;
     this.url = this.url || `https://${domain}/pages/${this.slug}`;
-    this.server =
-      this.server || (await Settings.findOne({ name: "actorId" })).value;
+    this.server = this.server || actorId;
     this.source.mediaType = this.source.mediaType || "text/html";
 
     switch (this.source.mediaType) {

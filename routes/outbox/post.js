@@ -119,18 +119,53 @@ export default route(
       created?.activity?.object?.id ||
       created?.activity?.id;
 
+    // Handle outbound federation if needed
+    let federationJob = null;
+    if (created.federate && createdId) {
+      try {
+        const { enqueueOutbox } = await import(
+          "#methods/federation/enqueueOutbox.js"
+        );
+        federationJob = await enqueueOutbox({
+          activity: created.activity,
+          activityId: createdId,
+          actorId: activity.actorId,
+          reason: "activity.federate = true",
+        });
+        if (DEV) {
+          console.log(`${label}: federation enqueued`, {
+            jobId: federationJob.jobId,
+            recipients: federationJob.recipients.length,
+          });
+        }
+      } catch (err) {
+        if (DEV) {
+          console.error(`${label}: federation enqueue failed`, err);
+        }
+        // Don't fail the whole request if federation fails
+      }
+    }
+
     setStatus(200);
     set("ok", true);
     set("activity", created.activity);
     set("result", created.result);
     if (createdId) set("createdId", createdId);
     set("federate", !!created.federate);
+    if (federationJob) {
+      set("federationJob", {
+        jobId: federationJob.jobId,
+        recipients: federationJob.recipients.length,
+        counts: federationJob.counts,
+      });
+    }
 
     if (DEV) {
       console.log(`${label}: success`, {
         status: 200,
         createdId: createdId || null,
         federate: !!created.federate,
+        federationJob: federationJob?.jobId || null,
       });
     }
     console.timeEnd(label);

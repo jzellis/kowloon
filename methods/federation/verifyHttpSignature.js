@@ -2,6 +2,7 @@
 import crypto from "crypto";
 import fetch from "node-fetch";
 import logger from "#methods/utils/logger.js";
+import { SignatureNonce } from "#schema";
 
 function parseSignatureHeader(sig) {
   // e.g. keyId="...",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="base64..."
@@ -59,9 +60,52 @@ function verifyWithPem(pem, algo, data, sigB64) {
   return verifier.verify(pem, Buffer.from(sigB64, "base64"));
 }
 
+function extractDomainFromUrl(url) {
+  try {
+    const parsed = new URL(url);
+    return parsed.hostname;
+  } catch (e) {
+    return null;
+  }
+}
+
+function verifyDigest(req) {
+  const digestHeader = req.get("Digest");
+  if (!digestHeader) return { ok: false, error: "Missing Digest header" };
+
+  // Parse digest header, e.g. "SHA-256=base64hash"
+  const match = digestHeader.match(/^(SHA-256|SHA-512)=(.+)$/i);
+  if (!match) return { ok: false, error: "Invalid Digest format" };
+
+  const [, algo, expectedDigestB64] = match;
+  const body = req.body;
+
+  // Calculate digest of actual body
+  let bodyStr;
+  if (typeof body === "string") {
+    bodyStr = body;
+  } else if (Buffer.isBuffer(body)) {
+    bodyStr = body.toString("utf8");
+  } else if (body && typeof body === "object") {
+    bodyStr = JSON.stringify(body);
+  } else {
+    bodyStr = "";
+  }
+
+  const hash = crypto.createHash(algo.toLowerCase().replace("-", ""));
+  hash.update(bodyStr);
+  const actualDigest = hash.digest("base64");
+
+  if (actualDigest !== expectedDigestB64) {
+    return { ok: false, error: "Digest mismatch - body has been tampered" };
+  }
+
+  return { ok: true };
+}
+
 export default async function verifyHttpSignature(
   req,
-  { maxSkewMs = 5 * 60 * 1000 } = {}
+  { maxSkewMs = 5 * 60 * 1000, actorId = null, verifyReplay = true } = {}
 ) {
   const sigHeader = req.get("Signature");
   if (!sigHeader) return { ok: false, error: "Missing Signature header" };
@@ -83,7 +127,12 @@ export default async function verifyHttpSignature(
   if (isFinite(skew) && skew > maxSkewMs)
     return { ok: false, error: "Clock skew too large" };
 
-  // If a body exists and Digest header is present, you may verify it here as well.
+  // SECURITY: Verify digest if present to detect body tampering
+  const digestHeader = req.get("Digest");
+  if (digestHeader && (req.body || req.method === "POST")) {
+    const digestResult = verifyDigest(req);
+    if (!digestResult.ok) return digestResult;
+  }
 
   // Build the signing string
   let signingString;
@@ -91,6 +140,43 @@ export default async function verifyHttpSignature(
     signingString = buildSigningString(req, headersList);
   } catch (e) {
     return { ok: false, error: e.message };
+  }
+
+  // SECURITY: Check for replay attacks by verifying signature hasn't been used before
+  if (verifyReplay) {
+    const signatureHash = crypto
+      .createHash("sha256")
+      .update(signature + keyId + signingString)
+      .digest("hex");
+
+    const existing = await SignatureNonce.findOne({ signatureHash }).lean();
+    if (existing) {
+      return {
+        ok: false,
+        error: "Replay attack detected - signature already used",
+      };
+    }
+
+    // Store signature to prevent replay (expires after maxSkewMs + buffer)
+    const expiresAt = new Date(Date.now() + maxSkewMs + 60 * 1000); // maxSkewMs + 1 minute buffer
+    try {
+      await SignatureNonce.create({
+        signatureHash,
+        keyId,
+        requestTarget: `${req.method} ${req.originalUrl || req.url}`,
+        expiresAt,
+      });
+    } catch (e) {
+      // Duplicate key error means race condition - another request with same signature
+      if (e.code === 11000) {
+        return {
+          ok: false,
+          error: "Replay attack detected - duplicate signature",
+        };
+      }
+      // Other errors - log but don't fail (replay protection is defense in depth)
+      logger.warn("Failed to store signature nonce", { error: e.message });
+    }
   }
 
   // Resolve key + verify
@@ -118,6 +204,26 @@ export default async function verifyHttpSignature(
   }
 
   if (!ok) return { ok: false, error: "Invalid HTTP Signature" };
+
+  // SECURITY: Verify domain consistency between actor and keyId
+  // This prevents impersonation attacks where someone signs with a key from domain A
+  // but claims to be an actor from domain B
+  if (actorId) {
+    const actorDomain = extractDomainFromUrl(actorId);
+    const keyDomain = extractDomainFromUrl(keyId);
+
+    if (!actorDomain || !keyDomain) {
+      logger.warn("Could not extract domains for verification", {
+        actorId,
+        keyId,
+      });
+    } else if (actorDomain !== keyDomain) {
+      return {
+        ok: false,
+        error: `Domain mismatch: actor domain (${actorDomain}) does not match keyId domain (${keyDomain})`,
+      };
+    }
+  }
 
   // Extract domain from Host
   const host = req.get("Host") || "";

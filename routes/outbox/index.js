@@ -1,5 +1,6 @@
 import express from "express";
 import post from "./post.js";
+import get from "./get.js";
 
 const router = express.Router({ mergeParams: true });
 
@@ -62,7 +63,8 @@ function authGate(req, res, next) {
   return requireAuth(req, res, next);
 }
 
-// Mount the POST handler
+// Mount handlers
 router.post("/", authGate, post);
+router.get("/:id", requireAuth, get);
 
 export default router;

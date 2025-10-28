@@ -57,4 +57,16 @@ const port = Number(process.env.PORT || 3000);
 http.createServer(app).listen(port, "0.0.0.0", () => {
   console.log(`HTTP listening on :${port}`);
 });
+
+// Start outbox worker for federation
+try {
+  const { startOutboxWorker } = await import(
+    "#methods/federation/outboxWorker.js"
+  );
+  const workerInterval = Number(process.env.OUTBOX_WORKER_INTERVAL || 5000);
+  startOutboxWorker(workerInterval);
+} catch (err) {
+  console.error("Failed to start outbox worker:", err.message);
+}
+
 export default Kowloon;

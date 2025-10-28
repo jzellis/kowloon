@@ -2,6 +2,21 @@
 import getObjectById from "#methods/get/objectById.js";
 import { User } from "#schema";
 import indefinite from "indefinite";
+import { getSetting } from "#methods/settings/cache.js";
+
+// Extract domain from various ID formats
+function extractDomain(id) {
+  if (!id || typeof id !== "string") return null;
+  const at = id.lastIndexOf("@");
+  if (at !== -1 && at < id.length - 1) {
+    return id.slice(at + 1).toLowerCase();
+  }
+  try {
+    return new URL(id).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
 
 const asObject = (doc) =>
   doc?.toObject ? doc.toObject({ getters: true, virtuals: true }) : doc || null;
@@ -64,6 +79,14 @@ export default async function del(activity) {
   activity.objectId = item.id || item._id?.toString?.();
   activity.object = sanitize(asObject(item));
   activity.summary = `Deleted ${indefinite(typeLabel(item))} successfully.`;
+
+  // Check if deleting a remote object
+  const localDomain = getSetting("domain") || process.env.DOMAIN;
+  const objectId = item.id || activity.target;
+  const objectDomain = extractDomain(objectId);
+  if (objectDomain && localDomain && objectDomain !== localDomain.toLowerCase()) {
+    activity.federate = true;
+  }
 
   return activity;
 }

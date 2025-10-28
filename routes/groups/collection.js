@@ -57,12 +57,16 @@ export default route(async ({ req, query, set }) => {
   const baseUrl = `${protocol}://${domain}${req.path}`;
   const fullUrl = page ? `${baseUrl}?page=${page}` : baseUrl;
 
-  return activityStreamsCollection({
-    id: fullUrl,
-    orderedItems,
-    totalItems: result.totalItems,
-    page,
-    itemsPerPage,
-    baseUrl,
-  });
+  for (const [index, activity] of Object.entries(
+    activityStreamsCollection({
+      id: fullUrl,
+      orderedItems: result.items,
+      totalItems: result.totalItems,
+      page: result.page,
+      itemsPerPage: result.itemsPerPage,
+      baseUrl: baseUrl + "activities",
+    })
+  )) {
+    set(index, activity);
+  }
 });

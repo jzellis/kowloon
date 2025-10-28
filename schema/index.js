@@ -16,6 +16,7 @@ import Outbox from "./Outbox.js";
 import File from "./File.js";
 import TimelineEntry from "./TimelineEntry.js";
 import FederationCursor from "./FederationCursor.js";
+import SignatureNonce from "./SignatureNonce.js";
 export {
   Activity,
   Bookmark,
@@ -35,4 +36,5 @@ export {
   File,
   TimelineEntry,
   FederationCursor,
+  SignatureNonce,
 };

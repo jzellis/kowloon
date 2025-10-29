@@ -109,7 +109,7 @@ Push federation only occurs when the Activity’s object, target, or actor is **
 
 ## Federated Activities
 
-| **A\*\*\*\*ctivity** | **Federate when…** |
+| **Activity** | **Federate when…** |
 | --- | --- |
 | **Create** | The object is created inside a **remote Group or Event** (their server hosts the collection). |
 | **Reply** | The replyTo object is hosted on a **remote** server. |

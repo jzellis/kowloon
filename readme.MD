@@ -350,6 +350,7 @@ Example: Create->Bookmark Activity
         mediaType: "text/html",
         content: "<p>Wikipedia is a free encyclopedia used by billions around the world.</p><p>It's my favorite website.</p>"
     },
+    body: "<p>Wikipedia is a free encyclopedia used by billions around the world.</p><p>It's my favorite website.</p>",
     to: "@public",
     canReply: null,
     canReact: null,
@@ -904,7 +905,7 @@ Returned
     "contentEncoding": "utf-8",
     "content": "Had a great time hacking on **Kowloon** tonight. Ship it!"
   },
-  "body": "<p><p>Had a great time hacking on <strong>Kowloon</strong> tonight. Ship it!</p></p>",
+  "body": "<p>Had a great time hacking on <strong>Kowloon</strong> tonight. Ship it!</p>",
   "wordCount": 10,
   "charCount": 61,
 

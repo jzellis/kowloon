@@ -79,8 +79,8 @@ In addition, some activities also have:
 - `target`: The target Kowloon ID for `Update, Delete, Block, Mute, Add, Remove, Undo, Flag, Accept, Reject` and `Invite` Activities, as well as optionally for `Follow/Unfollow` activities.
 - `objectType`: If the Activity has an `object`, what type of Object it is (which is sometimes different from `object.type`, as we'll see below).
 - `object`: If the Activity type is Create, Update, Add, Remove, Follow, Unfollow, Reply, React, Invite, Flag, the actual object of the Activity -- the object it's Creating or the fields that are being Updated, for example.  
-    <br/>Objects are usually actual Javascript/JSON objects but for some Activities a Kowloon ID string is sufficient, though either a string or an object of the form `{actorId: "<KowloonID>"}` may also be used in these cases.  
-    <br/>A detailed description of the various object types and required fields is below.
+    Objects are usually actual Javascript/JSON objects but for some Activities a Kowloon ID string is sufficient, though either a string or an object of the form `{actorId: "<KowloonID>"}` may also be used in these cases.  
+    A detailed description of the various object types and required fields is below.
 
 ### Kowloon IDs
 
@@ -150,7 +150,6 @@ An Activity is the envelope that applies a **verb** (type) to some **object** (o
 
 Accept, Add, Block, Create, Delete, Flag, Follow, Invite, Join, Leave, Mute, React, Reject, Remove, Reply, Undo, Unfollow, Update, Upload
 
-(*No others unless you explicitly extend; “Announce” and “Register” are not supported.*)
 
 **Incoming Fields** (what clients send; **bold** = required)
 
@@ -170,7 +169,7 @@ Accept, Add, Block, Create, Delete, Flag, Follow, Invite, Join, Leave, Mute, Rea
         
 - `target`: Secondary entity the verb operates *toward* (when applicable).
     
-    - Examples: a **Circle** for Follow/Unfollow lists, a **Group**/**Event** for Join/Leave, an original **Activity ID** for Undo, etc.
+    - Examples: a **Circle** for Follow/Unfollow, a **Group**/**Event** for Join/Leave, an original **Activity ID** for Undo, etc.
 - `summary`: Optional human-readable summary of the action.
     
 - `to`: Single string audience/visibility. One of:
@@ -181,7 +180,6 @@ Accept, Add, Block, Create, Delete, Flag, Follow, Invite, Join, Leave, Mute, Rea
 - `canReact`: Single string, who is allowed to react (same addressing rules as to).
     
 
-> Note: **canReply** and **canReact** live on *objects* (like your Bookmark), not on the Activity envelope.
 
 **Outgoing Fields** (what the server returns/ stores)
 
@@ -310,7 +308,7 @@ A Bookmark is exactly that, a bookmark of a URL that can be remote or local. A B
 - `updatedAt`: the Date object timestamp of when the Bookmark was last updated
 
 Example: Create->Bookmark Activity  
-<br/>
+
 
 ```JSON
 {

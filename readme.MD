@@ -36,18 +36,18 @@ Here is a current list of implemented Activities and what they do:
 | **Create** | Create a new object (Post, Page, Event, etc.) | Core of posting; populates /activities and /outbox |
 | **Update** | Edit an existing object | Uses object.id to locate and modify |
 | **Delete** | Remove an object | Marks object as deleted in DB |
-| **Follow** | Follow another user | Adds target to follower’s “following” Circle |
-| **Unfollow** | Reverse of Follow | Removes user from following Circle |
+| **Follow** | Follow another user | Adds target to follower’s “following” Circle or a `target` Circle |
+| **Unfollow** | Reverse of Follow | Removes user from all of user's Circles or one `target` Circle |
 | **Block** | Block another user | Prevents their content from showing up |
 | **Mute** | Hide user or object without blocking | Client-level visibility suppression |
 | **Join** | Join a Group or Event | Adds actor to members list |
 | **Leave** | Leave a Group or Event | Removes actor from members list |
 | **Add** | Add another user to a Circle | Requires permission to edit the Circle |
 | **Remove** | Remove a user from a Circle | Mirrors Add, same permissions logic |
-| **React** | Add a reaction to an object | Stored in object.reactions, Undo reverses it |
+| **React** | Add a reaction to an object | Stored in Reacts, Undo reverses it |
 | **Undo** | Reverse a previous activity (React, Follow, etc.) | Requires target = original activity id |
 | **Flag** | Report inappropriate content | Creates a moderation record for admin review |
-| **Reply** | Post a reply to another activity/object | Links to parent via replyTo |
+| **Reply** | Alias of **Create->Reply** Post a reply to another activity/object | Links to parent via replyTo |
 | **Accept** | Accept an Invite or Follow request | Creates reciprocal relationship |
 | **Reject** | Reject an Invite or Follow request | No-op beyond acknowledgment |
 | **Invite** | Invite user to Group or Event |     |

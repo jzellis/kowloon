@@ -6,7 +6,7 @@
 - MongoDB
 - AWS or compatible server (for uploaded file storage)
 
-&nbsp;
+
 
 ## Installation
 
@@ -52,7 +52,7 @@ Here is a current list of implemented Activities and what they do:
 | **Reject** | Reject an Invite or Follow request | No-op beyond acknowledgment |
 | **Invite** | Invite user to Group or Event |     |
 
-&nbsp;
+
 
 The following are in the process of being implemented but only have placeholder handlers now:
 
@@ -60,7 +60,7 @@ The following are in the process of being implemented but only have placeholder 
 | --- | --- | --- |
 | **Upload** | 🟡 *Planned but not yet implemented* | Will handle media/file uploads via adapter system |
 
-&nbsp;
+
 
 ### Activities
 
@@ -72,7 +72,7 @@ The structure of Kowloon Activities is a modified form of the ActivityStreams st
 - `canReply`: Who can reply to the Activity (can be empty, see below)
 - `canReact`: Who can react to the Activity. (can be empty, see below)
 
-&nbsp;
+
 
 In addition, some activities also have:
 
@@ -122,7 +122,7 @@ Push federation only occurs when the Activity’s object, target, or actor is **
 | **Add / Remove** | The target collection or object is **remote**. |
 | **Undo** | The original Activity being undone was previously federated (e.g., React, Join). |
 
-&nbsp;
+
 
 ### Unfederated Activities
 
@@ -134,13 +134,13 @@ Push federation only occurs when the Activity’s object, target, or actor is **
 | **Upload** | *Currently not yet fully implemented*; never federate. |
 | **Add / Remove** | Circles are local “playlist-like” constructs; never federate membership changes. Logic for parsing Circles related to Event/Group membership are always handled on the Event/Group's home server. |
 
-&nbsp;
+
 
 # Objects
 
 These are the types of objects in Kowloon aside from Activities (see above). Each one includes both *incoming* and *outgoing* fields: *incoming* fields are what Kowloon expects a new object to have and *outgoing* are what it returns after the object is created.
 
-&nbsp;
+
 
 ## **Activity**
 
@@ -310,7 +310,7 @@ A Bookmark is exactly that, a bookmark of a URL that can be remote or local. A B
 Example: Create->Bookmark Activity  
 
 
-```JSON
+```
 {
     type: "Create",
     objectType: "Bookmark",
@@ -336,7 +336,7 @@ Example: Create->Bookmark Activity
 
 **Returned Bookmark**
 
-```JSON
+```
 {
     id: "bookmark:6900ced19ca646e97f1490ca@example.org",
     server: "@example.org",
@@ -368,7 +368,7 @@ Example: Create->Bookmark Activity
 }
 ```
 
-&nbsp;
+
 
 # **Circle**
 
@@ -419,7 +419,7 @@ A Circle is a user-owned list used to organize other users (e.g., “Following,�
 - `createdAt, updatedAt`: Timestamps.
     
 
-&nbsp;
+
 
 **Incoming**
 
@@ -553,7 +553,7 @@ An Event represents a scheduled gathering with start/end time, optional descript
 - createdAt, updatedAt.
     
 
-&nbsp;
+
 
 **Incoming**
 
@@ -637,7 +637,7 @@ An Event represents a scheduled gathering with start/end time, optional descript
 }
 ```
 
-&nbsp;
+
 
 # **Group**
 
@@ -696,7 +696,7 @@ A Group is a community owned by a single creator (actorId). Local Groups automat
 - createdAt, updatedAt.
     
 
-&nbsp;
+
 
 **Incoming**
 
@@ -769,11 +769,11 @@ A Group is a community owned by a single creator (actorId). Local Groups automat
 }
 ```
 
-&nbsp;
+
 
 Page (*coming soon)*
 
-&nbsp;
+
 
 # **Post**
 
@@ -943,7 +943,7 @@ Returned
 - Posts are signed on save; a verifySignature() helper uses the author’s public key.
     
 
-&nbsp;
+
 
 # **User**
 
@@ -1034,7 +1034,7 @@ A User is a Kowloon actor — a person or automated account that can create, fol
 - createdAt, updatedAt.
     
 
-&nbsp;
+
 
 **Incoming registration (POST to /register)**
 
@@ -1108,8 +1108,7 @@ Returned
 }
 ```
 
-&nbsp;
+
 
 *\[More documentation to come!\]*
 
-&nbsp;

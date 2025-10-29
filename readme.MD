@@ -772,7 +772,178 @@ A Group is a community owned by a single creator (actorId). Local Groups automat
 
 
 
-Page (*coming soon)*
+# **Page**
+
+A Page is a static or semi-static content item — similar to a wiki page, blog post, or document. Pages can also act as **Folders**, allowing hierarchical organization. They are authored by a User (actorId) and stored with both raw (source) and rendered (body) forms. Each Page automatically generates a slug and signature, and counts its reactions and replies on save.
+
+**Incoming Fields** (for Create → Page; **bold** = required)
+
+- type: Must be "Page" or "Folder", defaults to "Page".
+    
+- **actorId**: The ID of the page’s creator (e.g., "@alice@example.org").
+    
+- **title**: Required for "Page" objects; optional for "Folder".
+    
+- summary: Optional short description or excerpt.
+    
+- parentFolder: The Kowloon ID of the folder that contains this page (if any).
+    
+- order: Optional numeric order within the folder.
+    
+- href: If the Page is a link, the target URL.
+    
+- source: The raw editable content.
+    
+    - mediaType: "text/html" (default), "text/markdown", or "text/plain".
+        
+    - content: The actual text or markup.
+        
+    - contentEncoding: "utf-8" (default).
+        
+- image: Featured image URL.
+    
+- attachments: Array of file objects { filetype, size, url, title?, description? }.
+    
+- tags: Array of strings.
+    
+- to: Single-string visibility (e.g., "@public" or "@example.org").
+    
+- canReply: Single-string; who may reply.
+    
+- canReact: Single-string; who may react.
+    
+
+> **Server behavior:**
+
+- > Generates slug from the title.
+    
+- > Fills in id, url, and server from domain settings.
+    
+- > Converts source.content into HTML for body.
+    
+- > Computes wordCount and charCount from rendered text.
+    
+- > Signs the Page using the author’s private key.
+    
+- > Updates replyCount and reactCount by querying related collections.
+    
+
+* * *
+
+**Outgoing Fields** (returned/stored)
+
+- id: Global Kowloon ID page:&lt;\_id&gt;@&lt;domain&gt;.
+    
+- objectType: "Page".
+    
+- type: "Page" or "Folder".
+    
+- server: Hosting server’s ID (e.g., "@example.org").
+    
+- url: Canonical URL (https://&lt;domain&gt;/pages/&lt;slug&gt;).
+    
+- actorId: Creator’s ID.
+    
+- actor: Cached profile (if available).
+    
+- parentFolder, order, slug, href, title, summary.
+    
+- source: Original text/markup (mediaType, content, contentEncoding).
+    
+- body: Rendered and sanitized HTML.
+    
+- wordCount, charCount.
+    
+- replyCount, reactCount, shareCount.
+    
+- image, attachments, tags.
+    
+- to, canReply, canReact.
+    
+- deletedAt, deletedBy.
+    
+- signature: The base64 RSA-SHA256 signature created using the author’s private key.
+    
+- createdAt, updatedAt.
+    
+
+&nbsp;
+
+Incoming
+
+```JSON
+{
+  "type": "Create",
+  "objectType": "Page",
+  "actorId": "@alice@example.org",
+  "object": {
+    "type": "Page",
+    "actorId": "@alice@example.org",
+    "title": "About Kowloon",
+    "summary": "A quick overview of how Kowloon works.",
+    "source": {
+      "mediaType": "text/markdown",
+      "content": "## What is Kowloon?\nKowloon is a federated social platform built around ActivityStreams."
+    },
+    "tags": ["about", "kowloon"],
+    "to": "@public",
+    "canReply": "@example.org",
+    "canReact": "@public"
+  }
+}
+```
+
+Returned
+
+```JSON
+{
+  "id": "page:5bcae912a4d34d1aa5c3e2fa@example.org",
+  "objectType": "Page",
+  "type": "Page",
+  "server": "@example.org",
+  "url": "https://example.org/pages/about-kowloon",
+  "actorId": "@alice@example.org",
+  "actor": {
+    "id": "@alice@example.org",
+    "name": "Alice Lee",
+    "icon": "https://example.org/images/alice.png",
+    "inbox": "https://example.org/@alice@example.org/inbox",
+    "outbox": "https://example.org/@alice@example.org/outbox",
+    "url": "https://example.org/@alice@example.org",
+    "server": "@example.org"
+  },
+  "parentFolder": null,
+  "order": 0,
+  "slug": "about-kowloon",
+  "href": null,
+  "title": "About Kowloon",
+  "summary": "A quick overview of how Kowloon works.",
+  "source": {
+    "mediaType": "text/markdown",
+    "contentEncoding": "utf-8",
+    "content": "## What is Kowloon?\nKowloon is a federated social platform built around ActivityStreams."
+  },
+  "body": "<p><h2>What is Kowloon?</h2>\n<p>Kowloon is a federated social platform built around ActivityStreams.</p></p>",
+  "wordCount": 11,
+  "charCount": 80,
+  "replyCount": 0,
+  "reactCount": 0,
+  "shareCount": 0,
+  "image": null,
+  "attachments": [],
+  "tags": ["about", "kowloon"],
+  "to": "@public",
+  "canReply": "@example.org",
+  "canReact": "@public",
+  "deletedAt": null,
+  "deletedBy": null,
+  "signature": "BASE64_SIGNATURE_DATA",
+  "createdAt": "2025-10-29T17:55:00.682Z",
+  "updatedAt": "2025-10-29T17:55:00.682Z"
+}
+```
+
+&nbsp;
 
 
 
@@ -943,7 +1114,122 @@ Returned
     
 - Posts are signed on save; a verifySignature() helper uses the author’s public key.
     
+# **React**
 
+A **React** represents a user’s reaction (emoji or named response) to another object such as a Post, Page, Event, or Bookmark. Each React links an actorId (the reacting user) to a target (the object being reacted to) and stores both a display emoji and a canonical name (e.g. "👍" / "like"). Reacts are lightweight, immutable entries that can be undone via an Undo Activity.
+
+* * *
+
+### **Incoming Fields**
+
+### **(for**
+
+### **Create → React**
+
+### **;**
+
+### **bold**
+
+### **\= required)**
+
+- **type**: Must be "React". Defaults to "React".
+    
+- **actorId**: The Kowloon ID of the user performing the reaction (e.g., "@alice@example.org").
+    
+- **target**: The Kowloon ID of the object being reacted to (e.g., "post:1234@example.org").
+    
+- **emoji**: The emoji or symbol used for the reaction (e.g., "❤️", "😂", "👍").
+    
+- **name**: The canonical name for the reaction (e.g., "love", "laugh", "like").
+    
+- actor: Cached actor object (optional; the server fills it in automatically if available).
+    
+
+> **Server behavior:**
+
+- > Fills in id as react:&lt;\_id&gt;@&lt;domain&gt;.
+    
+- > Fills in server with the current server’s actor ID.
+    
+- > Adds timestamps automatically (createdAt, updatedAt).
+    
+
+* * *
+
+### **Outgoing Fields**
+
+### **(returned/stored)**
+
+- id: Global Kowloon ID (e.g., "react:abc123@example.org").
+    
+- type: "React".
+    
+- server: The actor ID of the server that processed the reaction.
+    
+- actorId: ID of the user who created the reaction.
+    
+- actor: Cached profile object (if available):
+    
+    - id, name, icon, inbox, outbox, url, server.
+- target: ID of the object being reacted to.
+    
+- emoji: The emoji used for this reaction.
+    
+- name: The name describing the reaction.
+    
+- deletedAt: Timestamp if the reaction was removed (via Undo).
+    
+- createdAt: Timestamp when the React was created.
+    
+- updatedAt: Timestamp when last modified.
+    
+
+&nbsp;
+
+**Incoming**
+
+```JSON
+{
+  "type": "Create",
+  "objectType": "React",
+  "actorId": "@alice@example.org",
+  "object": {
+    "type": "React",
+    "actorId": "@alice@example.org",
+    "target": "post:6a90cfe41b5a4d2c9e8f10aa@example.org",
+    "emoji": "❤️",
+    "name": "love"
+  }
+}
+```
+
+**Returned**
+
+```JSON
+{
+  "id": "react:12b4e7a8cd9b4c50b3f7c2aa@example.org",
+  "type": "React",
+  "server": "@example.org",
+  "actorId": "@alice@example.org",
+  "actor": {
+    "id": "@alice@example.org",
+    "name": "Alice Lee",
+    "icon": "https://example.org/images/alice.png",
+    "inbox": "https://example.org/@alice@example.org/inbox",
+    "outbox": "https://example.org/@alice@example.org/outbox",
+    "url": "https://example.org/@alice@example.org",
+    "server": "@example.org"
+  },
+  "target": "post:6a90cfe41b5a4d2c9e8f10aa@example.org",
+  "emoji": "❤️",
+  "name": "love",
+  "deletedAt": null,
+  "createdAt": "2025-10-29T18:10:00.444Z",
+  "updatedAt": "2025-10-29T18:10:00.444Z"
+}
+```
+
+&nbsp;
 
 
 # **User**

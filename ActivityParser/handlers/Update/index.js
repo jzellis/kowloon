@@ -10,6 +10,7 @@ import {
   React as ReactModel,
   Reply,
   User,
+  FeedCache,
 } from "#schema";
 import kowloonId from "#methods/parse/kowloonId.js";
 
@@ -24,6 +25,44 @@ const MODELS = {
   Reply,
   User,
 };
+
+// Object types that should be synced to FeedCache
+const FEED_CACHEABLE_TYPES = [
+  "Post",
+  "Reply",
+  "Event",
+  "Page",
+  "Bookmark",
+  "React",
+];
+
+/**
+ * Update FeedCache when source object is updated
+ */
+async function updateFeedCache(updated, objectType, patchFields) {
+  try {
+    if (!FEED_CACHEABLE_TYPES.includes(objectType)) return;
+
+    // Build update for FeedCache
+    const cacheUpdate = {
+      updatedAt: new Date(),
+      object: updated, // refresh the full object envelope
+    };
+
+    // Update specific fields that might have changed
+    if (patchFields.to !== undefined) cacheUpdate.to = updated.to;
+    if (patchFields.canReply !== undefined)
+      cacheUpdate.canReply = updated.canReply;
+    if (patchFields.canReact !== undefined)
+      cacheUpdate.canReact = updated.canReact;
+    if (patchFields.type !== undefined) cacheUpdate.type = updated.type;
+
+    await FeedCache.findOneAndUpdate({ id: updated.id }, { $set: cacheUpdate });
+  } catch (err) {
+    console.error(`FeedCache update failed for ${updated.id}:`, err.message);
+    // Non-fatal: don't block object update if cache update fails
+  }
+}
 
 export default async function Update(activity) {
   try {
@@ -86,6 +125,9 @@ export default async function Update(activity) {
 
     // annotate for downstreams + (optional) Undo
     activity.objectId = updated.id;
+
+    // Update FeedCache to reflect changes
+    await updateFeedCache(updated, parsed.type, activity.object);
 
     return { activity, updated };
   } catch (err) {

@@ -1,25 +1,71 @@
 import route from "../utils/route.js";
-import getVisibleCollection from "#methods/get/visibleCollection.js";
+import { FeedCache } from "#schema";
+import {
+  buildVisibilityFilter,
+  buildFollowerMap,
+  buildMembershipMap,
+  enrichWithCapabilities,
+} from "#methods/feed/visibility.js";
 
 export default route(async ({ req, query, set }) => {
-  const { before, page, itemsPerPage, sort, select, actorId } = query;
-
-  const result = await getVisibleCollection("bookmark", {
-    viewerId: req.user?.id || null,
+  const {
     before,
-    page: page ? Number(page) : undefined,
-    itemsPerPage: itemsPerPage ? Number(itemsPerPage) : 20,
-    sort: sort || "-createdAt",
-    select, // e.g. "id actorId to content createdAt"
-    query: actorId ? { actorId } : {}, // any extra filters for this resource
-  });
+    page,
+    itemsPerPage = 20,
+    type,
+    actorId,
+  } = query;
 
-  set("items", result.items);
-  set("count", result.count);
-  if (result.nextCursor) set("nextCursor", result.nextCursor);
-  if (result.totalItems !== undefined) {
-    set("page", result.page);
-    set("itemsPerPage", result.itemsPerPage);
-    set("totalItems", result.totalItems);
+  const viewerId = req.user?.id || null;
+  const limit = Number(itemsPerPage);
+
+  // Build visibility filter using FeedCache pattern
+  const filter = buildVisibilityFilter(viewerId);
+  filter.objectType = "Bookmark";
+
+  // Optional filters
+  if (type) filter.type = type;
+  if (actorId) filter.actorId = actorId;
+  if (before) filter.publishedAt = { $lt: new Date(before) };
+
+  // Query FeedCache
+  const items = await FeedCache.find(filter)
+    .sort({ publishedAt: -1, _id: -1 })
+    .limit(limit + 1)
+    .lean();
+
+  const hasMore = items.length > limit;
+  if (hasMore) items.pop();
+
+  // Build context for capabilities
+  const actorIds = [...new Set(items.map((i) => i.actorId))];
+  const followerMap = await buildFollowerMap(actorIds);
+  const membershipMap = await buildMembershipMap([]);
+
+  // Enrich with per-viewer capabilities
+  const enrichedItems = items.map((item) =>
+    enrichWithCapabilities(item, viewerId, {
+      followerMap,
+      membershipMap,
+      grants: {},
+      addressedIds: [],
+    })
+  );
+
+  set("items", enrichedItems.map((item) => ({
+    ...item.object,
+    canReply: item.canReply,
+    canReact: item.canReact,
+  })));
+  set("count", items.length);
+
+  if (hasMore && items.length > 0) {
+    const lastItem = items[items.length - 1];
+    set("nextCursor", lastItem.publishedAt.toISOString());
+  }
+
+  if (page !== undefined) {
+    set("page", Number(page));
+    set("itemsPerPage", limit);
   }
 });

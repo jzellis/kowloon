@@ -1,4 +1,4 @@
-import { TimelineEntry } from "#schema";
+import { Feed } from "#schema";
 
 export async function getCircleTimeline(
   viewerId,
@@ -6,5 +6,5 @@ export async function getCircleTimeline(
   { limit = 50 } = {}
 ) {
   const filter = { userId: viewerId, deletedAt: null, localCircleId: circleId };
-  return TimelineEntry.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
+  return Feed.find(filter).sort({ createdAt: -1 }).limit(limit).lean();
 }

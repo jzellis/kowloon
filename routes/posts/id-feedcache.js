@@ -1,3 +1,7 @@
+// /routes/posts/id-feedcache.js
+// Example: GET /posts/:id using FeedCache as the read layer
+// This is the NEW pattern - single object fetch via FeedCache
+
 import route from "../utils/route.js";
 import { FeedCache } from "#schema";
 import {
@@ -11,21 +15,20 @@ export default route(async ({ req, params, set, setStatus }) => {
   const { id } = params; // e.g. "post:123@domain.com"
   const viewerId = req.user?.id || null;
 
-  // Lookup in FeedCache by canonical ID (NEW: using FeedCache instead of Post)
+  // Lookup in FeedCache by canonical ID
   const feedCacheItem = await FeedCache.findOne({
     id,
-    objectType: "Post",
     deletedAt: null,
     tombstoned: { $ne: true },
   }).lean();
 
   if (!feedCacheItem) {
     setStatus(404);
-    set("error", "Post not found");
+    set("error", "Object not found");
     return;
   }
 
-  // Check visibility for this viewer (NEW: privacy check)
+  // Check visibility for this viewer
   const followerMap = await buildFollowerMap([feedCacheItem.actorId]);
   const membershipMap = await buildMembershipMap([]); // TODO: addressedIds
 
@@ -41,7 +44,7 @@ export default route(async ({ req, params, set, setStatus }) => {
     return;
   }
 
-  // Enrich with per-viewer capabilities (NEW: compute canReply/canReact for this viewer)
+  // Enrich with per-viewer capabilities
   const enriched = enrichWithCapabilities(feedCacheItem, viewerId, {
     followerMap,
     membershipMap,
@@ -50,18 +53,13 @@ export default route(async ({ req, params, set, setStatus }) => {
   });
 
   // Return the normalized object envelope with capabilities
-  const response = {
-    ...enriched.object, // The full object data from FeedCache
-    canReply: enriched.canReply, // NEW: Boolean for this viewer
-    canReact: enriched.canReact, // NEW: Boolean for this viewer
-    publishedAt: enriched.publishedAt,
-    updatedAt: enriched.updatedAt,
-  };
-
-  // Set all fields on response
-  for (const [key, value] of Object.entries(response)) {
-    set(key, value);
-  }
+  setStatus(200);
+  set("object", enriched.object); // The full object data
+  set("canReply", enriched.canReply); // Boolean for this viewer
+  set("canReact", enriched.canReact); // Boolean for this viewer
+  set("publishedAt", enriched.publishedAt);
+  set("updatedAt", enriched.updatedAt);
+  set("actorId", enriched.actorId);
 
   // TODO: If canReply/canReact requires audience grant, include capability token
   // if (enriched.canReply && enriched.origin === "remote" && enriched.canReply === "audience") {

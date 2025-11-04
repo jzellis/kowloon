@@ -2280,7 +2280,7 @@
     "indexes": []
   },
   {
-    "model": "TimelineEntry",
+    "model": "Feed",
     "options": {
       "timestamps": true,
       "strict": true

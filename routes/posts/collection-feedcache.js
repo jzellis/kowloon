@@ -1,3 +1,7 @@
+// /routes/posts/collection-feedcache.js
+// Example: GET /posts using FeedCache as the read layer
+// This is the NEW pattern - all read endpoints should use FeedCache
+
 import route from "../utils/route.js";
 import { FeedCache } from "#schema";
 import {
@@ -12,16 +16,15 @@ import { getSetting } from "#methods/settings/cache.js";
 export default route(async ({ req, query, set }) => {
   const {
     before, // Cursor for pagination (ISO date string)
-    page, // Page number (for compatibility)
-    itemsPerPage = 20,
+    page, // Page number (alternative to cursor)
+    limit = 20, // Items per page
     type, // Optional subtype filter (Note/Article/Media/Link)
     actorId, // Optional: filter by author
   } = query;
 
   const viewerId = req.user?.id || null;
-  const limit = Number(itemsPerPage);
 
-  // Build base visibility filter (NEW: FeedCache pattern)
+  // Build base visibility filter
   const filter = buildVisibilityFilter(viewerId);
 
   // Add objectType filter (we want Posts)
@@ -42,29 +45,31 @@ export default route(async ({ req, query, set }) => {
     filter.publishedAt = { $lt: new Date(before) };
   }
 
-  // Query FeedCache (NEW: using FeedCache instead of Post collection)
+  // Query FeedCache
   const items = await FeedCache.find(filter)
     .sort({ publishedAt: -1, _id: -1 }) // Stable sort
-    .limit(limit + 1) // Fetch one extra for hasMore
+    .limit(Number(limit) + 1) // Fetch one extra for hasMore
     .lean();
 
   // Check if there are more items
   const hasMore = items.length > limit;
   if (hasMore) items.pop(); // Remove the extra item
 
-  // Total count (for ActivityStreams totalItems)
+  // Total count (expensive, consider caching or removing)
   const totalItems = await FeedCache.countDocuments({
     objectType: "Post",
-    deletedAt: null,
-    tombstoned: { $ne: true },
+    ...buildVisibilityFilter(viewerId),
   });
 
-  // Build context for capability evaluation (NEW: batch operations)
+  // Build context for capability evaluation
   const actorIds = [...new Set(items.map((i) => i.actorId))];
   const followerMap = await buildFollowerMap(actorIds);
-  const membershipMap = await buildMembershipMap([]); // TODO: addressedIds
 
-  // Enrich items with per-viewer capabilities (NEW: compute canReply/canReact)
+  // For local items, we'd need addressedIds - for now, pass empty
+  // TODO: Consider storing addressedIds in FeedCache for read optimization
+  const membershipMap = await buildMembershipMap([]);
+
+  // Enrich items with per-viewer capabilities
   const enrichedItems = items.map((item) =>
     enrichWithCapabilities(item, viewerId, {
       followerMap,
@@ -83,21 +88,17 @@ export default route(async ({ req, query, set }) => {
   // Build ActivityStreams OrderedCollection
   const collection = activityStreamsCollection({
     id: fullUrl,
-    orderedItems: enrichedItems.map((item) => ({
-      ...item.object, // The full object envelope
-      canReply: item.canReply, // NEW: per-viewer capability
-      canReact: item.canReact, // NEW: per-viewer capability
-    })),
+    orderedItems: enrichedItems.map((item) => item.object), // Return the object envelope
     totalItems,
     page: page ? Number(page) : undefined,
-    itemsPerPage: limit,
+    itemsPerPage: Number(limit),
     baseUrl,
   });
 
   // Next cursor for pagination
   if (hasMore && items.length > 0) {
     const lastItem = items[items.length - 1];
-    collection.next = `${baseUrl}?before=${lastItem.publishedAt.toISOString()}&itemsPerPage=${limit}`;
+    collection.next = `${baseUrl}?before=${lastItem.publishedAt.toISOString()}&limit=${limit}`;
   }
 
   for (const [index, value] of Object.entries(collection)) {

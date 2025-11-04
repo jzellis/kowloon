@@ -14,9 +14,12 @@ import Inbox from "./Inbox.js";
 import Invite from "./Invite.js";
 import Outbox from "./Outbox.js";
 import File from "./File.js";
-import TimelineEntry from "./TimelineEntry.js";
+import Feed from "./Feed.js";
+import FeedCache from "./FeedCache.js";
+import FeedFanOut from "./FeedFanOut.js";
 import FederationCursor from "./FederationCursor.js";
 import SignatureNonce from "./SignatureNonce.js";
+import Server from "./Server.js";
 export {
   Activity,
   Bookmark,
@@ -34,7 +37,10 @@ export {
   Invite,
   Outbox,
   File,
-  TimelineEntry,
+  Feed,
+  FeedCache,
+  FeedFanOut,
   FederationCursor,
   SignatureNonce,
+  Server,
 };

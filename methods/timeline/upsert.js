@@ -1,9 +1,9 @@
-import { TimelineEntry } from "#schema";
+import { Feed } from "#schema";
 
 // item: the object returned by remote/local feed (already ACL-filtered by author server)
 // scope: "public" | "server" | "circle"
 // reason: "follow" | "domain" | "mention" | "self"
-export default async function upsertTimelineEntry({
+export default async function upsertFeed({
   viewerId,
   item,
   scope,
@@ -24,7 +24,7 @@ export default async function upsertTimelineEntry({
     deletedAt: null,
   };
 
-  await TimelineEntry.findOneAndUpdate(
+  await Feed.findOneAndUpdate(
     { userId: viewerId, objectId: item.id },
     { $set: entry },
     { upsert: true }

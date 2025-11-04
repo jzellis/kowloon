@@ -1,12 +1,12 @@
 // #methods/inbox/getFeed.js
-import { TimelineEntry } from "#schema";
+import { Feed } from "#schema";
 import { getViewerContext } from "#methods/visibility/context.js";
 import { sanitizeAudience } from "#methods/visibility/helpers.js";
 
 /**
- * Return the viewer's personalized feed from materialized TimelineEntry docs.
+ * Return the viewer's personalized feed from materialized Feed docs.
  *
- * TimelineEntry shape (assumed):
+ * Feed shape (assumed):
  *  - id, viewerId, objectType ("post"|"event"|...), objectId
  *  - actorId, to (copied from object at time of insert), createdAt, deletedAt
  *  - optionally a denormalized 'object' snapshot; if not present, your UI can refetch by id
@@ -32,7 +32,7 @@ export default async function getFeed(viewerId, opts = {}) {
     filter.objectType = { $in: types.map((t) => t.toLowerCase()) };
   if (!includeSelf) filter.actorId = { $ne: viewerId };
 
-  const rows = await TimelineEntry.find(filter)
+  const rows = await Feed.find(filter)
     .sort({ createdAt: -1 })
     .limit(Number(limit))
     // Keep payload small; expand if you store snapshots

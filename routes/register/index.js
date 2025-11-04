@@ -20,6 +20,9 @@ function pickUserInput(body = {}) {
     password: isNonEmpty(body.password) ? body.password : null,
     email: isNonEmpty(body.email) ? body.email.trim() : undefined,
     profile: isObj(body.profile) ? body.profile : undefined,
+    to: isNonEmpty(body.to) ? body.to : undefined,
+    canReply: isNonEmpty(body.canReply) ? body.canReply : undefined,
+    canReact: isNonEmpty(body.canReact) ? body.canReact : undefined,
     // Add other safe fields as needed (prefs, etc.)
   };
 }
@@ -93,6 +96,8 @@ export default route(
       email: input.email,
       profile: input.profile,
       to: input.to,
+      canReply: input.canReply,
+      canReact: input.canReact,
     });
 
     // Sign RS256 JWT shaped for routes/middleware/attachUser.js
@@ -127,7 +132,7 @@ export default route(
     set("user", user);
     set("token", token);
 
-    // return { user, token };
+    return { user, token };
   },
   {
     // Allow unauthenticated POST for registration

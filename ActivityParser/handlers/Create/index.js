@@ -10,8 +10,11 @@ import {
   React as ReactModel,
   Reply,
   User,
-  Settings, // <- ensure Settings is exported from #schema/index.js
+  Settings,
+  FeedCache, // <- ensure Settings is exported from #schema/index.js
 } from "#schema";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 
 const MODELS = {
   Bookmark,
@@ -24,6 +27,77 @@ const MODELS = {
   Reply,
   User,
 };
+
+// Object types that should be cached in FeedCache for timeline delivery
+const FEED_CACHEABLE_TYPES = [
+  "Post",
+  "Reply",
+  "Event",
+  "Page",
+  "Bookmark",
+  "React",
+];
+
+/**
+ * Write created object to FeedCache for timeline delivery and enqueue fan-out
+ */
+async function writeFeedCache(created, objectType) {
+  try {
+    if (!FEED_CACHEABLE_TYPES.includes(objectType)) return;
+
+    const { domain } = getServerSettings();
+    const parsed = kowloonId(created.id);
+    const isLocal = parsed?.domain?.toLowerCase() === domain?.toLowerCase();
+
+    const cacheEntry = {
+      id: created.id,
+      url: created.url,
+      server: created.server,
+      origin: isLocal ? "local" : "remote",
+      originDomain: parsed?.domain || domain,
+      actorId: created.actorId,
+      objectType: objectType,
+      type: created.type, // subtype (Note/Article/Media/etc)
+      inReplyTo: created.inReplyTo,
+      threadRoot: created.threadRoot,
+      object: created, // normalized content envelope
+      to: created.to || "public",
+      canReply: created.canReply || "public",
+      canReact: created.canReact || "public",
+      publishedAt: created.createdAt || created.publishedAt || new Date(),
+      updatedAt: created.updatedAt,
+    };
+
+    await FeedCache.findOneAndUpdate(
+      { id: created.id },
+      { $set: cacheEntry },
+      { upsert: true, new: true }
+    );
+
+    // Enqueue fan-out job (async processing)
+    try {
+      const { default: enqueueFeedFanOut } = await import(
+        "#methods/feed/enqueueFanOut.js"
+      );
+      await enqueueFeedFanOut({
+        feedCacheId: created.id,
+        objectType,
+        actorId: created.actorId,
+        audience: {
+          to: cacheEntry.to,
+          canReply: cacheEntry.canReply,
+          canReact: cacheEntry.canReact,
+        },
+      });
+    } catch (err) {
+      console.error(`Feed fan-out enqueue failed for ${created.id}:`, err.message);
+      // Non-fatal: worker can retry or admin can manually trigger
+    }
+  } catch (err) {
+    console.error(`FeedCache write failed for ${created.id}:`, err.message);
+    // Non-fatal: don't block object creation if cache write fails
+  }
+}
 
 export default async function Create(activity) {
   try {
@@ -93,6 +167,10 @@ export default async function Create(activity) {
       const created = await User.create(obj);
 
       activity.objectId = created.id;
+
+      // Users typically don't go into FeedCache (not timeline objects)
+      // but you could add them if needed
+
       return { activity, created };
     } else {
       // For everything but User, we need to ensure object.actor is present
@@ -106,6 +184,9 @@ export default async function Create(activity) {
     const created = await Model.create(activity.object);
 
     activity.objectId = created.id;
+
+    // Write to FeedCache for timeline delivery
+    await writeFeedCache(created, type);
 
     return { activity, created };
   } catch (err) {

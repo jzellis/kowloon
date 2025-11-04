@@ -140,7 +140,7 @@ export default async function syncCircleForViewer(
           },
         };
       });
-      await TimelineEntry.bulkWrite(ops, { ordered: false });
+      await Feed.bulkWrite(ops, { ordered: false });
     }
 
     const newSince = payload?.next || items.at(-1)?.createdAt || since;

@@ -1,4 +1,4 @@
-import { TimelineEntry } from "#schema";
+import { Feed } from "#schema";
 
 export default async function getTimeline(
   viewerId,
@@ -10,7 +10,7 @@ export default async function getTimeline(
   if (before) filter.createdAt = { $lt: new Date(before) };
 
   // Retrieve timeline entries
-  const rows = await TimelineEntry.find(filter)
+  const rows = await Feed.find(filter)
     .sort({ createdAt: -1 })
     .limit(limit)
     .lean();

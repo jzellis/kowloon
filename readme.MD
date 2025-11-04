@@ -15,7 +15,7 @@ Currently, Kowloon is still in development and not ready for production, but if 
 1.  Install Node and Mongo on your system
 2.  Clone the repo to your local machine
 3.  Update the vars in the .env.sample file to match your own MongoDB URL, etc. (Right now things like "ADMIN_PASSWORD" are ignored.)
-4.  `npm install`  and `node index.js` and your Kowloon server will be live.
+4.  `npm install`  and `node index.js` and your Kowloon server will be live.
 
 It's been confirmed to run on MacOS Sequoia, Ubuntu 24.05 and Raspberry Pi OS Trixie (based on Debian 13). The current stack runs perfectly well on a Raspberry Pi Zero 2 W, so it shouldn't tax any machine made after about 2008 unduly.
 
@@ -36,7 +36,7 @@ Here is a current list of implemented Activities and what they do:
 | **Create** | Create a new object (Post, Page, Event, etc.) | Core of posting; populates /activities and /outbox |
 | **Update** | Edit an existing object | Uses object.id to locate and modify |
 | **Delete** | Remove an object | Marks object as deleted in DB |
-| **Follow** | Follow another user | Adds target to follower’s “following” Circle or a `target` Circle |
+| **Follow** | Follow another user | Adds target to follower's "following" Circle or a `target` Circle |
 | **Unfollow** | Reverse of Follow | Removes user from all of user's Circles or one `target` Circle |
 | **Block** | Block another user | Prevents their content from showing up |
 | **Mute** | Hide user or object without blocking | Client-level visibility suppression |
@@ -77,7 +77,7 @@ The structure of Kowloon Activities is a modified form of the ActivityStreams st
 In addition, some activities also have:
 
 - `target`: The target Kowloon ID for `Update, Delete, Block, Mute, Add, Remove, Undo, Flag, Accept, Reject` and `Invite` Activities, as well as optionally for `Follow/Unfollow` activities.
-- `objectType`: If the Activity has an `object`, what type of Object it is (which is sometimes different from `object.type`, as we'll see below).
+- `objectType`: If the Activity has an `object`, what type of Object it is (which is sometimes different from `object.type`, as we'll see below).
 - `object`: If the Activity type is Create, Update, Add, Remove, Follow, Unfollow, Reply, React, Invite, Flag, the actual object of the Activity -- the object it's Creating or the fields that are being Updated, for example.  
     Objects are usually actual Javascript/JSON objects but for some Activities a Kowloon ID string is sufficient, though either a string or an object of the form `{actorId: "<KowloonID>"}` may also be used in these cases.  
     A detailed description of the various object types and required fields is below.
@@ -92,7 +92,7 @@ The three address fields, `to`, `canReply` and `canReact`, determine who can vie
 
 - `@public`: This means that the item is visible to anyone on any Kowloon server, as well as via the Web (where applicable) for non-logged-in users. It will appear in any applicable Collection or Feed without limitation to any audience.
 - `@<server>`: This is for objects that are only visible to logged-in members of the creator's own server, and not members of other servers or the general public. The server ID must match the creator's own server ID. For example, @alice@example.com can address a Post or Circle or Event to @example.com but not @otherexample.com.
-- A Circle ID *(ex.* `circle:6900bf19d164eed933307f19@example.org`): This marks the object as only visible to members of the Circle whose ID it's addressed to, or the Circle's creator. It can only be the ID of a Circle belonging to the creator.
+- A Circle ID *(ex.* `circle:6900bf19d164eed933307f19@example.org`): This marks the object as only visible to members of the Circle whose ID it's addressed to, or the Circle's creator. It can only be the ID of a Circle belonging to the creator.
 - A Group ID (ex. `group:6900bf19d164eed933307f19@example.org)`: This marks the object as being posted to a Group the creator belongs to, whether local or remote. It cannot be a Group the creator doesn't belong to.
 - An Event ID (ex. `event:6900bf19d164eed933307f19@example.org)`: This marks the object as being posted to an Event the creator is attending, whether local or remote. It cannot be an Event the creator isn't attending.
 - blank: The only person who can see the object is the object's creator.
@@ -105,7 +105,7 @@ Under the current implementation, address fields can have only one recipient per
 
 ## Federation
 
-Push federation only occurs when the Activity’s object, target, or actor is **owned by a remote host** *and* the Activity directly changes or affects that remote resource. Posts addressed to @public are **never pushed**; they are retrieved via pull.
+Push federation only occurs when the Activity's object, target, or actor is **owned by a remote host** *and* the Activity directly changes or affects that remote resource. Posts addressed to @public are **never pushed**; they are retrieved via pull.
 
 ## Federated Activities
 
@@ -132,13 +132,13 @@ Push federation only occurs when the Activity’s object, target, or actor is **
 | **Block / Mute** | Local moderation or UX preference. |
 | **Flag** | Local when reporting local content; optional federation *only* if reporting a remote object to its host moderators. |
 | **Upload** | *Currently not yet fully implemented*; never federate. |
-| **Add / Remove** | Circles are local “playlist-like” constructs; never federate membership changes. Logic for parsing Circles related to Event/Group membership are always handled on the Event/Group's home server. |
+| **Add / Remove** | Circles are local "playlist-like" constructs; never federate membership changes. Logic for parsing Circles related to Event/Group membership are always handled on the Event/Group's home server. |
 
 
 
 # Objects
 
-These are the types of objects in Kowloon aside from Activities (see above). Each one includes both *incoming* and *outgoing* fields: *incoming* fields are what Kowloon expects a new object to have and *outgoing* are what it returns after the object is created.
+These are the types of objects in Kowloon aside from Activities (see above). Each one includes both *incoming* and *outgoing* fields: *incoming* fields are what Kowloon expects a new object to have and *outgoing* are what it returns after the object is created.
 
 
 
@@ -163,7 +163,7 @@ Accept, Add, Block, Create, Delete, Flag, Follow, Invite, Join, Leave, Mute, Rea
     
     - For **Create**: a minimal/initial embedded object payload (as with your Bookmark example).
         
-    - For **Update**: a partial object patch or full replacement (server-side rules decide what’s mutable).
+    - For **Update**: a partial object patch or full replacement (server-side rules decide what's mutable).
         
     - For **Delete/Undo/React/etc.**: usually a string ID of the target object/activity, or a minimal stub as required by the verb.
         
@@ -373,15 +373,15 @@ Example: Create->Bookmark Activity
 
 # **Circle**
 
-A Circle is a user-owned list used to organize other users (e.g., “Following,” “Friends”). Circles are owned by a single user; membership is typically managed with Add / Remove Activities, though a new Circle can be created empty. The schema tracks basic metadata, an optional icon, membership, and engagement counts.
+A Circle is a user-owned list used to organize other users (e.g., "Following," "Friends"). Circles are owned by a single user; membership is typically managed with Add / Remove Activities, though a new Circle can be created empty. The schema tracks basic metadata, an optional icon, membership, and engagement counts.
 
 **Incoming Fields** (for Create -> Circle; **bold** = required)
 
 - `type`: Must be "Circle"; defaults to "Circle" if omitted.
     
-- `actorId`: The Circle owner’s Kowloon ID (e.g., "@alice@example.org").
+- `actorId`: The Circle owner's Kowloon ID (e.g., "@alice@example.org").
     
-- **`name`**: Human-readable name (e.g., “Following”).
+- **`name`**: Human-readable name (e.g., "Following").
     
 - `summary`: Optional short description.
     
@@ -401,7 +401,7 @@ A Circle is a user-owned list used to organize other users (e.g., “Following,�
 
 - `id`: Assigned on create, format circle:&lt;mongoId&gt;@&lt;domain&gt;.
     
-- `server`: The hosting server’s actor ID; set from server settings on create.
+- `server`: The hosting server's actor ID; set from server settings on create.
     
 - `url`: Canonical Circle URL (e.g., https://&lt;domain&gt;/circles/&lt;encoded-id&gt;).
     
@@ -488,7 +488,7 @@ An Event represents a scheduled gathering with start/end time, optional descript
 
 - type: Must be "Event"; defaults to "Event" if omitted.
     
-- **actorId**: The creator’s Kowloon ID (e.g., "@alice@example.org").
+- **actorId**: The creator's Kowloon ID (e.g., "@alice@example.org").
     
 - title: Short title of the event.
     
@@ -517,19 +517,19 @@ An Event represents a scheduled gathering with start/end time, optional descript
 - canReact: Single string; who may react.
     
 
-> Note: The six membership Circles (admins, invited, moderators, interested, attending, blocked) are **created/ensured by the server** for local events; clients don’t need to send them on create. The creator is auto-seeded into Admins (and Attending), and counts are updated.
+> Note: The six membership Circles (admins, invited, moderators, interested, attending, blocked) are **created/ensured by the server** for local events; clients don't need to send them on create. The creator is auto-seeded into Admins (and Attending), and counts are updated.
 
 **Outgoing Fields** (returned/stored)
 
 - id: Stable global ID event:&lt;\_id&gt;@&lt;domain&gt;.
     
-- server: Hosting server’s actor ID (e.g., "@example.org").
+- server: Hosting server's actor ID (e.g., "@example.org").
     
 - url: Canonical URL, plus inbox/outbox URLs for the event.
     
 - type, actorId, title, description, startTime, endTime, timezone, location, ageRestricted, href, rsvpPolicy, capacity, to, canReply, canReact: Normalized echoes.
     
-- actor: Cached snapshot of the creator’s profile (id, name, icon, inbox, outbox, url, server).
+- actor: Cached snapshot of the creator's profile (id, name, icon, inbox, outbox, url, server).
     
 - Membership Circle **IDs** and counts:
     
@@ -648,7 +648,7 @@ A Group is a community owned by a single creator (actorId). Local Groups automat
 
 - type: Must be "Group"; defaults to "Group" if omitted.
     
-- **actorId**: Creator’s Kowloon ID (e.g., "@alice@example.org").
+- **actorId**: Creator's Kowloon ID (e.g., "@alice@example.org").
     
 - name: Human-readable group name.
     
@@ -675,11 +675,11 @@ A Group is a community owned by a single creator (actorId). Local Groups automat
     
 - objectType: "Group".
     
-- server: Hosting server’s actor ID (e.g., "@example.org").
+- server: Hosting server's actor ID (e.g., "@example.org").
     
 - url, inbox, outbox: Canonical links.
     
-- actorId, actor: Owner’s ID and a cached profile snapshot (if available).
+- actorId, actor: Owner's ID and a cached profile snapshot (if available).
     
 - Presentation: name, description, icon, location.
     
@@ -774,13 +774,13 @@ A Group is a community owned by a single creator (actorId). Local Groups automat
 
 # **Page**
 
-A Page is a static or semi-static content item — similar to a wiki page, blog post, or document. Pages can also act as **Folders**, allowing hierarchical organization. They are authored by a User (actorId) and stored with both raw (source) and rendered (body) forms. Each Page automatically generates a slug and signature, and counts its reactions and replies on save.
+A Page is a static or semi-static content item -- similar to a wiki page, blog post, or document. Pages can also act as **Folders**, allowing hierarchical organization. They are authored by a User (actorId) and stored with both raw (source) and rendered (body) forms. Each Page automatically generates a slug and signature, and counts its reactions and replies on save.
 
 **Incoming Fields** (for Create → Page; **bold** = required)
 
 - type: Must be "Page" or "Folder", defaults to "Page".
     
-- **actorId**: The ID of the page’s creator (e.g., "@alice@example.org").
+- **actorId**: The ID of the page's creator (e.g., "@alice@example.org").
     
 - **title**: Required for "Page" objects; optional for "Folder".
     
@@ -823,7 +823,7 @@ A Page is a static or semi-static content item — similar to a wiki page, blog 
     
 - > Computes wordCount and charCount from rendered text.
     
-- > Signs the Page using the author’s private key.
+- > Signs the Page using the author's private key.
     
 - > Updates replyCount and reactCount by querying related collections.
     
@@ -838,11 +838,11 @@ A Page is a static or semi-static content item — similar to a wiki page, blog 
     
 - type: "Page" or "Folder".
     
-- server: Hosting server’s ID (e.g., "@example.org").
+- server: Hosting server's ID (e.g., "@example.org").
     
 - url: Canonical URL (https://&lt;domain&gt;/pages/&lt;slug&gt;).
     
-- actorId: Creator’s ID.
+- actorId: Creator's ID.
     
 - actor: Cached profile (if available).
     
@@ -862,7 +862,7 @@ A Page is a static or semi-static content item — similar to a wiki page, blog 
     
 - deletedAt, deletedBy.
     
-- signature: The base64 RSA-SHA256 signature created using the author’s private key.
+- signature: The base64 RSA-SHA256 signature created using the author's private key.
     
 - createdAt, updatedAt.
     
@@ -955,7 +955,7 @@ A Post is a user-authored piece of content. It can be a short **Note** (default)
 
 - type: The post style/type: currently can be "Note", "Article", "Media" or "Link". (Defaults to "Note").
     
-- **actorId**: The author’s Kowloon ID (e.g., "@alice@example.org").
+- **actorId**: The author's Kowloon ID (e.g., "@alice@example.org").
     
 - title: Optional title (primarily for non-Note types).
     
@@ -979,7 +979,7 @@ A Post is a user-authored piece of content. It can be a short **Note** (default)
     
 - location: GeoPoint (ActivityStreams-style).
     
-- target: If this is a “Link” style, the internal object ID it points at (optional).
+- target: If this is a "Link" style, the internal object ID it points at (optional).
     
 - inReplyTo: If this is a reply, the ID of the target post/activity.
     
@@ -998,7 +998,7 @@ A Post is a user-authored piece of content. It can be a short **Note** (default)
     
 - > Recounts replyCount and reactCount from related collections.
     
-- > Signs the post with the author’s private key and stores signature (a verify method exists).
+- > Signs the post with the author's private key and stores signature (a verify method exists).
     
 
 **Outgoing Fields** (returned/stored)
@@ -1007,7 +1007,7 @@ A Post is a user-authored piece of content. It can be a short **Note** (default)
     
 - objectType: "Post".
     
-- server: Hosting server’s actor ID (e.g., "@example.org").
+- server: Hosting server's actor ID (e.g., "@example.org").
     
 - url: Canonical URL for the post.
     
@@ -1110,13 +1110,13 @@ Returned
 
 - body is derived from source: Markdown is rendered to HTML; HTML passes through; plain text is wrapped into paragraphs. Word/char counts are computed from the HTML-stripped text.
     
-- replyCount/reactCount are recomputed by querying Reply/React on the post’s id. shareCount exists on the document for future use.
+- replyCount/reactCount are recomputed by querying Reply/React on the post's id. shareCount exists on the document for future use.
     
-- Posts are signed on save; a verifySignature() helper uses the author’s public key.
+- Posts are signed on save; a verifySignature() helper uses the author's public key.
     
 # **React**
 
-A **React** represents a user’s reaction (emoji or named response) to another object such as a Post, Page, Event, or Bookmark. Each React links an actorId (the reacting user) to a target (the object being reacted to) and stores both a display emoji and a canonical name (e.g. "👍" / "like"). Reacts are lightweight, immutable entries that can be undone via an Undo Activity.
+A **React** represents a user's reaction (emoji or named response) to another object such as a Post, Page, Event, or Bookmark. Each React links an actorId (the reacting user) to a target (the object being reacted to) and stores both a display emoji and a canonical name (e.g. "👍" / "like"). Reacts are lightweight, immutable entries that can be undone via an Undo Activity.
 
 * * *
 
@@ -1149,7 +1149,7 @@ A **React** represents a user’s reaction (emoji or named response) to another 
 
 - > Fills in id as react:&lt;\_id&gt;@&lt;domain&gt;.
     
-- > Fills in server with the current server’s actor ID.
+- > Fills in server with the current server's actor ID.
     
 - > Adds timestamps automatically (createdAt, updatedAt).
     
@@ -1234,7 +1234,7 @@ A **React** represents a user’s reaction (emoji or named response) to another 
 
 # **User**
 
-A User is a Kowloon actor — a person or automated account that can create, follow, post, and participate in federation. Each user owns their own Circles (Following, All Following, Blocked, Muted), has ActivityPub-compatible endpoints (inbox, outbox), and automatically receives public/private keypairs and ActivityPub actor URLs on creation.
+A User is a Kowloon actor -- a person or automated account that can create, follow, post, and participate in federation. Each user owns their own Circles (Following, All Following, Blocked, Muted), has ActivityPub-compatible endpoints (inbox, outbox), and automatically receives public/private keypairs and ActivityPub actor URLs on creation.
 
 **Incoming Fields** (for Create → User; **bold** = required)
 
@@ -1284,7 +1284,7 @@ A User is a Kowloon actor — a person or automated account that can create, fol
     
 - actorId: Canonical ActivityPub actor URL (e.g., https://example.org/users/alice).
     
-- server: Server’s actor ID (e.g., "@example.org").
+- server: Server's actor ID (e.g., "@example.org").
     
 - objectType: "User".
     

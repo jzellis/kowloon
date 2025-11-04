@@ -68,7 +68,7 @@ const OutboxSchema = new Schema(
 OutboxSchema.index({ status: 1, "counts.pending": 1, lastAttemptedAt: 1 });
 OutboxSchema.index({ "deliveries.status": 1, "deliveries.nextAttemptAt": 1 });
 OutboxSchema.index({ "deliveries.host": 1 });
-OutboxSchema.index({ ttl: 1 });
+// TTL index is already created by 'expires: 0' option on the ttl field above
 
 OutboxSchema.pre("save", async function (next) {
   // Create the activity id and url

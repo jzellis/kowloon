@@ -63,7 +63,6 @@ const ServerSchema = new Schema(
     contentFilters: {
       rejectObjectTypes: { type: [String], default: undefined }, // e.g., ["Post", "Bookmark"]
       rejectPostTypes: { type: [String], default: undefined }, // e.g., ["Article", "Video"]
-      rejectDomains: { type: [String], default: undefined }, // block content from specific domains
     },
 
     // Poll configuration

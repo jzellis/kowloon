@@ -45,9 +45,46 @@ async function writeFeedCache(created, objectType) {
   try {
     if (!FEED_CACHEABLE_TYPES.includes(objectType)) return;
 
+    if (!created || !created.id) {
+      console.error(`FeedCache write skipped: created object missing id`, { objectType, created });
+      return;
+    }
+
     const { domain } = getServerSettings();
     const parsed = kowloonId(created.id);
     const isLocal = parsed?.domain?.toLowerCase() === domain?.toLowerCase();
+
+    // Normalize visibility values from source object format to FeedCache enum format
+    // Source objects use "@public" but FeedCache uses "public"
+    const normalizeTo = (val) => {
+      if (!val) return "public";
+      const v = String(val).toLowerCase().trim();
+      if (v === "@public" || v === "public") return "public";
+      if (v === `@${domain}` || v === "server") return "server";
+      return "audience";
+    };
+
+    const normalizeCap = (val) => {
+      if (!val) return "public";
+      const v = String(val).toLowerCase().trim();
+      if (v === "@public" || v === "public") return "public";
+      if (v === "followers") return "followers";
+      if (v === "audience") return "audience";
+      if (v === "none") return "none";
+      return "public";
+    };
+
+    // Sanitize object: remove visibility, deletion, source, and MongoDB internal fields
+    // These will be stored at FeedCache top-level (visibility) or not at all (internal/metadata)
+    const sanitizedObject = { ...created };
+    delete sanitizedObject.to;
+    delete sanitizedObject.canReply;
+    delete sanitizedObject.canReact;
+    delete sanitizedObject.deletedAt;
+    delete sanitizedObject.deletedBy;
+    delete sanitizedObject.source;
+    delete sanitizedObject._id;
+    delete sanitizedObject.__v;
 
     const cacheEntry = {
       id: created.id,
@@ -60,13 +97,21 @@ async function writeFeedCache(created, objectType) {
       type: created.type, // subtype (Note/Article/Media/etc)
       inReplyTo: created.inReplyTo,
       threadRoot: created.threadRoot,
-      object: created, // normalized content envelope
-      to: created.to || "public",
-      canReply: created.canReply || "public",
-      canReact: created.canReact || "public",
+      object: sanitizedObject, // sanitized content envelope (no visibility/deletion/source)
+      to: normalizeTo(created.to), // top-level coarse visibility
+      canReply: normalizeCap(created.canReply), // top-level coarse capability
+      canReact: normalizeCap(created.canReact), // top-level coarse capability
       publishedAt: created.createdAt || created.publishedAt || new Date(),
       updatedAt: created.updatedAt,
     };
+
+    console.log(`FeedCache write for ${created.id}:`, {
+      id: cacheEntry.id,
+      actorId: cacheEntry.actorId,
+      objectType: cacheEntry.objectType,
+      type: cacheEntry.type,
+      to: cacheEntry.to,
+    });
 
     await FeedCache.findOneAndUpdate(
       { id: created.id },
@@ -181,9 +226,14 @@ export default async function Create(activity) {
     // ---- Generic path for other object types -------------------------------
     // If object.actorId is missing, many models will tolerate it, but your
     // outbox added a fallback already. We leave it as-is here.
-    const created = await Model.create(activity.object);
+    let created = await Model.create(activity.object);
 
     activity.objectId = created.id;
+
+    // Reload the document to ensure all pre-save hook fields are populated
+    // (especially id, url, server which are computed in pre-save)
+    // Convert to plain object to access all fields including virtuals
+    created = created.toObject ? created.toObject() : created;
 
     // Write to FeedCache for timeline delivery
     await writeFeedCache(created, type);

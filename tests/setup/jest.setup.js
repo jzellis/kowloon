@@ -21,11 +21,6 @@ beforeAll(async () => {
 
   // Minimal Settings for pre-save hooks
   const { Settings, User } = await import("#schema");
-  await Settings.create([
-    { name: "domain", value: "kwln.org" },
-    { name: "actorId", value: "https://kwln.org/server" },
-    { name: "defaultPronouns", value: "they/them" },
-  ]);
 
   // Create admin user for tests
   const bcryptModule = await import("bcryptjs");

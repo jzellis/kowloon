@@ -17,6 +17,27 @@ const FeedSchema = new Schema(
     // Author for quick render/filter
     activityActorId: { type: String, required: true, index: true }, // object author
 
+    // Object typing for efficient filtering (denormalized from FeedCache)
+    type: {
+      type: String,
+      enum: [
+        "Post",
+        "Reply",
+        "Event",
+        "Page",
+        "Bookmark",
+        "File",
+        "Group",
+        "Circle",
+        "Invite",
+        "Flag",
+        "React",
+      ],
+      required: true,
+      index: true,
+    }, // Overall type (e.g., "Post", "Bookmark", "Page")
+    objectType: { type: String, default: undefined, index: true }, // Subtype (e.g., "Note", "Article", "Folder")
+
     // Why it's in this feed (coarse, non-leaky)
     reason: {
       type: String,
@@ -56,5 +77,7 @@ const FeedSchema = new Schema(
 FeedSchema.index({ actorId: 1, objectId: 1 }, { unique: true });
 FeedSchema.index({ actorId: 1, createdAt: -1, _id: -1 });
 FeedSchema.index({ actorId: 1, reason: 1, createdAt: -1 });
+FeedSchema.index({ actorId: 1, type: 1, createdAt: -1 }); // Type-filtered feeds
+FeedSchema.index({ actorId: 1, type: 1, objectType: 1, createdAt: -1 }); // Subtype-filtered feeds
 
 export default mongoose.model("Feed", FeedSchema);

@@ -43,19 +43,40 @@ async function updateFeedCache(updated, objectType, patchFields) {
   try {
     if (!FEED_CACHEABLE_TYPES.includes(objectType)) return;
 
+    // Sanitize object: remove visibility, deletion, source, and MongoDB internal fields
+    // These will be stored at FeedCache top-level (visibility) or not at all (internal/metadata)
+    const sanitizedObject = { ...updated };
+    delete sanitizedObject.to;
+    delete sanitizedObject.canReply;
+    delete sanitizedObject.canReact;
+    delete sanitizedObject.deletedAt;
+    delete sanitizedObject.deletedBy;
+    delete sanitizedObject.source;
+    delete sanitizedObject._id;
+    delete sanitizedObject.__v;
+
     // Build update for FeedCache
     const cacheUpdate = {
       updatedAt: new Date(),
-      object: updated, // refresh the full object envelope
+      object: sanitizedObject, // refresh the sanitized object envelope
     };
 
-    // Update specific fields that might have changed
-    if (patchFields.to !== undefined) cacheUpdate.to = updated.to;
-    if (patchFields.canReply !== undefined)
-      cacheUpdate.canReply = updated.canReply;
-    if (patchFields.canReact !== undefined)
-      cacheUpdate.canReact = updated.canReact;
+    // Update subtype if changed
     if (patchFields.type !== undefined) cacheUpdate.type = updated.type;
+
+    // Update top-level visibility fields if changed (with normalization)
+    if (patchFields.to !== undefined) {
+      const val = String(updated.to || "").toLowerCase().trim();
+      cacheUpdate.to = val === "@public" || val === "public" ? "public" : val === "server" ? "server" : "audience";
+    }
+    if (patchFields.canReply !== undefined) {
+      const val = String(updated.canReply || "").toLowerCase().trim();
+      cacheUpdate.canReply = ["public", "followers", "audience", "none"].includes(val) ? val : "public";
+    }
+    if (patchFields.canReact !== undefined) {
+      const val = String(updated.canReact || "").toLowerCase().trim();
+      cacheUpdate.canReact = ["public", "followers", "audience", "none"].includes(val) ? val : "public";
+    }
 
     await FeedCache.findOneAndUpdate({ id: updated.id }, { $set: cacheUpdate });
   } catch (err) {

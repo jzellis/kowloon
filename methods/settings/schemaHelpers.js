@@ -23,7 +23,7 @@ export function getServerSettings() {
   logger.warn("Settings cache not loaded, using env vars as fallback");
   return {
     domain: process.env.DOMAIN,
-    actorId: process.env.ACTOR_ID || `https://${process.env.DOMAIN}/server`,
+    actorId: process.env.ACTOR_ID || `@${process.env.DOMAIN}`,
   };
 }
 
@@ -46,7 +46,10 @@ export function getActorId() {
   if (isLoaded()) {
     return getSetting("actorId");
   }
-  return process.env.ACTOR_ID || (process.env.DOMAIN ? `https://${process.env.DOMAIN}/server` : null);
+  return (
+    process.env.ACTOR_ID ||
+    (process.env.DOMAIN ? `https://${process.env.DOMAIN}/server` : null)
+  );
 }
 
 /**

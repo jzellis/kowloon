@@ -1,4 +1,9 @@
 // /schema/FeedCache.js
+// FeedCache: Canonical object storage with coarse visibility policy
+//
+// Top-level fields include coarse visibility (to/canReply/canReact) for efficient querying.
+// The object field stores sanitized content WITHOUT these fields (no duplication).
+// Source tracking and deletion metadata live only in source collections (Post, Reply, etc).
 import mongoose from "mongoose";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
@@ -48,10 +53,10 @@ const FeedCacheSchema = new Schema(
     inReplyTo: { type: String, default: undefined },
     threadRoot: { type: String, default: undefined },
 
-    // Normalized content envelope for detail views
+    // Normalized content envelope for detail views (sanitized - no to/canReply/canReact/deletedAt/deletedBy/source)
     object: { type: Object, default: undefined },
 
-    // Audience & capabilities (NO Circle IDs, just coarse policy)
+    // Coarse visibility policy (top-level for efficient queries)
     to: { type: String, enum: TO_ENUM, default: "public", index: true },
     canReply: { type: String, enum: CAP_ENUM, default: "public" },
     canReact: { type: String, enum: CAP_ENUM, default: "public" },
@@ -64,8 +69,7 @@ const FeedCacheSchema = new Schema(
     etag: { type: String, default: undefined },
     lastSyncedAt: { type: Date, default: undefined },
 
-    // Deletion/tombstone
-    deletedAt: { type: Date, default: null },
+    // Deletion/tombstone (tombstoned only - not deletedAt/deletedBy)
     tombstoned: { type: Boolean, default: false },
   },
   {

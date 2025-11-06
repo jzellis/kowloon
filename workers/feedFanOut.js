@@ -317,6 +317,8 @@ async function processFanOutJob(job) {
         actorId: viewerId, // The viewer
         objectId: feedCache.id, // FeedCache.id
         activityActorId: feedCache.actorId, // Object author
+        type: feedCache.objectType, // Main type (e.g., "Post", "Bookmark", "Page")
+        objectType: feedCache.type, // Subtype (e.g., "Note", "Article", "Folder")
         reason,
         createdAt: feedCache.publishedAt || feedCache.createdAt || new Date(),
         fetchedAt: new Date(),

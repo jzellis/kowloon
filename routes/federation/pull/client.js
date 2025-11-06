@@ -39,6 +39,32 @@ async function ingestItems(items = [], serverDomain) {
     }
 
     try {
+      // Sanitize object: remove visibility, deletion, source, and MongoDB internal fields
+      // These will be stored at FeedCache top-level (visibility) or not at all (internal/metadata)
+      const sanitizedObject = { ...item };
+      delete sanitizedObject.to;
+      delete sanitizedObject.canReply;
+      delete sanitizedObject.canReact;
+      delete sanitizedObject.deletedAt;
+      delete sanitizedObject.deletedBy;
+      delete sanitizedObject.source;
+      delete sanitizedObject._id;
+      delete sanitizedObject.__v;
+
+      // Normalize visibility values
+      const normalizeTo = (val) => {
+        if (!val) return "public";
+        const v = String(val).toLowerCase().trim();
+        if (v === "@public" || v === "public") return "public";
+        return v === "server" ? "server" : "audience";
+      };
+
+      const normalizeCap = (val) => {
+        if (!val) return "public";
+        const v = String(val).toLowerCase().trim();
+        return ["public", "followers", "audience", "none"].includes(v) ? v : "public";
+      };
+
       // Upsert into FeedCache
       const cached = await FeedCache.findOneAndUpdate(
         { id: item.id },
@@ -52,12 +78,12 @@ async function ingestItems(items = [], serverDomain) {
             objectType: item.objectType || "Post",
             type: item.type,
             publishedAt: item.publishedAt ? new Date(item.publishedAt) : new Date(),
-            object: item,
+            object: sanitizedObject,
           },
           $set: {
-            to: item.to || "public",
-            canReply: item.canReply || "public",
-            canReact: item.canReact || "public",
+            to: normalizeTo(item.to),
+            canReply: normalizeCap(item.canReply),
+            canReact: normalizeCap(item.canReact),
             lastSyncedAt: new Date(),
             etag: item.etag || undefined,
           },

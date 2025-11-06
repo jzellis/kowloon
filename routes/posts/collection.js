@@ -1,11 +1,5 @@
 import route from "../utils/route.js";
-import { FeedCache } from "#schema";
-import {
-  buildVisibilityFilter,
-  buildFollowerMap,
-  buildMembershipMap,
-  enrichWithCapabilities,
-} from "#methods/feed/visibility.js";
+import { getCollection } from "#methods/collections/index.js";
 import { activityStreamsCollection } from "../utils/oc.js";
 import { getSetting } from "#methods/settings/cache.js";
 
@@ -13,94 +7,82 @@ export default route(async ({ req, query, set }) => {
   const {
     before, // Cursor for pagination (ISO date string)
     page, // Page number (for compatibility)
-    itemsPerPage = 20,
-    type, // Optional subtype filter (Note/Article/Media/Link)
-    actorId, // Optional: filter by author
+    limit,
+    objectType, // Optional subtype filter (Note/Article/Media/Link)
+    actorId: filterActorId, // Optional: filter by author
   } = query;
 
-  const viewerId = req.user?.id || null;
-  const limit = Number(itemsPerPage);
+  const pageNum = page ? Number(page) : 1;
+  const itemsPerPage = limit ? Number(limit) : 20;
+  const offset = pageNum && pageNum > 1 ? (pageNum - 1) * itemsPerPage : 0;
 
-  // Build base visibility filter (NEW: FeedCache pattern)
-  const filter = buildVisibilityFilter(viewerId);
-
-  // Add objectType filter (we want Posts)
-  filter.objectType = "Post";
-
-  // Optional: filter by subtype
-  if (type) {
-    filter.type = type;
+  // Build filters
+  const filters = {};
+  if (filterActorId) {
+    filters.actorId = filterActorId;
   }
 
-  // Optional: filter by author
-  if (actorId) {
-    filter.actorId = actorId;
-  }
-
-  // Cursor-based pagination
+  // Cursor-based pagination (if before is provided)
   if (before) {
-    filter.publishedAt = { $lt: new Date(before) };
+    filters.publishedAt = { $lt: new Date(before) };
   }
 
-  // Query FeedCache (NEW: using FeedCache instead of Post collection)
-  const items = await FeedCache.find(filter)
-    .sort({ publishedAt: -1, _id: -1 }) // Stable sort
-    .limit(limit + 1) // Fetch one extra for hasMore
-    .lean();
-
-  // Check if there are more items
-  const hasMore = items.length > limit;
-  if (hasMore) items.pop(); // Remove the extra item
-
-  // Total count (for ActivityStreams totalItems)
-  const totalItems = await FeedCache.countDocuments({
-    objectType: "Post",
-    deletedAt: null,
-    tombstoned: { $ne: true },
+  // Query collection using new getCollection function
+  const result = await getCollection({
+    type: "Post",
+    objectType, // optional subtype filter (Note, Article, Media, Link)
+    actorId: req.user?.id || undefined,
+    limit: itemsPerPage + (before ? 1 : 0), // Fetch one extra for cursor pagination
+    offset,
+    sortBy: "createdAt",
+    sortOrder: -1,
+    filters,
   });
 
-  // Build context for capability evaluation (NEW: batch operations)
-  const actorIds = [...new Set(items.map((i) => i.actorId))];
-  const followerMap = await buildFollowerMap(actorIds);
-  const membershipMap = await buildMembershipMap([]); // TODO: addressedIds
-
-  // Enrich items with per-viewer capabilities (NEW: compute canReply/canReact)
-  const enrichedItems = items.map((item) =>
-    enrichWithCapabilities(item, viewerId, {
-      followerMap,
-      membershipMap,
-      grants: {}, // TODO: Implement remote grants from tokens
-      addressedIds: [], // TODO: Store in FeedCache or derive
-    })
-  );
+  // For cursor-based pagination, check if there are more items
+  let items = result.items;
+  let hasMore = result.hasMore;
+  if (before && items.length > itemsPerPage) {
+    hasMore = true;
+    items = items.slice(0, itemsPerPage);
+  }
 
   // Build collection URL
   const domain = getSetting("domain");
   const protocol = req.headers["x-forwarded-proto"] || "https";
-  const baseUrl = `${protocol}://${domain}${req.path}`;
-  const fullUrl = page ? `${baseUrl}?page=${page}` : baseUrl;
+  const baseUrl = `${protocol}://${domain}/posts`;
+  const fullUrl = pageNum ? `${baseUrl}?page=${pageNum}` : baseUrl;
 
   // Build ActivityStreams OrderedCollection
   const collection = activityStreamsCollection({
     id: fullUrl,
-    orderedItems: enrichedItems.map((item) => ({
+    orderedItems: items.map((item) => ({
       ...item.object, // The full object envelope
-      canReply: item.canReply, // NEW: per-viewer capability
-      canReact: item.canReact, // NEW: per-viewer capability
+      // Add per-viewer visibility flags (nested to avoid conflict with server domain field)
+      visibility: {
+        public: item._visibility?.public,
+        server: item._visibility?.server,
+        canReply: item._visibility?.canReply,
+        canReact: item._visibility?.canReact,
+      },
     })),
-    totalItems,
-    page: page ? Number(page) : undefined,
-    itemsPerPage: limit,
+    totalItems: result.total,
+    page: pageNum,
+    itemsPerPage,
     baseUrl,
   });
 
-  // Next cursor for pagination
-  if (hasMore && items.length > 0) {
+  // Next cursor for pagination (if using cursor-based)
+  if (before && hasMore && items.length > 0) {
     const lastItem = items[items.length - 1];
-    collection.next = `${baseUrl}?before=${lastItem.publishedAt.toISOString()}&itemsPerPage=${limit}`;
+    const lastDate = lastItem.publishedAt || lastItem.createdAt;
+    collection.next = `${baseUrl}?before=${new Date(
+      lastDate
+    ).toISOString()}&limit=${itemsPerPage}`;
   }
 
-  for (const [index, value] of Object.entries(collection)) {
-    set(index, value);
+  // Set response fields
+  for (const [key, value] of Object.entries(collection)) {
+    set(key, value);
   }
 });

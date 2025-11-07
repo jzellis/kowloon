@@ -3,6 +3,7 @@
 // Background worker that processes FeedFanOut queue
 // Computes audience and creates Feed entries for local viewers
 
+import "dotenv/config";
 import mongoose from "mongoose";
 import { FeedFanOut, FeedCache, Feed, User, Circle, Group, Event, Settings } from "#schema";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
@@ -419,7 +420,13 @@ async function run() {
 // Connect to MongoDB and start worker
 async function main() {
   try {
-    const mongoUri = process.env.MONGO_URI || "mongodb://localhost:27017/kowloon";
+    // Check multiple env variable names for MongoDB URI (match main server behavior)
+    const mongoUri =
+      process.env.MONGO_URI ||
+      process.env.MONGO_URL ||
+      process.env.MONGODB_URI ||
+      process.env.DATABASE_URL ||
+      "mongodb://localhost:27017/kowloon";
     await mongoose.connect(mongoUri);
     console.log("Connected to MongoDB");
 

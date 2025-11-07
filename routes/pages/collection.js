@@ -1,13 +1,19 @@
 // routes/pages/collection.js
 import route from "../utils/route.js";
-import { getCollection } from "#methods/collections/index.js";
+import { FeedCache } from "#schema";
+import {
+  buildVisibilityFilter,
+  buildFollowerMap,
+  buildMembershipMap,
+  enrichWithCapabilities,
+} from "#methods/feed/visibility.js";
 import { activityStreamsCollection } from "../utils/oc.js";
 import { getSetting } from "#methods/settings/cache.js";
 
 /**
  * Build hierarchical tree structure from flat page list
  * Pages are ordered by the `order` field within each level
- * @param {Array} items - Flat list of page items
+ * @param {Array} items - Flat list of enriched FeedCache items
  * @returns {Array} Hierarchical tree with folders containing children
  */
 function buildPageTree(items) {
@@ -41,10 +47,10 @@ function buildPageTree(items) {
       const node = {
         ...item.object,
         visibility: {
-          public: item._visibility?.public,
-          server: item._visibility?.server,
-          canReply: item._visibility?.canReply,
-          canReact: item._visibility?.canReact,
+          public: item.to === "public" || item.to === "@public",
+          server: item.to === "server",
+          canReply: item.canReply,
+          canReact: item.canReact,
         },
       };
 
@@ -67,51 +73,73 @@ function buildPageTree(items) {
 export default route(async ({ req, query, set }) => {
   const {
     page, // Page number (for compatibility, though tree structure doesn't paginate well)
-    limit,
-    objectType, // Optional: filter by "Page" or "Folder"
+    limit = 500, // Higher default for pages (entire tree)
+    type, // Optional: filter by "Page" or "Folder"
     actorId, // Optional: filter by author
   } = query;
 
-  const pageNum = page ? Number(page) : 1;
-  const itemsPerPage = limit ? Number(limit) : 500; // Higher default for pages (entire tree)
-  const offset = pageNum && pageNum > 1 ? (pageNum - 1) * itemsPerPage : 0;
+  const viewerId = req.user?.id || null;
 
-  // Build filters
-  const filters = {};
-  if (actorId) {
-    filters.actorId = actorId;
+  // Build base visibility filter
+  const filter = buildVisibilityFilter(viewerId);
+
+  // Add objectType filter (we want Pages)
+  filter.objectType = "Page";
+
+  // Optional: filter by subtype
+  if (type) {
+    filter.type = type;
   }
 
-  // Query collection using getCollection function
-  // Note: For hierarchical pages, we fetch ALL items to build the tree
-  // Pagination is tricky with tree structures
-  const result = await getCollection({
-    type: "Page",
-    objectType, // optional: "Page" or "Folder"
-    actorId: req.user?.id || undefined, // viewer for visibility
-    limit: itemsPerPage,
-    offset,
-    sortBy: "createdAt",
-    sortOrder: -1,
-    filters,
+  // Optional: filter by author
+  if (actorId) {
+    filter.actorId = actorId;
+  }
+
+  // Query FeedCache - fetch all pages to build tree
+  const items = await FeedCache.find(filter)
+    .sort({ publishedAt: -1, _id: -1 })
+    .limit(Number(limit))
+    .lean();
+
+  // Total count
+  const totalItems = await FeedCache.countDocuments({
+    objectType: "Page",
+    ...buildVisibilityFilter(viewerId),
   });
 
+  // Build context for capability evaluation
+  const actorIds = [...new Set(items.map((i) => i.actorId))];
+  const followerMap = await buildFollowerMap(actorIds);
+  const membershipMap = await buildMembershipMap([]);
+
+  // Enrich items with per-viewer capabilities
+  const enrichedItems = items.map((item) =>
+    enrichWithCapabilities(item, viewerId, {
+      followerMap,
+      membershipMap,
+      grants: {},
+      addressedIds: [],
+    })
+  );
+
   // Build hierarchical tree structure ordered by `order` field
-  const tree = buildPageTree(result.items);
+  const tree = buildPageTree(enrichedItems);
 
   // Build collection URL
   const domain = getSetting("domain");
   const protocol = req.headers["x-forwarded-proto"] || "https";
-  const baseUrl = `${protocol}://${domain}/pages`;
-  const fullUrl = pageNum ? `${baseUrl}?page=${pageNum}` : baseUrl;
+  const baseUrl = `${protocol}://${domain}${req.path}`;
+  const pageNum = page ? Number(page) : 1;
+  const fullUrl = `${baseUrl}?page=${pageNum}`;
 
   // Build ActivityStreams OrderedCollection with hierarchical items
   const collection = activityStreamsCollection({
     id: fullUrl,
     orderedItems: tree, // Hierarchical tree instead of flat list
-    totalItems: result.total,
+    totalItems,
     page: pageNum,
-    itemsPerPage,
+    itemsPerPage: Number(limit),
     baseUrl,
   });
 

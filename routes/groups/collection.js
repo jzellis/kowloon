@@ -1,6 +1,12 @@
 // /routes/groups/collection.js
 import route from "../utils/route.js";
-import { getCollection } from "#methods/collections/index.js";
+import { FeedCache } from "#schema";
+import {
+  buildVisibilityFilter,
+  buildFollowerMap,
+  buildMembershipMap,
+  enrichWithCapabilities,
+} from "#methods/feed/visibility.js";
 import { activityStreamsCollection } from "../utils/oc.js";
 import { getSetting } from "#methods/settings/cache.js";
 
@@ -15,83 +21,98 @@ import { getSetting } from "#methods/settings/cache.js";
 export default route(async ({ req, query, set }) => {
   const {
     before, // Cursor for pagination (ISO date string)
-    page, // Page number (for compatibility)
-    limit,
-    objectType, // Optional subtype filter if Groups have subtypes
-    actorId: filterActorId, // Optional: filter by owner/creator
+    page, // Page number (alternative to cursor)
+    limit = 20, // Items per page
+    type, // Optional subtype filter
+    actorId, // Optional: filter by owner/creator
   } = query;
 
-  const pageNum = page ? Number(page) : 1;
-  const itemsPerPage = limit ? Number(limit) : 20;
-  const offset = pageNum && pageNum > 1 ? (pageNum - 1) * itemsPerPage : 0;
+  const viewerId = req.user?.id || null;
 
-  // Build filters
-  const filters = {};
-  if (filterActorId) {
-    filters.actorId = filterActorId;
+  // Build base visibility filter
+  const filter = buildVisibilityFilter(viewerId);
+
+  // Add objectType filter (we want Groups)
+  filter.objectType = "Group";
+
+  // Optional: filter by subtype
+  if (type) {
+    filter.type = type;
   }
 
-  // Cursor-based pagination (if before is provided)
+  // Optional: filter by author
+  if (actorId) {
+    filter.actorId = actorId;
+  }
+
+  // Cursor-based pagination
   if (before) {
-    filters.publishedAt = { $lt: new Date(before) };
+    filter.publishedAt = { $lt: new Date(before) };
   }
 
-  // Query collection using new getCollection function
-  const result = await getCollection({
-    type: "Group",
-    objectType, // optional subtype filter
-    actorId: req.user?.id || undefined,
-    limit: itemsPerPage + (before ? 1 : 0), // Fetch one extra for cursor pagination
-    offset,
-    sortBy: "createdAt",
-    sortOrder: -1,
-    filters,
+  // Query FeedCache
+  const items = await FeedCache.find(filter)
+    .sort({ publishedAt: -1, _id: -1 }) // Stable sort
+    .limit(Number(limit) + 1) // Fetch one extra for hasMore
+    .lean();
+
+  // Check if there are more items
+  const hasMore = items.length > limit;
+  if (hasMore) items.pop(); // Remove the extra item
+
+  // Total count
+  const totalItems = await FeedCache.countDocuments({
+    objectType: "Group",
+    ...buildVisibilityFilter(viewerId),
   });
 
-  // For cursor-based pagination, check if there are more items
-  let items = result.items;
-  let hasMore = result.hasMore;
-  if (before && items.length > itemsPerPage) {
-    hasMore = true;
-    items = items.slice(0, itemsPerPage);
-  }
+  // Build context for capability evaluation
+  const actorIds = [...new Set(items.map((i) => i.actorId))];
+  const followerMap = await buildFollowerMap(actorIds);
+  const membershipMap = await buildMembershipMap([]);
+
+  // Enrich items with per-viewer capabilities
+  const enrichedItems = items.map((item) =>
+    enrichWithCapabilities(item, viewerId, {
+      followerMap,
+      membershipMap,
+      grants: {},
+      addressedIds: [],
+    })
+  );
 
   // Build collection URL
   const domain = getSetting("domain");
   const protocol = req.headers["x-forwarded-proto"] || "https";
-  const baseUrl = `${protocol}://${domain}/groups`;
-  const fullUrl = pageNum ? `${baseUrl}?page=${pageNum}` : baseUrl;
+  const baseUrl = `${protocol}://${domain}${req.path}`;
+  const pageNum = page ? Number(page) : 1;
+  const fullUrl = `${baseUrl}?page=${pageNum}`;
 
   // Build ActivityStreams OrderedCollection
   const collection = activityStreamsCollection({
     id: fullUrl,
-    orderedItems: items.map((item) => ({
-      ...item.object, // The full object envelope
-      // Add per-viewer visibility flags (nested to avoid conflict with server domain field)
+    orderedItems: enrichedItems.map((item) => ({
+      ...item.object,
       visibility: {
-        public: item._visibility?.public,
-        server: item._visibility?.server,
-        canReply: item._visibility?.canReply,
-        canReact: item._visibility?.canReact,
+        public: item.to === "public" || item.to === "@public",
+        server: item.to === "server",
+        canReply: item.canReply,
+        canReact: item.canReact,
       },
     })),
-    totalItems: result.total,
+    totalItems,
     page: pageNum,
-    itemsPerPage,
+    itemsPerPage: Number(limit),
     baseUrl,
   });
 
-  // Next cursor for pagination (if using cursor-based)
-  if (before && hasMore && items.length > 0) {
+  // Next cursor for pagination
+  if (hasMore && items.length > 0) {
     const lastItem = items[items.length - 1];
-    const lastDate = lastItem.publishedAt || lastItem.createdAt;
-    collection.next = `${baseUrl}?before=${new Date(
-      lastDate
-    ).toISOString()}&limit=${itemsPerPage}`;
+    collection.next = `${baseUrl}?before=${lastItem.publishedAt.toISOString()}&limit=${limit}`;
   }
 
-  // Set response fields
-  for (const [key, value] of Object.entries(collection)) {
-    set(key, value);
+  for (const [index, value] of Object.entries(collection)) {
+    set(index, value);
   }
 });

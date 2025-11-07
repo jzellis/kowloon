@@ -1,38 +1,41 @@
-// /routes/events/collection.js
+// routes/users/circles.js
 import route from "../utils/route.js";
 import { getCollection } from "#methods/collections/index.js";
 import { activityStreamsCollection } from "../utils/oc.js";
 import { getSetting } from "#methods/settings/cache.js";
 
-export default route(async ({ req, query, set }) => {
+export default route(async ({ req, params, query, set, setStatus }) => {
+  const userId = decodeURIComponent(params.id);
+  if (!userId.startsWith("@")) {
+    setStatus(400);
+    set("error", "Invalid user id");
+    return;
+  }
+
   const {
     before, // Cursor for pagination (ISO date string)
     page, // Page number (for compatibility)
     limit,
-    objectType, // Optional subtype filter if Events have subtypes
-    actorId: filterActorId, // Optional: filter by owner/creator
+    objectType, // Optional subtype filter if Circles have subtypes
   } = query;
 
   const pageNum = page ? Number(page) : 1;
   const itemsPerPage = limit ? Number(limit) : 20;
   const offset = pageNum && pageNum > 1 ? (pageNum - 1) * itemsPerPage : 0;
 
-  // Build filters
-  const filters = {};
-  if (filterActorId) {
-    filters.actorId = filterActorId;
-  }
+  // Build filters - filter by the user's actorId
+  const filters = { actorId: userId };
 
   // Cursor-based pagination (if before is provided)
   if (before) {
     filters.publishedAt = { $lt: new Date(before) };
   }
 
-  // Query collection using new getCollection function
+  // Query collection using getCollection function
   const result = await getCollection({
-    type: "Event",
+    type: "Circle",
     objectType, // optional subtype filter
-    actorId: req.user?.id || undefined,
+    actorId: req.user?.id || undefined, // viewer for visibility
     limit: itemsPerPage + (before ? 1 : 0), // Fetch one extra for cursor pagination
     offset,
     sortBy: "createdAt",
@@ -51,7 +54,7 @@ export default route(async ({ req, query, set }) => {
   // Build collection URL
   const domain = getSetting("domain");
   const protocol = req.headers["x-forwarded-proto"] || "https";
-  const baseUrl = `${protocol}://${domain}/events`;
+  const baseUrl = `${protocol}://${domain}/users/${encodeURIComponent(userId)}/circles`;
   const fullUrl = pageNum ? `${baseUrl}?page=${pageNum}` : baseUrl;
 
   // Build ActivityStreams OrderedCollection

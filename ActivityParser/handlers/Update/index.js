@@ -34,6 +34,8 @@ const FEED_CACHEABLE_TYPES = [
   "Page",
   "Bookmark",
   "React",
+  "Group",
+  "Circle",
 ];
 
 /**

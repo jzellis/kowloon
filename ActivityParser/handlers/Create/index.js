@@ -36,6 +36,8 @@ const FEED_CACHEABLE_TYPES = [
   "Page",
   "Bookmark",
   "React",
+  "Group",
+  "Circle",
 ];
 
 /**
@@ -46,7 +48,10 @@ async function writeFeedCache(created, objectType) {
     if (!FEED_CACHEABLE_TYPES.includes(objectType)) return;
 
     if (!created || !created.id) {
-      console.error(`FeedCache write skipped: created object missing id`, { objectType, created });
+      console.error(`FeedCache write skipped: created object missing id`, {
+        objectType,
+        created,
+      });
       return;
     }
 
@@ -78,6 +83,9 @@ async function writeFeedCache(created, objectType) {
     // These will be stored at FeedCache top-level (visibility) or not at all (internal/metadata)
     const sanitizedObject = { ...created };
     delete sanitizedObject.to;
+    delete sanitizedObject.password;
+    delete sanitizedObject.prefs;
+    delete sanitizedObject.privateKey;
     delete sanitizedObject.canReply;
     delete sanitizedObject.canReact;
     delete sanitizedObject.deletedAt;
@@ -135,7 +143,10 @@ async function writeFeedCache(created, objectType) {
         },
       });
     } catch (err) {
-      console.error(`Feed fan-out enqueue failed for ${created.id}:`, err.message);
+      console.error(
+        `Feed fan-out enqueue failed for ${created.id}:`,
+        err.message
+      );
       // Non-fatal: worker can retry or admin can manually trigger
     }
   } catch (err) {

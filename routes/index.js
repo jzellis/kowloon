@@ -163,6 +163,12 @@ router.get("/__routes", (_req, res) => {
   res.json({ total: routes.length, routes });
 });
 
+// **TESTING ONLY** - Database wipe endpoint (remove in production)
+if (process.env.NODE_ENV !== "production") {
+  const testWipe = await import("./test-wipe.js");
+  router.post("/__test/wipe", testWipe.default);
+}
+
 // Optional: log at boot
 if (process.env.ROUTE_DEBUG) {
   const routes = listAllRoutes();

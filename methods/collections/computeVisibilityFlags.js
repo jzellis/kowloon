@@ -8,7 +8,9 @@ import { getDomain } from "#methods/settings/schemaHelpers.js";
 const SOURCE_MODELS = {
   Post,
   Reply,
-  // Add more as needed
+  Circle,
+  Group,
+  Event,
 };
 
 /**

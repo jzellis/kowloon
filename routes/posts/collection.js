@@ -80,8 +80,8 @@ export default route(async ({ req, query, set }) => {
   const domain = getSetting("domain");
   const protocol = req.headers["x-forwarded-proto"] || "https";
   const baseUrl = `${protocol}://${domain}${req.path}`;
-  const pageNum = page ? Number(page) : undefined;
-  const fullUrl = pageNum ? `${baseUrl}?page=${pageNum}` : baseUrl;
+  const pageNum = page ? Number(page) : 1; // Default to page 1
+  const fullUrl = `${baseUrl}?page=${pageNum}`;
 
   // Build ActivityStreams OrderedCollection
   const collection = activityStreamsCollection({
@@ -90,8 +90,8 @@ export default route(async ({ req, query, set }) => {
       ...item.object, // The full object envelope
       // Add per-viewer visibility flags (nested to avoid conflict with server domain field)
       visibility: {
-        public: item.object.to === "public" || item.object.to === "@public",
-        server: item.object.to === "server",
+        public: item.to === "public" || item.to === "@public",
+        server: item.to === "server",
         canReply: item.canReply,
         canReact: item.canReact,
       },

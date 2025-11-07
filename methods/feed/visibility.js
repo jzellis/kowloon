@@ -185,14 +185,14 @@ export function evaluateCapability({
 
   const cap = capability.toLowerCase().trim();
 
-  // "public" → always true
-  if (cap === "public" || cap === "@public") return true;
-
   // "none" → always false
   if (cap === "none") return false;
 
-  // Not logged in → false for everything else
+  // Not logged in → false (even for "public" - must be authenticated to reply/react)
   if (!viewerId) return false;
+
+  // "public" → true for any authenticated user
+  if (cap === "public" || cap === "@public") return true;
 
   // "followers" → check if viewer follows author
   if (cap === "followers") {

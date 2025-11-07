@@ -7,6 +7,14 @@ module.exports = {
       watch: true,
       time: true,
     },
+    {
+      name: "kowloon-worker-feed",
+      script: "workers/feedFanOut.js",
+      watch: false,
+      time: true,
+      autorestart: true,
+      max_restarts: 10,
+    },
   ],
   deploy: {
     dev1: {

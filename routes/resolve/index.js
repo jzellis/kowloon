@@ -28,7 +28,14 @@ export default route(
       }
 
       setStatus(200);
-      set("object", result.object);
+      // Spread all object properties into the response
+      const obj = result.object;
+      for (const key in obj) {
+        if (obj.hasOwnProperty(key)) {
+          set(key, obj[key]);
+        }
+      }
+      return;
     } catch (err) {
       if (err.name === "NotFound") {
         setStatus(404);

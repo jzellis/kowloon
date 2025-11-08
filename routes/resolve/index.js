@@ -3,6 +3,7 @@
 // GET /resolve?id=@user@domain or /resolve?id=post:xxx@domain
 import route from "../utils/route.js";
 import getObjectById from "#methods/get/objectById.js";
+import sanitizeObject from "#methods/sanitize/object.js";
 
 export default route(
   async ({ query, user, set, setStatus }) => {
@@ -15,24 +16,45 @@ export default route(
     }
 
     try {
-      const result = await getObjectById(id, {
-        viewerId: user?.id || null,
-        mode: "local", // Only return local objects (remote fetching is for our own use)
-        enforceLocalVisibility: true,
-      });
+      // For non-User objects, prefer FeedCache
+      let obj = null;
+      const isUserQuery = id.startsWith("@");
 
-      if (!result?.object) {
+      if (!isUserQuery) {
+        // Try FeedCache first for Posts, Groups, Events, etc.
+        const { FeedCache } = await import("#schema");
+        const cached = await FeedCache.findOne({ objectId: id }).lean();
+        if (cached) {
+          obj = cached;
+        }
+      }
+
+      // Fallback to getObjectById if not in FeedCache or is a User
+      if (!obj) {
+        const result = await getObjectById(id, {
+          viewerId: user?.id || null,
+          mode: "local", // Only return local objects (remote fetching is for our own use)
+          enforceLocalVisibility: true,
+        });
+        obj = result?.object;
+      }
+
+      if (!obj) {
         setStatus(404);
         set("error", "Not found");
         return;
       }
 
+      // Sanitize the object before returning
+      const sanitized = sanitizeObject(obj, {
+        objectType: obj.objectType || obj.type,
+      });
+
       setStatus(200);
-      // Spread all object properties into the response
-      const obj = result.object;
-      for (const key in obj) {
-        if (obj.hasOwnProperty(key)) {
-          set(key, obj[key]);
+      // Spread all sanitized properties into the response
+      for (const key in sanitized) {
+        if (sanitized.hasOwnProperty(key)) {
+          set(key, sanitized[key]);
         }
       }
       return;

@@ -19,31 +19,57 @@ export default async function Follow(activity) {
     const actor = await User.findOne({ id: activity.actorId });
     if (!actor) return { activity, error: "Follow: actor not found" };
 
-    // The person being followed (could be remote user, so may not have User doc)
+    // The person being followed
     const followedUserId = activity.object;
-    let userToFollow = await User.findOne({ id: followedUserId });
+    const localUser = await User.findOne({ id: followedUserId });
 
-    // If not found locally, try to fetch from remote server
-    if (!userToFollow) {
+    let member;
+    if (localUser) {
+      // Local user - use toMember
+      member = toMember(localUser);
+    } else {
+      // Remote user - fetch their public profile and create member
       try {
-        const getObjectById = (await import("#methods/get/objectById.js")).default;
-        const result = await getObjectById(followedUserId, {
-          viewerId: null, // Public fetch
-          mode: "prefer-local",
-          hydrateRemoteIntoDB: true, // Cache the user in our DB
-          maxStaleSeconds: 3600, // Use cached data if less than 1 hour old
-        });
-        userToFollow = result?.object;
+        const parsed = kowloonId(followedUserId);
+
+        if (parsed?.domain) {
+          // Fetch from remote /resolve endpoint
+          const url = `https://${parsed.domain}/resolve?id=${encodeURIComponent(followedUserId)}`;
+          const response = await fetch(url, {
+            headers: { 'Accept': 'application/json' },
+            signal: AbortSignal.timeout(8000)
+          });
+
+          if (response.ok) {
+            const remoteUser = await response.json();
+            member = {
+              id: followedUserId,
+              name: remoteUser.profile?.name || remoteUser.username || followedUserId,
+              icon: remoteUser.profile?.icon || "",
+              inbox: remoteUser.inbox || `https://${parsed.domain}/users/${encodeURIComponent(followedUserId)}/inbox`,
+              outbox: remoteUser.outbox || `https://${parsed.domain}/users/${encodeURIComponent(followedUserId)}/outbox`,
+              url: remoteUser.url || `https://${parsed.domain}/users/${encodeURIComponent(followedUserId)}`,
+              server: `@${parsed.domain}`,
+            };
+          }
+        }
       } catch (err) {
-        // If fetch fails, we'll create a minimal member object below
         console.warn(`Follow: Could not fetch remote user ${followedUserId}:`, err.message);
       }
-    }
 
-    // Create member from the followed user (or construct from ID if remote)
-    const member = userToFollow
-      ? toMember(userToFollow)
-      : { id: followedUserId, name: followedUserId, icon: "", inbox: "", outbox: "", url: "" };
+      // Fallback if fetch failed
+      if (!member) {
+        member = {
+          id: followedUserId,
+          name: followedUserId,
+          icon: "",
+          inbox: "",
+          outbox: "",
+          url: "",
+          server: "",
+        };
+      }
+    }
 
     if (!member || !member.id)
       return { activity, error: "Follow: could not resolve member" };

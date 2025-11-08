@@ -19,15 +19,39 @@ export default async function Follow(activity) {
     const actor = await User.findOne({ id: activity.actorId });
     if (!actor) return { activity, error: "Follow: actor not found" };
 
-    const member = toMember(actor);
+    // The person being followed (could be remote user, so may not have User doc)
+    const followedUserId = activity.object;
+    let userToFollow = await User.findOne({ id: followedUserId });
+
+    // If not found locally, try to fetch from remote server
+    if (!userToFollow) {
+      try {
+        const getObjectById = (await import("#methods/get/objectById.js")).default;
+        const result = await getObjectById(followedUserId, {
+          viewerId: null, // Public fetch
+          mode: "prefer-local",
+          hydrateRemoteIntoDB: true, // Cache the user in our DB
+          maxStaleSeconds: 3600, // Use cached data if less than 1 hour old
+        });
+        userToFollow = result?.object;
+      } catch (err) {
+        // If fetch fails, we'll create a minimal member object below
+        console.warn(`Follow: Could not fetch remote user ${followedUserId}:`, err.message);
+      }
+    }
+
+    // Create member from the followed user (or construct from ID if remote)
+    const member = userToFollow
+      ? toMember(userToFollow)
+      : { id: followedUserId, name: followedUserId, icon: "", inbox: "", outbox: "", url: "" };
+
     if (!member || !member.id)
       return { activity, error: "Follow: could not resolve member" };
 
     let targetId = activity.target;
     if (!targetId) {
       const followingCircle = await Circle.findOne({
-        "owner.id": actor.id,
-        subtype: "Following",
+        id: actor.following,
       });
       targetId = followingCircle?.id;
     }
@@ -72,7 +96,8 @@ export default async function Follow(activity) {
       } else {
         // Following a specific actor on the remote server - increment refcount
         const currentServer = await Server.findOne({ domain: serverDomain });
-        const currentCount = currentServer?.actorsRefCount?.get(remoteActorId) || 0;
+        const currentCount =
+          currentServer?.actorsRefCount?.get(remoteActorId) || 0;
 
         await Server.updateOne(
           { domain: serverDomain },

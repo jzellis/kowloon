@@ -15,6 +15,14 @@ module.exports = {
       autorestart: true,
       max_restarts: 10,
     },
+    {
+      name: "kowloon-worker-pull",
+      script: "workers/pullScheduler.js",
+      watch: false,
+      time: true,
+      autorestart: true,
+      max_restarts: 10,
+    },
   ],
   deploy: {
     dev1: {

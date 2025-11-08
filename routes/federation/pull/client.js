@@ -176,10 +176,13 @@ export default route(
     let server = await Server.findOne({ domain });
 
     if (!server) {
+      console.log(`Pull client: Server ${domain} not found in registry`);
       setStatus(404);
       set({ error: `Server ${domain} not found in registry` });
       return;
     }
+
+    console.log(`Pull client: Found server ${domain}, include:`, server.include);
 
     // Check moderation status
     if (server.status === "blocked") {
@@ -296,7 +299,7 @@ export default route(
     }
 
     // Make HTTP request to remote server
-    const pullUrl = server.outbox || `https://${domain}/outbox/pull`;
+    const pullUrl = server.pullEndpoint || `https://${domain}/federation/pull`;
 
     let response;
     try {

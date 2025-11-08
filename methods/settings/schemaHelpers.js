@@ -8,7 +8,7 @@ import logger from "#methods/utils/logger.js";
  * Get domain and actorId settings commonly needed in schema pre-save hooks
  * Falls back to environment variables if cache isn't loaded yet
  *
- * @returns {Object} { domain, actorId }
+ * @returns {Object} { domain, actorId, privateKey }
  */
 export function getServerSettings() {
   // If cache is loaded, use it
@@ -16,6 +16,7 @@ export function getServerSettings() {
     return {
       domain: getSetting("domain"),
       actorId: getSetting("actorId"),
+      privateKey: getSetting("privateKey"),
     };
   }
 
@@ -24,6 +25,7 @@ export function getServerSettings() {
   return {
     domain: process.env.DOMAIN,
     actorId: process.env.ACTOR_ID || `@${process.env.DOMAIN}`,
+    privateKey: process.env.PRIVATE_KEY,
   };
 }
 

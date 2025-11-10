@@ -187,5 +187,5 @@ export default route(
       requestedBy: requestingDomain,
     });
   },
-  { allowUnauth: false } // Require authentication
+  { allowUnauth: true } // Server-to-server endpoint - authenticates via JWT, not user session
 );

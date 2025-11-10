@@ -20,14 +20,14 @@ function normalizeDomain(domain) {
 
 export default route(
   async (api) => {
-    const { body, headers, setStatus, set } = api;
+    const { req, body, setStatus, set } = api;
 
     // Get our domain for JWT verification
     const { domain: ourDomain } = getServerSettings();
 
     // Extract and verify JWT
     let requestingDomain;
-    const authHeader = headers.authorization || headers.Authorization;
+    const authHeader = req.headers.authorization || req.headers.Authorization;
 
     if (authHeader?.startsWith("Bearer ")) {
       const token = authHeader.substring(7);

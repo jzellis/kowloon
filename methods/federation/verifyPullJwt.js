@@ -3,6 +3,7 @@
 
 import { jwtVerify, importSPKI } from "jose";
 import { Server } from "#schema";
+import fetchServerPublicKey from "./fetchServerPublicKey.js";
 
 /**
  * Normalize domain to lowercase, remove scheme/port
@@ -28,9 +29,9 @@ async function getServerPublicKey(domain) {
     return server.publicKey;
   }
 
-  // If not in DB, could fetch from /.well-known/kowloon or actor endpoint
-  // For now, return null if not registered
-  throw new Error(`Public key not found for server ${domain}`);
+  // If not in DB, fetch from remote server's /.well-known/kowloon endpoint
+  console.log(`Public key not cached for ${domain}, fetching from remote...`);
+  return await fetchServerPublicKey(domain);
 }
 
 /**

@@ -29,6 +29,10 @@ const ServerSchema = new Schema(
     domain: { type: String, required: true, unique: true, index: true }, // normalized: lowercased, punycode, no scheme/port
     aliases: { type: [String], default: undefined }, // alternate hostnames for same peer
 
+    // Cryptographic keys for server-to-server authentication
+    publicKey: { type: String, default: undefined }, // RSA public key in PEM format for JWT verification
+    pullEndpoint: { type: String, default: undefined }, // Custom pull endpoint URL (defaults to https://{domain}/federation/pull)
+
     // Audience tracking - reference counts instead of storing user IDs
     // Maps remote actor ID -> count of local users following that actor
     actorsRefCount: { type: Map, of: Number, default: undefined }, // e.g., {"@alice@remote.com": 3}

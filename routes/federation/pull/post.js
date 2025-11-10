@@ -65,7 +65,6 @@ export default route(
     }
 
     // Parse request
-    const include = Array.isArray(body.include) ? body.include : [];
     const actors = Array.isArray(body.actors) ? body.actors : [];
     const audience = Array.isArray(body.audience) ? body.audience : [];
     const since = body.since || {};
@@ -79,14 +78,10 @@ export default route(
     };
 
     // Collect items from different scopes
-    const results = {
-      public: [],
-      actors: [],
-      audience: [],
-    };
+    const allItems = [];
 
-    // Scope: public
-    if ((include.includes("public") || includePublic) && since.public !== undefined) {
+    // Scope: public posts (if requested)
+    if (includePublic) {
       const publicQuery = {
         ...query,
         to: "public",
@@ -96,15 +91,17 @@ export default route(
         publicQuery.publishedAt = { $gt: new Date(since.public) };
       }
 
-      results.public = await FeedCache.find(publicQuery)
+      const publicItems = await FeedCache.find(publicQuery)
         .sort({ publishedAt: -1 })
         .limit(limit)
         .select("id url actorId objectType type publishedAt object to canReply canReact")
         .lean();
+
+      allItems.push(...publicItems);
     }
 
-    // Scope: actors
-    if (include.includes("actors") && actors.length > 0) {
+    // Scope: specific actors on our server
+    if (actors.length > 0) {
       // Filter actors to only those on our domain
       const localActors = actors.filter((actorId) => {
         const actorDomain = actorId.split("@").pop();
@@ -121,18 +118,19 @@ export default route(
           actorsQuery.publishedAt = { $gt: new Date(since.actors) };
         }
 
-        results.actors = await FeedCache.find(actorsQuery)
+        const actorItems = await FeedCache.find(actorsQuery)
           .sort({ publishedAt: -1 })
           .limit(limit)
           .select("id url actorId objectType type publishedAt object to canReply canReact")
           .lean();
+
+        allItems.push(...actorItems);
       }
     }
 
-    // Scope: audience
-    if (include.includes("audience") && audience.length > 0) {
+    // Scope: posts addressed to specific users on the requesting server
+    if (audience.length > 0) {
       // Find items where any of the audience members are in the item's audience
-      // This requires checking the object.to array or audience fields
       const audienceQuery = {
         ...query,
         $or: [
@@ -146,21 +144,20 @@ export default route(
         audienceQuery.publishedAt = { $gt: new Date(since.audience) };
       }
 
-      results.audience = await FeedCache.find(audienceQuery)
+      const audienceItems = await FeedCache.find(audienceQuery)
         .sort({ publishedAt: -1 })
         .limit(limit)
         .select("id url actorId objectType type publishedAt object to canReply canReact")
         .lean();
+
+      allItems.push(...audienceItems);
     }
 
-    // Merge and deduplicate items
+    // Deduplicate and sort items
     const itemsMap = new Map();
-
-    for (const scope of ["public", "actors", "audience"]) {
-      for (const item of results[scope]) {
-        if (!itemsMap.has(item.id)) {
-          itemsMap.set(item.id, item);
-        }
+    for (const item of allItems) {
+      if (!itemsMap.has(item.id)) {
+        itemsMap.set(item.id, item);
       }
     }
 
@@ -168,22 +165,16 @@ export default route(
       .sort((a, b) => b.publishedAt - a.publishedAt)
       .slice(0, limit);
 
-    // Compute next cursors
+    // Compute next cursors based on latest item in each scope
     const cursors = {};
 
-    if (results.public.length > 0) {
-      const latest = results.public[0];
-      cursors.public = latest.publishedAt.toISOString();
-    }
+    if (items.length > 0) {
+      // Use the latest publishedAt as cursor for each scope
+      const latestPublishedAt = items[0].publishedAt.toISOString();
 
-    if (results.actors.length > 0) {
-      const latest = results.actors[0];
-      cursors.actors = latest.publishedAt.toISOString();
-    }
-
-    if (results.audience.length > 0) {
-      const latest = results.audience[0];
-      cursors.audience = latest.publishedAt.toISOString();
+      if (includePublic) cursors.public = latestPublishedAt;
+      if (actors.length > 0) cursors.actors = latestPublishedAt;
+      if (audience.length > 0) cursors.audience = latestPublishedAt;
     }
 
     // Return response
@@ -192,12 +183,8 @@ export default route(
       type: "OrderedCollection",
       items,
       cursors: Object.keys(cursors).length > 0 ? cursors : undefined,
-      counts: {
-        public: results.public.length,
-        actors: results.actors.length,
-        audience: results.audience.length,
-        total: items.length,
-      },
+      total: items.length,
+      requestedBy: requestingDomain,
     });
   },
   { allowUnauth: false } // Require authentication

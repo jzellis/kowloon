@@ -163,6 +163,10 @@ async function fanOutItems(items, scope, metadata = {}) {
 export default async function pullFromServer(domain, options = {}) {
   domain = normalizeDomain(domain);
 
+  // Get our domain from settings
+  const { getServerSettings } = await import("#methods/settings/schemaHelpers.js");
+  const { domain: ourDomain } = getServerSettings();
+
   // Find Server record
   let server = await Server.findOne({ domain });
 
@@ -243,29 +247,15 @@ export default async function pullFromServer(domain, options = {}) {
     }
   }
 
-  // Build request body
+  // Build request body with simpler structure
   const requestBody = {
-    include,
+    requestingServer: `@${ourDomain}`,
+    actors: actors,
+    audience: audience,
+    since: since,
     limit: Math.min(requestLimit, server.maxPage || 200),
+    includePublic: include.includes("public"),
   };
-
-  if (actors.length > 0 && include.includes("actors")) {
-    requestBody.actors = actors;
-  }
-
-  if (audience.length > 0 && include.includes("audience")) {
-    requestBody.audience = audience;
-  }
-
-  if (Object.keys(since).length > 0) {
-    requestBody.since = since;
-  }
-
-  if (Object.keys(filters).length > 0) {
-    requestBody.filters = filters;
-  }
-
-  requestBody.capabilities = { includeGrants: true };
 
   // Prepare headers
   const headers = {

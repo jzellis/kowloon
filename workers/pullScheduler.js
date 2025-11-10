@@ -8,50 +8,14 @@ import mongoose from "mongoose";
 import Server from "../schema/Server.js";
 import { loadSettings } from "../methods/settings/cache.js";
 import Settings from "../schema/Settings.js";
-import fetch from "node-fetch";
 import logger from "../methods/utils/logger.js";
+import pullFromServerMethod from "../methods/federation/pullFromServer.js";
 
 const POLL_INTERVAL_MS = Number(process.env.PULL_SCHEDULER_INTERVAL) || 10000; // 10 seconds
 const BATCH_SIZE = Number(process.env.PULL_SCHEDULER_BATCH_SIZE) || 5; // Pull from 5 servers per tick
 const NEXT_POLL_DELAY_MS = Number(process.env.PULL_NEXT_POLL_DELAY_MS) || 300000; // 5 minutes default
 
 let running = false;
-let systemToken = null;
-
-/**
- * Generate a system JWT token for internal API calls
- */
-async function getSystemToken() {
-  if (systemToken) return systemToken;
-
-  const jwt = await import("jsonwebtoken");
-  const { getSetting } = await import("../methods/settings/cache.js");
-
-  const domain = getSetting("domain");
-  const privateKey = getSetting("privateKey");
-
-  if (!domain || !privateKey) {
-    throw new Error("Missing domain or privateKey in settings");
-  }
-
-  const payload = {
-    iss: `https://${domain}`,
-    sub: `@${domain}`,
-    scope: "system:pull-scheduler",
-    iat: Math.floor(Date.now() / 1000),
-    // Long-lived token for worker
-    exp: Math.floor(Date.now() / 1000) + 86400, // 24 hours
-  };
-
-  systemToken = jwt.default.sign(payload, privateKey, { algorithm: "RS256" });
-
-  // Refresh token every 12 hours
-  setTimeout(() => {
-    systemToken = null;
-  }, 43200000);
-
-  return systemToken;
-}
 
 /**
  * Pull from a single remote server
@@ -67,86 +31,26 @@ async function pullFromServer(server) {
       serverFollowersCount: server.serverFollowersCount || 0,
     });
 
-    const token = await getSystemToken();
-    const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
-    const pullUrl = `${baseUrl}/federation/pull/${domain}`;
-
-    const response = await fetch(pullUrl, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        limit: server.maxPage || 100,
-      }),
-      timeout: server.timeouts?.readMs || 30000,
+    // Use the pullFromServer method directly
+    const result = await pullFromServerMethod(domain, {
+      limit: server.maxPage || 100,
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    // Check if pull succeeded
+    if (result.error) {
+      throw new Error(result.error);
     }
 
-    const result = await response.json();
-
-    // Update server stats
-    const updateData = {
-      "scheduler.nextPollAt": new Date(Date.now() + NEXT_POLL_DELAY_MS),
-      "scheduler.errorCount": 0,
-      "scheduler.backoffMs": 0,
-      "scheduler.lastSuccessfulPollAt": new Date(),
-      "scheduler.lastError": null,
-      "scheduler.lastErrorCode": null,
-      lastSeenAt: new Date(),
-    };
-
-    if (result.result?.ingested > 0) {
-      updateData["stats.itemsSeen"] = (server.stats?.itemsSeen || 0) + result.result.ingested;
-      updateData["stats.lastItemAt"] = new Date();
-    }
-
-    await Server.updateOne({ _id: server._id }, { $set: updateData });
-
+    // Pull succeeded - update server (note: pullFromServer already updated cursors)
     logger.info(`Pull scheduler: ${domain} completed`, {
       serverId,
       ingested: result.result?.ingested || 0,
       filtered: result.result?.filtered || 0,
     });
   } catch (err) {
-    // Handle errors with exponential backoff
-    const errorCount = (server.scheduler?.errorCount || 0) + 1;
-    const currentBackoff = server.scheduler?.backoffMs || 0;
-    const newBackoff = Math.min(currentBackoff + 60000, 3600000); // Max 1 hour
-
-    // Determine error code
-    let errorCode = "EOTHER";
-    if (err.code === "ECONNREFUSED" || err.code === "ENOTFOUND") {
-      errorCode = "ECONN";
-    } else if (err.code === "ETIMEDOUT" || err.type === "request-timeout") {
-      errorCode = "ETIMEOUT";
-    } else if (err.message.includes("HTTP 4") || err.message.includes("HTTP 5")) {
-      errorCode = "EHTTP";
-    }
-
-    await Server.updateOne(
-      { _id: server._id },
-      {
-        $set: {
-          "scheduler.nextPollAt": new Date(Date.now() + newBackoff),
-          "scheduler.errorCount": errorCount,
-          "scheduler.backoffMs": newBackoff,
-          "scheduler.lastError": err.message.substring(0, 500),
-          "scheduler.lastErrorCode": errorCode,
-        },
-      }
-    );
-
     logger.error(`Pull scheduler: ${domain} failed`, {
       serverId,
       error: err.message,
-      errorCode,
-      errorCount,
-      nextBackoffMs: newBackoff,
     });
   }
 }
@@ -214,19 +118,7 @@ async function main() {
     await loadSettings(Settings);
     logger.info("Pull scheduler: Settings cache loaded");
 
-    // Verify we have required settings
-    const { getSetting } = await import("../methods/settings/cache.js");
-    const domain = getSetting("domain");
-    const privateKey = getSetting("privateKey");
-
-    if (!domain) {
-      throw new Error("Missing domain in settings - cannot start pull scheduler");
-    }
-    if (!privateKey) {
-      throw new Error("Missing privateKey in settings - cannot start pull scheduler");
-    }
-
-    logger.info(`Pull scheduler: Starting (domain: ${domain}, interval: ${POLL_INTERVAL_MS}ms)`);
+    logger.info(`Pull scheduler: Starting (interval: ${POLL_INTERVAL_MS}ms, batch: ${BATCH_SIZE})`);
 
     // Run first tick immediately
     await tick();

@@ -379,8 +379,11 @@ export default async function pullFromServer(domain, options = {}) {
   // Parse 200 response
   let responseData;
   try {
-    responseData = await response.json();
+    const responseText = await response.text();
+    console.log(`Response from ${domain} (${responseText.length} bytes):`, responseText.substring(0, 500));
+    responseData = JSON.parse(responseText);
   } catch (err) {
+    console.error(`Failed to parse response from ${domain}:`, err.message);
     return {
       error: "Failed to parse response from remote server",
       status: 502,
@@ -394,6 +397,7 @@ export default async function pullFromServer(domain, options = {}) {
       type: responseData.type,
       hasItems: !!responseData.items,
       itemsIsArray: Array.isArray(responseData.items),
+      responseKeys: Object.keys(responseData),
     });
     return {
       error: "Invalid response structure from remote server",

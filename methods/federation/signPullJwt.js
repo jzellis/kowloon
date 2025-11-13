@@ -1,9 +1,14 @@
 // /methods/federation/signPullJwt.js
 // Sign a short-lived JWT for authenticated /outbox/pull requests
 
-import crypto from "node:crypto";
+import { webcrypto } from "node:crypto";
 import { SignJWT, importPKCS8 } from "jose";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+
+// Ensure crypto is available globally for jose
+if (!globalThis.crypto) {
+  globalThis.crypto = webcrypto;
+}
 
 /**
  * Sign a JWT for federation pull request

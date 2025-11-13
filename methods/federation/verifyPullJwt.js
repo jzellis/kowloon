@@ -1,9 +1,15 @@
 // /methods/federation/verifyPullJwt.js
 // Verify JWT from remote server making a pull request
 
+import { webcrypto } from "node:crypto";
 import { jwtVerify, importSPKI } from "jose";
 import { Server } from "#schema";
 import fetchServerPublicKey from "./fetchServerPublicKey.js";
+
+// Ensure crypto is available globally for jose
+if (!globalThis.crypto) {
+  globalThis.crypto = webcrypto;
+}
 
 /**
  * Normalize domain to lowercase, remove scheme/port

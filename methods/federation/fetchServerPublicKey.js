@@ -52,6 +52,11 @@ export default async function fetchServerPublicKey(domain) {
         $set: {
           publicKey: publicKey,
         },
+        $setOnInsert: {
+          id: `@${domain}`,
+          domain: domain,
+          status: "active",
+        },
       },
       { upsert: true }
     );

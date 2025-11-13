@@ -388,7 +388,13 @@ export default async function pullFromServer(domain, options = {}) {
   }
 
   // Validate response structure
-  if (responseData.type !== "OrderedCollection" && !Array.isArray(responseData.items)) {
+  if (responseData.type !== "OrderedCollection" || !Array.isArray(responseData.items)) {
+    console.error(`Invalid response from ${domain}:`, {
+      hasType: !!responseData.type,
+      type: responseData.type,
+      hasItems: !!responseData.items,
+      itemsIsArray: Array.isArray(responseData.items),
+    });
     return {
       error: "Invalid response structure from remote server",
       status: 502,

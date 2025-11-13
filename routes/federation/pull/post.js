@@ -179,13 +179,13 @@ export default route(
 
     // Return response
     setStatus(200);
-    set({
-      type: "OrderedCollection",
-      items,
-      cursors: Object.keys(cursors).length > 0 ? cursors : undefined,
-      total: items.length,
-      requestedBy: requestingDomain,
-    });
+    set("type", "OrderedCollection");
+    set("items", items);
+    if (Object.keys(cursors).length > 0) {
+      set("cursors", cursors);
+    }
+    set("total", items.length);
+    set("requestedBy", requestingDomain);
   },
   { allowUnauth: true } // Server-to-server endpoint - authenticates via JWT, not user session
 );

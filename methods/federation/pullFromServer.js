@@ -266,7 +266,7 @@ export default async function pullFromServer(domain, options = {}) {
   // Add JWT if signedPull is supported
   if (server.supports.signedPull) {
     try {
-      const jwt = await signPullJwt({ aud: domain });
+      const jwt = await signPullJwt({ aud: `https://${domain}` });
       headers["Authorization"] = `Bearer ${jwt}`;
     } catch (err) {
       console.error(`Failed to sign JWT for ${domain}:`, err.message);

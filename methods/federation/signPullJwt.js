@@ -1,20 +1,21 @@
 // /methods/federation/signPullJwt.js
 // Sign a short-lived JWT for authenticated /outbox/pull requests
 
+import crypto from "node:crypto";
 import { SignJWT, importPKCS8 } from "jose";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 /**
- * Sign a JWT for /outbox/pull request
+ * Sign a JWT for federation pull request
  * @param {Object} options
- * @param {string} options.aud - Audience (remote domain)
- * @param {string} [options.scope="outbox:pull"] - Scope claim
+ * @param {string} options.aud - Audience (remote domain URL, e.g., "https://kwln.org")
+ * @param {string} [options.scope="federation:pull"] - Scope claim
  * @param {number} [options.expiresIn=60] - Expiration in seconds
  * @returns {Promise<string>} Signed JWT
  */
 export default async function signPullJwt({
   aud,
-  scope = "outbox:pull",
+  scope = "federation:pull",
   expiresIn = 60,
 }) {
   const { domain, actorId, privateKey } = getServerSettings();

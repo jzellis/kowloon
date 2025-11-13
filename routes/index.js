@@ -76,7 +76,15 @@ for (const dirent of entries) {
     console.log(`routes: skip ${name} (no index.js)`);
     continue;
   }
-  const mountPath = name === "home" ? "/" : `/${name}`;
+  // Special mount paths
+  let mountPath;
+  if (name === "home") {
+    mountPath = "/";
+  } else if (name === "well-known") {
+    mountPath = "/.well-known";
+  } else {
+    mountPath = `/${name}`;
+  }
   try {
     const mod = await import(pathToFileURL(indexJs).href);
     const subrouter = mod.default || mod.router || mod;

@@ -23,14 +23,14 @@ function normalizeDomain(domain) {
 export default async function fetchServerPublicKey(domain) {
   domain = normalizeDomain(domain);
 
-  // Try to fetch from /.well-known/kowloon endpoint
-  const wellKnownUrl = `https://${domain}/.well-known/kowloon`;
+  // Fetch from /.well-known/public.pem endpoint
+  const publicKeyUrl = `https://${domain}/.well-known/public.pem`;
 
   try {
-    const response = await fetch(wellKnownUrl, {
+    const response = await fetch(publicKeyUrl, {
       method: "GET",
       headers: {
-        Accept: "application/json",
+        Accept: "text/plain",
       },
       timeout: 10000,
     });
@@ -39,10 +39,10 @@ export default async function fetchServerPublicKey(domain) {
       throw new Error(`Server returned ${response.status}`);
     }
 
-    const data = await response.json();
+    const publicKey = await response.text();
 
-    if (!data.publicKey) {
-      throw new Error("No publicKey field in response");
+    if (!publicKey || !publicKey.includes("BEGIN PUBLIC KEY")) {
+      throw new Error("Invalid public key format");
     }
 
     // Store the public key in the Server record
@@ -50,14 +50,14 @@ export default async function fetchServerPublicKey(domain) {
       { domain },
       {
         $set: {
-          publicKey: data.publicKey,
+          publicKey: publicKey,
         },
       },
       { upsert: true }
     );
 
     console.log(`Fetched and stored public key for ${domain}`);
-    return data.publicKey;
+    return publicKey;
   } catch (err) {
     console.error(`Failed to fetch public key for ${domain}:`, err.message);
     throw new Error(`Could not fetch public key from ${domain}: ${err.message}`);

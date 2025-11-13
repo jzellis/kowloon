@@ -6,12 +6,10 @@ import hostMeta from "./hostMeta.js";
 import nodeinfo from "./nodeinfo.js";
 import nodeinfo20 from "./nodeinfo20.js";
 import actor from "./actor.js";
-import kowloon from "./kowloon.js";
 
 const router = express.Router({ mergeParams: true });
 
 // Mount well-known subroutes
-router.use("/kowloon", kowloon);
 router.use("/jwks.json", jwks);
 router.use("/public.pem", publicKey);
 router.use("/publickey.pem", publicKey);

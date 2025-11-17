@@ -1,7 +1,7 @@
 import StorageAdapter from "../StorageAdapter.js";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 import { Readable } from "stream";
-import File from "../../../schema/File.js";
+import File from "#schema/File.js";
 import mime from "mime-types";
 
 const s3 = new S3Client({

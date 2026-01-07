@@ -1,6 +1,7 @@
-import ActivityParser from "./parse/index.js";
+import ActivityParser from "#ActivityParser";
 
-export default function (activity) {
+export default async function (activity) {
+  const parser = await ActivityParser();
   switch (true) {
     case !activity.to:
       throw new Error("No recipients provided");
@@ -17,10 +18,10 @@ export default function (activity) {
     case !activity.actorId && !activity.actor:
       throw new Error("No actor or actor ID provided");
       break;
-    case !ActivityParser[activity.type]:
+    case !parser[activity.type]:
       throw new Error(
         "Invalid activity type. Valid activity types are: " +
-          Object.keys(ActivityParser).join(", ")
+          parser.verbs.join(", ")
       );
       break;
     default:

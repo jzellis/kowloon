@@ -1,0 +1,133 @@
+version: '3.8'
+
+services:
+  # MongoDB Database
+  mongodb:
+    image: mongo:7
+    container_name: kowloon-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-kowloon}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-kowloon_password}
+      MONGO_INITDB_DATABASE: ${MONGO_DATABASE:-kowloon}
+    volumes:
+      - mongodb_data:/data/db
+    ports:
+      - "${MONGO_HOST_PORT:-27017}:27017"
+    networks:
+      - kowloon-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: kowloon-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    networks:
+      - kowloon-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # MinIO Client - Creates bucket on startup
+  minio-init:
+    image: minio/mc:latest
+    container_name: kowloon-minio-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 ${S3_ACCESS_KEY:-minioadmin} ${S3_SECRET_KEY:-minioadmin};
+      mc mb myminio/${S3_BUCKET:-kowloon} --ignore-existing;
+      mc anonymous set download myminio/${S3_BUCKET:-kowloon};
+      echo 'MinIO bucket ${S3_BUCKET:-kowloon} configured successfully';
+      "
+    networks:
+      - kowloon-network
+
+  # Kowloon Server
+  kowloon:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kowloon-server
+    restart: unless-stopped
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    environment:
+      # Server Settings
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-3000}
+      DOMAIN: ${DOMAIN:-localhost}
+      SITE_TITLE: ${SITE_TITLE:-Kowloon}
+
+      # Security
+      JWT_SECRET: ${JWT_SECRET:-changeme_random_secret_key}
+
+      # Admin Settings
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@localhost}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-changeme}
+
+      # Database
+      MONGO_URI: mongodb://${MONGO_USERNAME:-kowloon}:${MONGO_PASSWORD:-kowloon_password}@mongodb:27017/${MONGO_DATABASE:-kowloon}?authSource=admin
+
+      # S3/MinIO Storage
+      S3_ENDPOINT: http://minio:9000
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-kowloon}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL:-http://localhost:9000/kowloon}
+
+      # Debugging (Optional)
+      ROUTE_DEBUG: ${ROUTE_DEBUG:-}
+
+      # Additional env vars from .env file
+    env_file:
+      - .env
+    ports:
+      - "${PORT:-3000}:3000"
+    volumes:
+      # Mount for development (comment out for production)
+      # - .:/app
+      # - /app/node_modules
+      - logs:/app/logs
+    networks:
+      - kowloon-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  mongodb_data:
+    driver: local
+  minio_data:
+    driver: local
+  logs:
+    driver: local
+
+networks:
+  kowloon-network:
+    driver: bridge

@@ -24,6 +24,7 @@ const EventSchema = new Schema(
     // Content
     title: { type: String, default: undefined },
     description: { type: String, default: undefined },
+    icon: { type: String, default: undefined }, // File ID or URL for backwards compatibility
     startTime: { type: Date, required: true },
     endTime: { type: Date },
     timezone: String,

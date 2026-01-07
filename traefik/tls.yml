@@ -1,0 +1,4 @@
+tls:
+  certificates:
+    - certFile: /certs/kowloon.net+1.pem
+      keyFile: /certs/kowloon.net+1-key.pem

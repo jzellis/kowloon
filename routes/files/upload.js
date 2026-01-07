@@ -38,4 +38,4 @@ export default route(async ({ req, body, setStatus, set }) => {
     setStatus(500);
     set("error", error.message || "Failed to upload file");
   }
-});
+}, { allowUnauth: true });

@@ -1,0 +1,95 @@
+version: '3.8'
+
+# Kowloon Multi-Instance Infrastructure
+# This compose file provides shared services for all Kowloon instances
+# Use kowloon-instance.sh to manage individual instances
+
+services:
+  # Shared MongoDB Database
+  mongodb:
+    image: mongo:7
+    container_name: kowloon-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-kowloon}
+      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-kowloon_password}
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - kowloon-network
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Shared MinIO Object Storage
+  minio:
+    image: minio/minio:latest
+    container_name: kowloon-minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    networks:
+      - kowloon-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v2.10
+    container_name: kowloon-traefik
+    restart: unless-stopped
+    command:
+      - "--api.insecure=true"
+      - "--api.dashboard=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--providers.docker.network=kowloon-network"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      # Local HTTPS with mkcert (development)
+      - "--providers.file.directory=/traefik-config"
+      - "--providers.file.watch=true"
+      # Uncomment for Let's Encrypt (production)
+      # - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
+      # - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      # - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik_letsencrypt:/letsencrypt
+      - ./certs:/certs:ro  # Local SSL certificates
+      - ./traefik:/traefik-config:ro  # Traefik dynamic config
+    networks:
+      - kowloon-network
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  mongodb_data:
+    driver: local
+  minio_data:
+    driver: local
+  traefik_letsencrypt:
+    driver: local
+
+networks:
+  kowloon-network:
+    driver: bridge

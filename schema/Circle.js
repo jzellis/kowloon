@@ -14,7 +14,7 @@ const CircleSchema = new Schema(
     actor: { type: Object, default: undefined },
     server: { type: String, default: undefined },
     summary: { type: String, default: undefined },
-    icon: { type: String, default: undefined },
+    icon: { type: String, default: undefined }, // File ID or URL for backwards compatibility
     members: { type: [Member], default: [] },
     memberCount: { type: Number, default: 0 },
     to: { type: String, default: "" },

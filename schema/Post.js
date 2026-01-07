@@ -30,8 +30,8 @@ const PostSchema = new Schema(
     replyCount: { type: Number, default: 0 }, // The number of replies to this post
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     shareCount: { type: Number, default: 0 }, // The number of shares of this post
-    image: { type: String, default: undefined }, // The post's featured/preview image
-    attachments: { type: [Object], default: [] }, // Any post attachments. Each attachment is an object with a filetype, size, url where it's stored and optional title and description
+    image: { type: String, default: undefined }, // The post's featured/preview image (File ID or URL for backwards compatibility)
+    attachments: { type: [String], default: [] }, // Array of File IDs
     tags: { type: [String], default: [] },
     location: { type: GeoPoint, default: undefined }, // A geotag for the post in the ActivityStreams geolocation format
     target: { type: String, default: undefined }, // For Links
@@ -63,6 +63,12 @@ PostSchema.virtual("replies", {
   ref: "Reply",
   localField: "id",
   foreignField: "target",
+});
+
+PostSchema.virtual("attachmentFiles", {
+  ref: "File",
+  localField: "attachments",
+  foreignField: "id",
 });
 
 PostSchema.pre("save", async function (next) {

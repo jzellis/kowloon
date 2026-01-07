@@ -52,8 +52,8 @@ const PageSchema = new Schema(
     replyCount: { type: Number, default: 0 }, // The number of replies to this page
     reactCount: { type: Number, default: 0 }, // The number of likes to this page
     shareCount: { type: Number, default: 0 }, // The number of shares of this page
-    image: { type: String, default: undefined }, // The page's featured/preview image
-    attachments: { type: [Object], default: [] }, // Any page attachments. Each attachment is an object with a filetype, size, url where it's stored and optional title and description
+    image: { type: String, default: undefined }, // The page's featured/preview image (File ID or URL for backwards compatibility)
+    attachments: { type: [String], default: [] }, // Array of File IDs
     tags: { type: [String], default: [] },
     to: { type: String, default: "" },
     canReply: { type: String, default: "" },
@@ -82,6 +82,12 @@ PageSchema.virtual("replies", {
   ref: "Reply",
   localField: "id",
   foreignField: "target",
+});
+
+PageSchema.virtual("attachmentFiles", {
+  ref: "File",
+  localField: "attachments",
+  foreignField: "id",
 });
 
 PageSchema.pre("save", async function (next) {

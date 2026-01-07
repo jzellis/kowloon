@@ -1,6 +1,5 @@
 import StorageAdapter from "../StorageAdapter.js";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { Readable } from "stream";
 import File from "#schema/File.js";
 import mime from "mime-types";
 
@@ -26,16 +25,16 @@ export default class S3StorageAdapter extends StorageAdapter {
       new PutObjectCommand({
         Bucket: process.env.S3_BUCKET,
         Key: key,
-        Body: Readable.from(buffer),
+        Body: buffer,
         ContentType: mimeType,
       })
     );
 
     const file = new File({
       originalFileName,
-      title,
+      name: title,
       summary,
-      mimeType,
+      mediaType: mimeType,
       extension,
       size: buffer.length,
       actorId,

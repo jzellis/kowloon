@@ -82,11 +82,15 @@ Response:
     "id": "file:abc123@kwln.org",
     "url": "http://localhost:9000/kowloon/1234567890-xyz.jpg",
     "originalFileName": "image.jpg",
-    "mimeType": "image/jpeg",
+    "mediaType": "image/jpeg",
+    "extension": "jpg",
     "size": 123456,
     "actorId": "@user@kwln.org",
-    "title": "My Photo",
-    "summary": "A beautiful sunset"
+    "name": "My Photo",
+    "summary": "A beautiful sunset",
+    "server": "@kwln.org",
+    "createdAt": "2025-01-01T00:00:00.000Z",
+    "updatedAt": "2025-01-01T00:00:00.000Z"
   }
 }
 ```
@@ -98,6 +102,54 @@ GET /files/:id
 
 Example: GET /files/file:abc123@kwln.org
 ```
+
+## Using Files in Posts and Pages
+
+Files are stored as a separate collection and referenced by ID in other schemas:
+
+### Post/Page Attachments
+
+```javascript
+// When creating a post with attachments:
+const post = new Post({
+  actorId: "@user@kwln.org",
+  source: { content: "Check out these photos!" },
+  attachments: ["file:abc123@kwln.org", "file:def456@kwln.org"] // Array of File IDs
+});
+
+// To populate the full file objects:
+const populatedPost = await Post.findOne({ id: "post:xyz@kwln.org" })
+  .populate("attachmentFiles");
+// Now populatedPost.attachmentFiles contains the full File objects
+```
+
+### User/Circle/Group/Event Icons
+
+```javascript
+// Setting an icon on a user:
+const user = await User.findOne({ id: "@alice@kwln.org" });
+user.profile.icon = "file:abc123@kwln.org"; // or a URL for backwards compatibility
+await user.save();
+```
+
+## File Schema Fields
+
+- `id` - Kowloon ID (e.g., "file:abc123@kwln.org")
+- `actorId` - Owner of the file (e.g., "@user@kwln.org")
+- `parentObject` - ID of the post/page/etc this file belongs to (optional)
+- `originalFileName` - Original filename from upload
+- `name` - Display title (optional)
+- `summary` - Alt text/description (optional)
+- `type` - Content type (Image, Video, Audio, Document)
+- `mediaType` - MIME type (e.g., "image/jpeg")
+- `extension` - File extension (e.g., "jpg")
+- `url` - Public URL to access the file
+- `server` - Server domain
+- `size` - File size in bytes
+- `width` - Image/video width in pixels (optional)
+- `height` - Image/video height in pixels (optional)
+- `blurhash` - BlurHash string for progressive loading (optional)
+- `deletedAt` - Soft delete timestamp (optional)
 
 ## File Limits
 

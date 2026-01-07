@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Development files
+.git/
+.gitignore
+.vscode/
+.idea/
+
+# Documentation
+*.md
+docs/
+
+# Test files
+test/
+tests/
+*.test.js
+*.spec.js
+
+# Build artifacts
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker files (to avoid recursion)
+Dockerfile
+docker-compose.yml
+.dockerignore
+.env.bak

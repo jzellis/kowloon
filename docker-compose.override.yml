@@ -1,0 +1,125 @@
+version: '3.8'
+
+# Auto-generated - DO NOT EDIT MANUALLY
+# Managed by kowloon-instance.sh
+
+services:
+
+  kowloon-kwln-org-ac3c8f02:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kowloon-kwln-org-ac3c8f02
+    restart: unless-stopped
+    env_file:
+      - .env
+      - instances/kwln-org_ac3c8f02/.env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - kowloon-network
+    labels:
+      - "traefik.enable=true"
+      # Single service definition (used by both HTTP and HTTPS routers)
+      - "traefik.http.services.kwln-org-ac3c8f02.loadbalancer.server.port=3000"
+      # HTTP router
+      - "traefik.http.routers.kwln-org-ac3c8f02.rule=Host(`kwln.org`)"
+      - "traefik.http.routers.kwln-org-ac3c8f02.entrypoints=web"
+      - "traefik.http.routers.kwln-org-ac3c8f02.service=kwln-org-ac3c8f02"
+      # HTTPS router (auto-enabled for local development with mkcert)
+      - "traefik.http.routers.kwln-org-ac3c8f02-secure.rule=Host(`kwln.org`)"
+      - "traefik.http.routers.kwln-org-ac3c8f02-secure.entrypoints=websecure"
+      - "traefik.http.routers.kwln-org-ac3c8f02-secure.tls=true"
+      - "traefik.http.routers.kwln-org-ac3c8f02-secure.service=kwln-org-ac3c8f02"
+      # Uncomment for Let's Encrypt (production)
+      # - "traefik.http.routers.kwln-org-ac3c8f02-secure.tls.certresolver=letsencrypt"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  kowloon-kowloon-net-63f81abc:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kowloon-kowloon-net-63f81abc
+    restart: unless-stopped
+    env_file:
+      - .env
+      - instances/kowloon-net_63f81abc/.env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - kowloon-network
+    labels:
+      - "traefik.enable=true"
+      # Single service definition (used by both HTTP and HTTPS routers)
+      - "traefik.http.services.kowloon-net-63f81abc.loadbalancer.server.port=3000"
+      # HTTP router
+      - "traefik.http.routers.kowloon-net-63f81abc.rule=Host(`kowloon.net`)"
+      - "traefik.http.routers.kowloon-net-63f81abc.entrypoints=web"
+      - "traefik.http.routers.kowloon-net-63f81abc.service=kowloon-net-63f81abc"
+      # HTTPS router (auto-enabled for local development with mkcert)
+      - "traefik.http.routers.kowloon-net-63f81abc-secure.rule=Host(`kowloon.net`)"
+      - "traefik.http.routers.kowloon-net-63f81abc-secure.entrypoints=websecure"
+      - "traefik.http.routers.kowloon-net-63f81abc-secure.tls=true"
+      - "traefik.http.routers.kowloon-net-63f81abc-secure.service=kowloon-net-63f81abc"
+      # Uncomment for Let's Encrypt (production)
+      # - "traefik.http.routers.kowloon-net-63f81abc-secure.tls.certresolver=letsencrypt"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  kowloon-kowlunatics-net-6845a7d6:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: kowloon-kowlunatics-net-6845a7d6
+    restart: unless-stopped
+    env_file:
+      - .env
+      - instances/kowlunatics-net_6845a7d6/.env
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - kowloon-network
+    labels:
+      - "traefik.enable=true"
+      # Single service definition (used by both HTTP and HTTPS routers)
+      - "traefik.http.services.kowlunatics-net-6845a7d6.loadbalancer.server.port=3000"
+      # HTTP router
+      - "traefik.http.routers.kowlunatics-net-6845a7d6.rule=Host(`kowlunatics.net`)"
+      - "traefik.http.routers.kowlunatics-net-6845a7d6.entrypoints=web"
+      - "traefik.http.routers.kowlunatics-net-6845a7d6.service=kowlunatics-net-6845a7d6"
+      # HTTPS router (auto-enabled for local development with mkcert)
+      - "traefik.http.routers.kowlunatics-net-6845a7d6-secure.rule=Host(`kowlunatics.net`)"
+      - "traefik.http.routers.kowlunatics-net-6845a7d6-secure.entrypoints=websecure"
+      - "traefik.http.routers.kowlunatics-net-6845a7d6-secure.tls=true"
+      - "traefik.http.routers.kowlunatics-net-6845a7d6-secure.service=kowlunatics-net-6845a7d6"
+      # Uncomment for Let's Encrypt (production)
+      # - "traefik.http.routers.kowlunatics-net-6845a7d6-secure.tls.certresolver=letsencrypt"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  kowloon-network:
+    name: kowloon_kowloon-network
+    external: true

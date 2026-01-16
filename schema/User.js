@@ -52,6 +52,7 @@ const UserSchemaDef = {
 
   following: { type: String, default: "" },
   allFollowing: { type: String, default: "" },
+  groups: { type: String, default: "" },
   blocked: { type: String, default: "" },
   muted: { type: String, default: "" },
 
@@ -223,6 +224,17 @@ UserSchema.pre("save", async function (next) {
       members: [selfMember],
     });
     this.following = followingCircle.id;
+
+    const groupsCircle = await Circle.create({
+      name: `${this.id} | Groups`,
+      actorId: this.id,
+      description: `${this.profile.name} (@${this.username}) | Groups`,
+      to: this.id,
+      canReply: this.id,
+      canReact: this.id,
+      members: [selfMember],
+    });
+    this.groups = groupsCircle.id;
 
     const allFollowingCircle = await Circle.create({
       name: `${this.id} | All Following`,

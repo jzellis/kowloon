@@ -15,7 +15,7 @@ import Invite from "./Invite.js";
 import Outbox from "./Outbox.js";
 import File from "./File.js";
 import Feed from "./Feed.js";
-import FeedCache from "./FeedCache.js";
+import FeedItems from "./FeedItems.js";
 import FeedFanOut from "./FeedFanOut.js";
 import FederationCursor from "./FederationCursor.js";
 import SignatureNonce from "./SignatureNonce.js";
@@ -38,7 +38,7 @@ export {
   Outbox,
   File,
   Feed,
-  FeedCache,
+  FeedItems,
   FeedFanOut,
   FederationCursor,
   SignatureNonce,

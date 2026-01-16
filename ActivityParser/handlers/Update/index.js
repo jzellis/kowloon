@@ -10,7 +10,7 @@ import {
   React as ReactModel,
   Reply,
   User,
-  FeedCache,
+  FeedItems,
 } from "#schema";
 import kowloonId from "#methods/parse/kowloonId.js";
 
@@ -26,7 +26,7 @@ const MODELS = {
   User,
 };
 
-// Object types that should be synced to FeedCache
+// Object types that should be synced to FeedItems
 const FEED_CACHEABLE_TYPES = [
   "Post",
   "Reply",
@@ -39,14 +39,14 @@ const FEED_CACHEABLE_TYPES = [
 ];
 
 /**
- * Update FeedCache when source object is updated
+ * Update FeedItems when source object is updated
  */
-async function updateFeedCache(updated, objectType, patchFields) {
+async function updateFeedItems(updated, objectType, patchFields) {
   try {
     if (!FEED_CACHEABLE_TYPES.includes(objectType)) return;
 
     // Sanitize object: remove visibility, deletion, source, and MongoDB internal fields
-    // These will be stored at FeedCache top-level (visibility) or not at all (internal/metadata)
+    // These will be stored at FeedItems top-level (visibility) or not at all (internal/metadata)
     const sanitizedObject = { ...updated };
     delete sanitizedObject.to;
     delete sanitizedObject.canReply;
@@ -57,7 +57,7 @@ async function updateFeedCache(updated, objectType, patchFields) {
     delete sanitizedObject._id;
     delete sanitizedObject.__v;
 
-    // Build update for FeedCache
+    // Build update for FeedItems
     const cacheUpdate = {
       updatedAt: new Date(),
       object: sanitizedObject, // refresh the sanitized object envelope
@@ -68,21 +68,46 @@ async function updateFeedCache(updated, objectType, patchFields) {
 
     // Update top-level visibility fields if changed (with normalization)
     if (patchFields.to !== undefined) {
-      const val = String(updated.to || "").toLowerCase().trim();
-      cacheUpdate.to = val === "@public" || val === "public" ? "public" : val === "server" ? "server" : "audience";
+      const val = String(updated.to || "")
+        .toLowerCase()
+        .trim();
+      cacheUpdate.to =
+        val === "@public" || val === "public"
+          ? "public"
+          : val === "server"
+          ? "server"
+          : "audience";
     }
     if (patchFields.canReply !== undefined) {
-      const val = String(updated.canReply || "").toLowerCase().trim();
-      cacheUpdate.canReply = ["public", "followers", "audience", "none"].includes(val) ? val : "public";
+      const val = String(updated.canReply || "")
+        .toLowerCase()
+        .trim();
+      cacheUpdate.canReply = [
+        "public",
+        "followers",
+        "audience",
+        "none",
+      ].includes(val)
+        ? val
+        : "public";
     }
     if (patchFields.canReact !== undefined) {
-      const val = String(updated.canReact || "").toLowerCase().trim();
-      cacheUpdate.canReact = ["public", "followers", "audience", "none"].includes(val) ? val : "public";
+      const val = String(updated.canReact || "")
+        .toLowerCase()
+        .trim();
+      cacheUpdate.canReact = [
+        "public",
+        "followers",
+        "audience",
+        "none",
+      ].includes(val)
+        ? val
+        : "public";
     }
 
-    await FeedCache.findOneAndUpdate({ id: updated.id }, { $set: cacheUpdate });
+    await FeedItems.findOneAndUpdate({ id: updated.id }, { $set: cacheUpdate });
   } catch (err) {
-    console.error(`FeedCache update failed for ${updated.id}:`, err.message);
+    console.error(`FeedItems update failed for ${updated.id}:`, err.message);
     // Non-fatal: don't block object update if cache update fails
   }
 }
@@ -149,8 +174,8 @@ export default async function Update(activity) {
     // annotate for downstreams + (optional) Undo
     activity.objectId = updated.id;
 
-    // Update FeedCache to reflect changes
-    await updateFeedCache(updated, parsed.type, activity.object);
+    // Update FeedItems to reflect changes
+    await updateFeedItems(updated, parsed.type, activity.object);
 
     return { activity, updated };
   } catch (err) {

@@ -10,7 +10,7 @@ import {
   React as ReactModel,
   Reply,
   User,
-  FeedCache,
+  FeedItems,
 } from "#schema";
 import kowloonId from "#methods/parse/kowloonId.js";
 
@@ -26,7 +26,7 @@ const MODELS = {
   User,
 };
 
-// Object types that should be tombstoned in FeedCache
+// Object types that should be tombstoned in FeedItems
 const FEED_CACHEABLE_TYPES = [
   "Post",
   "Reply",
@@ -39,13 +39,13 @@ const FEED_CACHEABLE_TYPES = [
 ];
 
 /**
- * Tombstone FeedCache entry when source object is deleted
+ * Tombstone FeedItems entry when source object is deleted
  */
-async function tombstoneFeedCache(deletedId, objectType) {
+async function tombstoneFeedItems(deletedId, objectType) {
   try {
     if (!FEED_CACHEABLE_TYPES.includes(objectType)) return;
 
-    await FeedCache.findOneAndUpdate(
+    await FeedItems.findOneAndUpdate(
       { id: deletedId },
       {
         $set: {
@@ -55,10 +55,7 @@ async function tombstoneFeedCache(deletedId, objectType) {
       }
     );
   } catch (err) {
-    console.error(
-      `FeedCache tombstone failed for ${deletedId}:`,
-      err.message
-    );
+    console.error(`FeedItems tombstone failed for ${deletedId}:`, err.message);
     // Non-fatal: don't block object deletion if cache tombstone fails
   }
 }
@@ -108,8 +105,8 @@ export default async function Delete(activity) {
     // annotate for downstreams + Undo
     activity.objectId = deleted.id;
 
-    // Tombstone FeedCache entry
-    await tombstoneFeedCache(deleted.id, parsed.type);
+    // Tombstone FeedItems entry
+    await tombstoneFeedItems(deleted.id, parsed.type);
 
     return { activity, deleted };
   } catch (err) {

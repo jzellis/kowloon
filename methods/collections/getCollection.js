@@ -1,7 +1,7 @@
 // /methods/collections/getCollection.js
-// Universal collection query function that pulls from Feed (for auth users) or FeedCache (for public)
+// Universal collection query function that pulls from Feed (for auth users) or FeedItems (for public)
 
-import { FeedCache, Feed } from "#schema";
+import { FeedItems, Feed } from "#schema";
 import kowloonId from "#methods/parse/kowloonId.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
 import { getDomain } from "#methods/settings/schemaHelpers.js";
@@ -75,9 +75,9 @@ export default async function getCollection({
   const sort = { [sortBy]: sortOrder, _id: sortOrder };
 
   if (!actorId || !isLocalUser) {
-    // Unauthenticated or remote user: query FeedCache for public items only
+    // Unauthenticated or remote user: query FeedItems for public items only
     const query = {
-      objectType: type, // FeedCache uses "objectType" for main type
+      objectType: type, // FeedItems uses "objectType" for main type
       to: "public",
       tombstoned: { $ne: true },
       ...normalizedFilters,
@@ -85,16 +85,16 @@ export default async function getCollection({
 
     // Filter by subtype if provided
     if (objectType) {
-      query.type = objectType; // FeedCache uses "type" for subtype
+      query.type = objectType; // FeedItems uses "type" for subtype
     }
 
     const [rawItems, total] = await Promise.all([
-      FeedCache.find(query)
+      FeedItems.find(query)
         .sort({ publishedAt: sortOrder, _id: sortOrder })
         .skip(offset)
         .limit(limit)
         .lean(),
-      FeedCache.countDocuments(query),
+      FeedItems.countDocuments(query),
     ]);
 
     // Add visibility flags to each item
@@ -140,9 +140,9 @@ export default async function getCollection({
     Feed.countDocuments(feedQuery),
   ]);
 
-  // Hydrate with full FeedCache objects
+  // Hydrate with full FeedItems objects
   const objectIds = feedEntries.map((entry) => entry.objectId);
-  const cacheItems = await FeedCache.find({
+  const cacheItems = await FeedItems.find({
     id: { $in: objectIds },
     tombstoned: { $ne: true },
   }).lean();
@@ -150,7 +150,7 @@ export default async function getCollection({
   // Create a map for quick lookup
   const cacheMap = new Map(cacheItems.map((item) => [item.id, item]));
 
-  // Merge Feed metadata with FeedCache objects, preserving Feed order
+  // Merge Feed metadata with FeedItems objects, preserving Feed order
   const rawItems = feedEntries
     .map((entry) => {
       const cached = cacheMap.get(entry.objectId);

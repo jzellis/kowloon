@@ -12,12 +12,12 @@ const FeedSchema = new Schema(
   {
     // Viewer & target
     actorId: { type: String, required: true, index: true }, // local viewer
-    objectId: { type: String, required: true, index: true }, // FeedCache.id (global)
+    objectId: { type: String, required: true, index: true }, // FeedItems.id (global)
 
     // Author for quick render/filter
     activityActorId: { type: String, required: true, index: true }, // object author
 
-    // Object typing for efficient filtering (denormalized from FeedCache)
+    // Object typing for efficient filtering (denormalized from FeedItems)
     type: {
       type: String,
       enum: [
@@ -46,7 +46,7 @@ const FeedSchema = new Schema(
     },
 
     // Render + sort
-    createdAt: { type: Date, required: true }, // usually FeedCache.publishedAt
+    // createdAt: { type: Date, required: true }, // usually FeedItems.publishedAt
     fetchedAt: { type: Date, default: () => new Date() },
 
     // Tiny snapshot for list UIs (keep minimal)

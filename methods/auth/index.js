@@ -1,6 +1,7 @@
 // #methods/auth/index.js
 import verifyS2S from "./verifyS2S.js";
 import verifyUserJwt from "./verifyUserJwt.js"; //  [oai_citation:4‡verifyUserJwt.js](file-service://file-8gZMHNcxmxqGfksDDkbJPc)
+import verifyRemoteUser from "./verifyRemoteUser.js";
 import signS2S from "./signS2S.js";
 import requirePeer from "./requirePeer.js";
 import requireUser from "./requireUser.js";
@@ -10,6 +11,7 @@ import login from "./login.js";
 export {
   verifyS2S,
   verifyUserJwt,
+  verifyRemoteUser,
   signS2S,
   requirePeer,
   requireUser,
@@ -21,6 +23,7 @@ export {
 export default {
   verifyS2S,
   verifyUserJwt,
+  verifyRemoteUser,
   signS2S,
   requirePeer,
   requireUser,

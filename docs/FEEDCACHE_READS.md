@@ -1,8 +1,8 @@
-# FeedCache Read Pattern
+# FeedItems Read Pattern
 
-**All GET endpoints should read from FeedCache, not original collections.**
+**All GET endpoints should read from FeedItems, not original collections.**
 
-FeedCache is the unified, normalized read layer for both local and remote content. It provides:
+FeedItems is the unified, normalized read layer for both local and remote content. It provides:
 - Consistent data shape for all object types
 - Privacy-preserving audience fields (no circle ID leaks)
 - Optimized indexes for reads
@@ -12,17 +12,17 @@ FeedCache is the unified, normalized read layer for both local and remote conten
 
 ```
 Write Path:
-User creates Post → Post collection → FeedCache → FeedFanOut queue → Feed (per-viewer)
+User creates Post → Post collection → FeedItems → FeedFanOut queue → Feed (per-viewer)
 
 Read Path:
-GET /posts → FeedCache (filtered by visibility) → Enrich with capabilities → Return
+GET /posts → FeedItems (filtered by visibility) → Enrich with capabilities → Return
 ```
 
 ## Core Principles
 
 ### 1. **Never read from original collections (Post/Bookmark/Event) in GET endpoints**
 - Original collections are the source of truth for **writes**
-- FeedCache is the source of truth for **reads**
+- FeedItems is the source of truth for **reads**
 - This separates write-optimized from read-optimized concerns
 
 ### 2. **Apply visibility filtering based on viewer**
@@ -44,7 +44,7 @@ For each item returned, compute:
 - `grantToken`: optional capability token for remote audience items
 
 ### 4. **Never expose circle IDs**
-- FeedCache stores audience as enums: `"public"|"followers"|"audience"|"none"`
+- FeedItems stores audience as enums: `"public"|"followers"|"audience"|"none"`
 - For local items: check membership via helpers
 - For remote items: use grants/tokens from the remote server
 
@@ -53,7 +53,7 @@ For each item returned, compute:
 ### Example 1: Collection Endpoint (GET /posts)
 
 ```javascript
-import { FeedCache } from "#schema";
+import { FeedItems } from "#schema";
 import {
   buildVisibilityFilter,
   buildFollowerMap,
@@ -68,8 +68,8 @@ export default route(async ({ req, query, set }) => {
   const filter = buildVisibilityFilter(viewerId);
   filter.objectType = "Post"; // Filter by type
 
-  // 2. Query FeedCache
-  const items = await FeedCache.find(filter)
+  // 2. Query FeedItems
+  const items = await FeedItems.find(filter)
     .sort({ publishedAt: -1, _id: -1 })
     .limit(20)
     .lean();
@@ -101,7 +101,7 @@ export default route(async ({ req, query, set }) => {
 ### Example 2: Single Object Endpoint (GET /posts/:id)
 
 ```javascript
-import { FeedCache } from "#schema";
+import { FeedItems } from "#schema";
 import {
   canView,
   buildFollowerMap,
@@ -112,8 +112,8 @@ export default route(async ({ req, params, set, setStatus }) => {
   const { id } = params;
   const viewerId = req.user?.id || null;
 
-  // 1. Fetch from FeedCache
-  const item = await FeedCache.findOne({
+  // 1. Fetch from FeedItems
+  const item = await FeedItems.findOne({
     id,
     deletedAt: null,
     tombstoned: { $ne: true },
@@ -167,11 +167,11 @@ const items = await Feed.find({ actorId: viewerId })
 
 **B) Viewer requesting someone else's timeline:**
 ```javascript
-// Read from FeedCache filtered by author + visibility
+// Read from FeedItems filtered by author + visibility
 const filter = buildVisibilityFilter(viewerId);
 filter.actorId = targetUserId; // The author
 
-const items = await FeedCache.find(filter)
+const items = await FeedItems.find(filter)
   .sort({ publishedAt: -1 })
   .limit(20)
   .lean();
@@ -248,14 +248,14 @@ const membershipMap = await buildMembershipMap(addressedIds);
 ### 3. Use lean() queries
 ```javascript
 // Skip Mongoose hydration for reads
-await FeedCache.find(filter).lean();
+await FeedItems.find(filter).lean();
 ```
 
-### 4. Add indexes to FeedCache
+### 4. Add indexes to FeedItems
 ```javascript
 // Already defined in schema
-FeedCache.index({ objectType: 1, to: 1, publishedAt: -1 });
-FeedCache.index({ actorId: 1, publishedAt: -1 });
+FeedItems.index({ objectType: 1, to: 1, publishedAt: -1 });
+FeedItems.index({ actorId: 1, publishedAt: -1 });
 ```
 
 ## TODO: Remote Grants
@@ -266,7 +266,7 @@ For remote content with `to: "audience"` or capabilities set to `"audience"`, th
 1. Local server fetches remote object
 2. Remote server checks if requestor is in audience
 3. If yes, remote includes `grants: { "@viewer@local": true }` in response
-4. Local server stores grants with FeedCache entry
+4. Local server stores grants with FeedItems entry
 5. Local endpoints use grants to evaluate capabilities
 
 **Implementation:**
@@ -277,8 +277,8 @@ if (remoteResponse.grants) {
   grants[viewerId] = remoteResponse.grants[viewerId];
 }
 
-// Store in FeedCache (extend schema)
-await FeedCache.updateOne(
+// Store in FeedItems (extend schema)
+await FeedItems.updateOne(
   { id: objectId },
   { $set: { grants } }
 );
@@ -288,7 +288,7 @@ const canReply = evaluateCapability({
   viewerId,
   capability: "audience",
   origin: "remote",
-  grants, // ← from FeedCache
+  grants, // ← from FeedItems
 });
 ```
 
@@ -304,7 +304,7 @@ To migrate existing endpoints:
    // NEW
    const filter = buildVisibilityFilter(viewerId);
    filter.objectType = "Post";
-   const posts = await FeedCache.find(filter);
+   const posts = await FeedItems.find(filter);
    ```
 
 2. **Add capability enrichment**
@@ -330,12 +330,12 @@ To migrate existing endpoints:
 ✅ **Uniform data model** - local and remote treated identically
 ✅ **Privacy-preserving** - no circle IDs ever exposed
 ✅ **Performance** - optimized indexes and batch queries
-✅ **Stable pagination** - FeedCache has stable sort keys
+✅ **Stable pagination** - FeedItems has stable sort keys
 ✅ **Separation of concerns** - write-optimized vs read-optimized
 
 ## See Also
 
-- `docs/FEED_FANOUT.md` - How Feed and FeedCache work together
+- `docs/FEED_FANOUT.md` - How Feed and FeedItems work together
 - `methods/feed/visibility.js` - Helper functions
 - `routes/posts/collection-feedcache.js` - Example collection endpoint
 - `routes/posts/id-feedcache.js` - Example single object endpoint

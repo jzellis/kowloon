@@ -1,5 +1,5 @@
 import route from "../utils/route.js";
-import { FeedCache } from "#schema";
+import { FeedItems } from "#schema";
 import {
   buildVisibilityFilter,
   buildFollowerMap,
@@ -8,18 +8,12 @@ import {
 } from "#methods/feed/visibility.js";
 
 export default route(async ({ req, query, set }) => {
-  const {
-    before,
-    page,
-    itemsPerPage = 20,
-    type,
-    actorId,
-  } = query;
+  const { before, page, itemsPerPage = 20, type, actorId } = query;
 
   const viewerId = req.user?.id || null;
   const limit = Number(itemsPerPage);
 
-  // Build visibility filter using FeedCache pattern
+  // Build visibility filter using FeedItems pattern
   const filter = buildVisibilityFilter(viewerId);
   filter.objectType = "Bookmark";
 
@@ -28,8 +22,8 @@ export default route(async ({ req, query, set }) => {
   if (actorId) filter.actorId = actorId;
   if (before) filter.publishedAt = { $lt: new Date(before) };
 
-  // Query FeedCache
-  const items = await FeedCache.find(filter)
+  // Query FeedItems
+  const items = await FeedItems.find(filter)
     .sort({ publishedAt: -1, _id: -1 })
     .limit(limit + 1)
     .lean();
@@ -52,11 +46,14 @@ export default route(async ({ req, query, set }) => {
     })
   );
 
-  set("items", enrichedItems.map((item) => ({
-    ...item.object,
-    canReply: item.canReply,
-    canReact: item.canReact,
-  })));
+  set(
+    "items",
+    enrichedItems.map((item) => ({
+      ...item.object,
+      canReply: item.canReply,
+      canReact: item.canReact,
+    }))
+  );
   set("count", items.length);
 
   if (hasMore && items.length > 0) {

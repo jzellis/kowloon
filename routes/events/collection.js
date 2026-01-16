@@ -1,6 +1,6 @@
 // /routes/events/collection.js
 import route from "../utils/route.js";
-import { FeedCache } from "#schema";
+import { FeedItems } from "#schema";
 import {
   buildVisibilityFilter,
   buildFollowerMap,
@@ -42,8 +42,8 @@ export default route(async ({ req, query, set }) => {
     filter.publishedAt = { $lt: new Date(before) };
   }
 
-  // Query FeedCache
-  const items = await FeedCache.find(filter)
+  // Query FeedItems
+  const items = await FeedItems.find(filter)
     .sort({ publishedAt: -1, _id: -1 }) // Stable sort
     .limit(Number(limit) + 1) // Fetch one extra for hasMore
     .lean();
@@ -53,7 +53,7 @@ export default route(async ({ req, query, set }) => {
   if (hasMore) items.pop(); // Remove the extra item
 
   // Total count
-  const totalItems = await FeedCache.countDocuments({
+  const totalItems = await FeedItems.countDocuments({
     objectType: "Event",
     ...buildVisibilityFilter(viewerId),
   });

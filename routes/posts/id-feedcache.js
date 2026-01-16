@@ -1,9 +1,9 @@
 // /routes/posts/id-feedcache.js
-// Example: GET /posts/:id using FeedCache as the read layer
-// This is the NEW pattern - single object fetch via FeedCache
+// Example: GET /posts/:id using FeedItems as the read layer
+// This is the NEW pattern - single object fetch via FeedItems
 
 import route from "../utils/route.js";
-import { FeedCache } from "#schema";
+import { FeedItems } from "#schema";
 import {
   canView,
   buildFollowerMap,
@@ -15,8 +15,8 @@ export default route(async ({ req, params, set, setStatus }) => {
   const { id } = params; // e.g. "post:123@domain.com"
   const viewerId = req.user?.id || null;
 
-  // Lookup in FeedCache by canonical ID
-  const feedCacheItem = await FeedCache.findOne({
+  // Lookup in FeedItems by canonical ID
+  const feedCacheItem = await FeedItems.findOne({
     id,
     deletedAt: null,
     tombstoned: { $ne: true },

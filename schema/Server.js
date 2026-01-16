@@ -130,6 +130,13 @@ const ServerSchema = new Schema(
       lastSuccessfulPollAt: { type: Date, default: undefined },
     },
 
+    // Unified pull tracking (for new /.well-known/kowloon/pull endpoint)
+    nextPullAt: { type: Date, index: true }, // When to next pull from this server
+    lastPulledAt: { type: Date, default: undefined }, // Last successful pull
+    lastPullAttemptedAt: { type: Date, default: undefined }, // Last attempt (success or fail)
+    pullErrorCount: { type: Number, default: 0 }, // Consecutive errors
+    lastPullError: { type: String, default: undefined }, // Last error message
+
     // Discovery & validation state
     discovery: {
       lastTriedAt: { type: Date, default: undefined },

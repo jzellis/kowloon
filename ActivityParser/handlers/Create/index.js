@@ -11,7 +11,7 @@ import {
   Reply,
   User,
   Settings,
-  FeedCache, // <- ensure Settings is exported from #schema/index.js
+  FeedItems, // <- ensure Settings is exported from #schema/index.js
 } from "#schema";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 import kowloonId from "#methods/parse/kowloonId.js";
@@ -28,7 +28,7 @@ const MODELS = {
   User,
 };
 
-// Object types that should be cached in FeedCache for timeline delivery
+// Object types that should be cached in FeedItems for timeline delivery
 const FEED_CACHEABLE_TYPES = [
   "Post",
   "Reply",
@@ -41,14 +41,14 @@ const FEED_CACHEABLE_TYPES = [
 ];
 
 /**
- * Write created object to FeedCache for timeline delivery and enqueue fan-out
+ * Write created object to FeedItems for timeline delivery and enqueue fan-out
  */
-async function writeFeedCache(created, objectType) {
+async function writeFeedItems(created, objectType) {
   try {
     if (!FEED_CACHEABLE_TYPES.includes(objectType)) return;
 
     if (!created || !created.id) {
-      console.error(`FeedCache write skipped: created object missing id`, {
+      console.error(`FeedItems write skipped: created object missing id`, {
         objectType,
         created,
       });
@@ -59,8 +59,8 @@ async function writeFeedCache(created, objectType) {
     const parsed = kowloonId(created.id);
     const isLocal = parsed?.domain?.toLowerCase() === domain?.toLowerCase();
 
-    // Normalize visibility values from source object format to FeedCache enum format
-    // Source objects use "@public" but FeedCache uses "public"
+    // Normalize visibility values from source object format to FeedItems enum format
+    // Source objects use "@public" but FeedItems uses "public"
     const normalizeTo = (val) => {
       if (!val) return "public";
       const v = String(val).toLowerCase().trim();
@@ -80,7 +80,7 @@ async function writeFeedCache(created, objectType) {
     };
 
     // Sanitize object: remove visibility, deletion, source, and MongoDB internal fields
-    // These will be stored at FeedCache top-level (visibility) or not at all (internal/metadata)
+    // These will be stored at FeedItems top-level (visibility) or not at all (internal/metadata)
     const sanitizedObject = { ...created };
     delete sanitizedObject.to;
     delete sanitizedObject.password;
@@ -94,6 +94,20 @@ async function writeFeedCache(created, objectType) {
     delete sanitizedObject._id;
     delete sanitizedObject.__v;
 
+    // Extract group/event from 'to' field if it's an ID (not @public/@server)
+    // Groups and Events are public containers, so we can store their IDs in FeedItems
+    let group = undefined;
+    let event = undefined;
+
+    if (created.to && typeof created.to === 'string') {
+      const toValue = created.to.trim();
+      if (toValue.startsWith('group:')) {
+        group = toValue;
+      } else if (toValue.startsWith('event:')) {
+        event = toValue;
+      }
+    }
+
     const cacheEntry = {
       id: created.id,
       url: created.url,
@@ -105,6 +119,8 @@ async function writeFeedCache(created, objectType) {
       type: created.type, // subtype (Note/Article/Media/etc)
       inReplyTo: created.inReplyTo,
       threadRoot: created.threadRoot,
+      group, // Group ID if addressed to a group (public container)
+      event, // Event ID if addressed to an event (public container)
       object: sanitizedObject, // sanitized content envelope (no visibility/deletion/source)
       to: normalizeTo(created.to), // top-level coarse visibility
       canReply: normalizeCap(created.canReply), // top-level coarse capability
@@ -113,15 +129,17 @@ async function writeFeedCache(created, objectType) {
       updatedAt: created.updatedAt,
     };
 
-    console.log(`FeedCache write for ${created.id}:`, {
+    console.log(`FeedItems write for ${created.id}:`, {
       id: cacheEntry.id,
       actorId: cacheEntry.actorId,
       objectType: cacheEntry.objectType,
       type: cacheEntry.type,
       to: cacheEntry.to,
+      group: cacheEntry.group,
+      event: cacheEntry.event,
     });
 
-    await FeedCache.findOneAndUpdate(
+    await FeedItems.findOneAndUpdate(
       { id: created.id },
       { $set: cacheEntry },
       { upsert: true, new: true }
@@ -150,7 +168,7 @@ async function writeFeedCache(created, objectType) {
       // Non-fatal: worker can retry or admin can manually trigger
     }
   } catch (err) {
-    console.error(`FeedCache write failed for ${created.id}:`, err.message);
+    console.error(`FeedItems write failed for ${created.id}:`, err.message);
     // Non-fatal: don't block object creation if cache write fails
   }
 }
@@ -224,7 +242,7 @@ export default async function Create(activity) {
 
       activity.objectId = created.id;
 
-      // Users typically don't go into FeedCache (not timeline objects)
+      // Users typically don't go into FeedItems (not timeline objects)
       // but you could add them if needed
 
       return { activity, created };
@@ -246,8 +264,26 @@ export default async function Create(activity) {
     // Convert to plain object to access all fields including virtuals
     created = created.toObject ? created.toObject() : created;
 
-    // Write to FeedCache for timeline delivery
-    await writeFeedCache(created, type);
+    // Write to FeedItems for timeline delivery
+    await writeFeedItems(created, type);
+
+    // Check if this activity should be pushed to remote servers
+    try {
+      const { default: shouldFederate } = await import("#methods/federation/shouldFederate.js");
+      if (shouldFederate(activity)) {
+        const { default: enqueueOutbox } = await import("#methods/federation/enqueueOutbox.js");
+        await enqueueOutbox({
+          activity,
+          activityId: created.id,
+          actorId: created.actorId || activity.actor?.id,
+          reason: "Activity targets remote resource",
+        });
+        console.log(`Enqueued federation push for ${created.id}`);
+      }
+    } catch (err) {
+      console.error(`Federation push enqueue failed for ${created.id}:`, err.message);
+      // Non-fatal: don't block object creation if federation fails
+    }
 
     return { activity, created };
   } catch (err) {

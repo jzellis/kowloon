@@ -3,7 +3,7 @@
 // Remote server A calls our server B's /federation/pull endpoint
 
 import route from "../../utils/route.js";
-import { FeedCache, Server } from "#schema";
+import { FeedItems, Server } from "#schema";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 import verifyPullJwt from "#methods/federation/verifyPullJwt.js";
 
@@ -71,7 +71,7 @@ export default route(
     const limit = Math.min(Number(body.limit) || 100, 500); // max 500
     const includePublic = body.includePublic !== false;
 
-    // Build query for FeedCache
+    // Build query for FeedItems
     const query = {
       origin: "local", // Only return our local content
       deletedAt: null, // Not deleted
@@ -91,10 +91,12 @@ export default route(
         publicQuery.publishedAt = { $gt: new Date(since.public) };
       }
 
-      const publicItems = await FeedCache.find(publicQuery)
+      const publicItems = await FeedItems.find(publicQuery)
         .sort({ publishedAt: -1 })
         .limit(limit)
-        .select("id url actorId objectType type publishedAt object to canReply canReact")
+        .select(
+          "id url actorId objectType type publishedAt object to canReply canReact"
+        )
         .lean();
 
       allItems.push(...publicItems);
@@ -118,10 +120,12 @@ export default route(
           actorsQuery.publishedAt = { $gt: new Date(since.actors) };
         }
 
-        const actorItems = await FeedCache.find(actorsQuery)
+        const actorItems = await FeedItems.find(actorsQuery)
           .sort({ publishedAt: -1 })
           .limit(limit)
-          .select("id url actorId objectType type publishedAt object to canReply canReact")
+          .select(
+            "id url actorId objectType type publishedAt object to canReply canReact"
+          )
           .lean();
 
         allItems.push(...actorItems);
@@ -144,10 +148,12 @@ export default route(
         audienceQuery.publishedAt = { $gt: new Date(since.audience) };
       }
 
-      const audienceItems = await FeedCache.find(audienceQuery)
+      const audienceItems = await FeedItems.find(audienceQuery)
         .sort({ publishedAt: -1 })
         .limit(limit)
-        .select("id url actorId objectType type publishedAt object to canReply canReact")
+        .select(
+          "id url actorId objectType type publishedAt object to canReply canReact"
+        )
         .lean();
 
       allItems.push(...audienceItems);

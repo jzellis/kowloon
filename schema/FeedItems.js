@@ -1,5 +1,5 @@
-// /schema/FeedCache.js
-// FeedCache: Canonical object storage with coarse visibility policy
+// /schema/FeedItems.js
+// FeedItems: Canonical object storage with coarse visibility policy
 //
 // Top-level fields include coarse visibility (to/canReply/canReact) for efficient querying.
 // The object field stores sanitized content WITHOUT these fields (no duplication).
@@ -13,7 +13,7 @@ const { Schema } = mongoose;
 export const TO_ENUM = ["public", "server", "audience"]; // who can see in principle
 export const CAP_ENUM = ["public", "followers", "audience", "none"]; // who may act in principle
 
-const FeedCacheSchema = new Schema(
+const FeedItemsSchema = new Schema(
   {
     // Canonical identifiers
     id: { type: String, key: true }, // global canonical id (remote as-is; local minted)
@@ -53,6 +53,10 @@ const FeedCacheSchema = new Schema(
     inReplyTo: { type: String, default: undefined },
     threadRoot: { type: String, default: undefined },
 
+    // Audience targeting (public containers only - Circles are NEVER stored for privacy)
+    group: { type: String, default: undefined, index: true }, // Group ID if addressed to a group
+    event: { type: String, default: undefined, index: true }, // Event ID if addressed to an event
+
     // Normalized content envelope for detail views (sanitized - no to/canReply/canReact/deletedAt/deletedBy/source)
     object: { type: Object, default: undefined },
 
@@ -60,10 +64,6 @@ const FeedCacheSchema = new Schema(
     to: { type: String, enum: TO_ENUM, default: "public", index: true },
     canReply: { type: String, enum: CAP_ENUM, default: "public" },
     canReact: { type: String, enum: CAP_ENUM, default: "public" },
-
-    // Sort/freshness
-    publishedAt: { type: Date, required: true },
-    updatedAt: { type: Date, default: undefined },
 
     // Federation freshness
     etag: { type: String, default: undefined },
@@ -81,7 +81,7 @@ const FeedCacheSchema = new Schema(
 );
 
 // Mint id/url/server for LOCAL-origin records; keep remote ids/urls as-is
-FeedCacheSchema.pre("save", async function (next) {
+FeedItemsSchema.pre("save", async function (next) {
   try {
     const { domain, actorId } = getServerSettings();
 
@@ -107,10 +107,10 @@ FeedCacheSchema.pre("save", async function (next) {
 });
 
 // Indexes
-FeedCacheSchema.index({ id: 1 }, { unique: true }); // de-dupe
-FeedCacheSchema.index({ actorId: 1, publishedAt: -1, _id: -1 }); // author timeline
-FeedCacheSchema.index({ originDomain: 1, publishedAt: -1 }); // ops/domain scans
-FeedCacheSchema.index({ objectType: 1, publishedAt: -1 }); // type-filtered
-FeedCacheSchema.index({ to: 1, publishedAt: -1 }); // public/server/audience scans
+FeedItemsSchema.index({ id: 1 }, { unique: true }); // de-dupe
+FeedItemsSchema.index({ actorId: 1, publishedAt: -1, _id: -1 }); // author timeline
+FeedItemsSchema.index({ originDomain: 1, publishedAt: -1 }); // ops/domain scans
+FeedItemsSchema.index({ objectType: 1, publishedAt: -1 }); // type-filtered
+FeedItemsSchema.index({ to: 1, publishedAt: -1 }); // public/server/audience scans
 
-export default mongoose.model("FeedCache", FeedCacheSchema);
+export default mongoose.model("FeedItems", FeedItemsSchema);

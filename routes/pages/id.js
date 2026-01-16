@@ -1,5 +1,5 @@
 import route from "../utils/route.js";
-import { FeedCache } from "#schema";
+import { FeedItems } from "#schema";
 import {
   canView,
   buildFollowerMap,
@@ -11,8 +11,8 @@ export default route(async ({ req, params, set, setStatus }) => {
   const { id } = params;
   const viewerId = req.user?.id || null;
 
-  // Lookup in FeedCache
-  const feedCacheItem = await FeedCache.findOne({
+  // Lookup in FeedItems
+  const feedCacheItem = await FeedItems.findOne({
     id,
     objectType: "Page",
     deletedAt: null,

@@ -1,6 +1,6 @@
 // routes/pages/collection.js
 import route from "../utils/route.js";
-import { FeedCache } from "#schema";
+import { FeedItems } from "#schema";
 import {
   buildVisibilityFilter,
   buildFollowerMap,
@@ -13,7 +13,7 @@ import { getSetting } from "#methods/settings/cache.js";
 /**
  * Build hierarchical tree structure from flat page list
  * Pages are ordered by the `order` field within each level
- * @param {Array} items - Flat list of enriched FeedCache items
+ * @param {Array} items - Flat list of enriched FeedItems items
  * @returns {Array} Hierarchical tree with folders containing children
  */
 function buildPageTree(items) {
@@ -96,14 +96,14 @@ export default route(async ({ req, query, set }) => {
     filter.actorId = actorId;
   }
 
-  // Query FeedCache - fetch all pages to build tree
-  const items = await FeedCache.find(filter)
+  // Query FeedItems - fetch all pages to build tree
+  const items = await FeedItems.find(filter)
     .sort({ publishedAt: -1, _id: -1 })
     .limit(Number(limit))
     .lean();
 
   // Total count
-  const totalItems = await FeedCache.countDocuments({
+  const totalItems = await FeedItems.countDocuments({
     objectType: "Page",
     ...buildVisibilityFilter(viewerId),
   });

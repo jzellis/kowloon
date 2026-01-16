@@ -13,7 +13,7 @@ export default route(async ({ req, query, set }) => {
 
   // Query collection using new getCollection function
   // Note: We need to check multiple activity types since activities aren't stored
-  // in FeedCache directly - they're stored as Posts, Replies, Reacts, etc.
+  // in FeedItems directly - they're stored as Posts, Replies, Reacts, etc.
   // For now, let's just show Posts and Replies as "activities"
   const types = ["Post", "Reply", "React"];
 
@@ -25,7 +25,7 @@ export default route(async ({ req, query, set }) => {
 
   // Fetch all activity types in parallel
   const results = await Promise.all(
-    types.map(type =>
+    types.map((type) =>
       getCollection({
         type,
         objectType, // optional subtype filter
@@ -40,7 +40,7 @@ export default route(async ({ req, query, set }) => {
   );
 
   // Merge and sort all results by createdAt
-  const allItems = results.flatMap(r => r.items);
+  const allItems = results.flatMap((r) => r.items);
   allItems.sort((a, b) => {
     const aTime = new Date(a.publishedAt || a.createdAt).getTime();
     const bTime = new Date(b.publishedAt || b.createdAt).getTime();
@@ -60,7 +60,7 @@ export default route(async ({ req, query, set }) => {
   // Format as ActivityStreams collection
   const collection = activityStreamsCollection({
     id: fullUrl,
-    orderedItems: items.map(item => ({
+    orderedItems: items.map((item) => ({
       ...(item.object || item),
       // Add per-viewer visibility flags (nested to avoid conflict with server domain field)
       visibility: {

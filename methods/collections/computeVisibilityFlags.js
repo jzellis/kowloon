@@ -87,7 +87,11 @@ async function evaluateCapability(value, viewerId, authorId, isLocalUser) {
   if (v === "none") return false;
 
   // Circle/Group/Event ID → check membership
-  if (v.startsWith("circle:") || v.startsWith("group:") || v.startsWith("event:")) {
+  if (
+    v.startsWith("circle:") ||
+    v.startsWith("group:") ||
+    v.startsWith("event:")
+  ) {
     if (!isLocalUser) return false;
     return await isMemberOf(viewerId, value);
   }
@@ -98,7 +102,7 @@ async function evaluateCapability(value, viewerId, authorId, isLocalUser) {
 
 /**
  * Compute visibility flags for a collection item
- * @param {Object} item - FeedCache item
+ * @param {Object} item - FeedItems item
  * @param {string} viewerId - Viewer's actorId (or undefined for unauth)
  * @param {boolean} isLocalUser - Is viewer a local authenticated user
  * @returns {Promise<Object>} { public, server, canReply, canReact }
@@ -134,7 +138,9 @@ export default async function computeVisibilityFlags(
 
   // Determine visibility flags
   const toValue = sourceObject?.to || item.to;
-  const toNormalized = String(toValue || "").toLowerCase().trim();
+  const toNormalized = String(toValue || "")
+    .toLowerCase()
+    .trim();
 
   const flags = {
     public: toNormalized === "@public" || toNormalized === "public",
@@ -143,7 +149,7 @@ export default async function computeVisibilityFlags(
     canReact: false,
   };
 
-  // Evaluate capabilities from source object (original values, not FeedCache enums)
+  // Evaluate capabilities from source object (original values, not FeedItems enums)
   if (sourceObject) {
     flags.canReply = await evaluateCapability(
       sourceObject.canReply,
@@ -158,7 +164,7 @@ export default async function computeVisibilityFlags(
       isLocalUser
     );
   } else {
-    // Fallback to FeedCache enums if source not available
+    // Fallback to FeedItems enums if source not available
     flags.canReply = item.canReply === "public";
     flags.canReact = item.canReact === "public";
   }

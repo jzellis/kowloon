@@ -6,7 +6,7 @@ This document describes the asynchronous feed fan-out system for Kowloon.
 
 The feed system uses a **two-tier approach** for efficient timeline delivery:
 
-1. **FeedCache** - Global canonical storage for all objects that can appear in feeds
+1. **FeedItems** - Global canonical storage for all objects that can appear in feeds
 2. **Feed** - Per-viewer fan-out rows with pre-computed permissions
 
 ```
@@ -16,7 +16,7 @@ ActivityParser Create Handler
      ↓
 Post Collection (source of truth)
      ↓
-FeedCache (normalized envelope) ← You are here
+FeedItems (normalized envelope) ← You are here
      ↓
 FeedFanOut Queue (job enqueued)
      ↓
@@ -29,7 +29,7 @@ User requests timeline → reads Feed
 
 ## Components
 
-### 1. FeedCache (schema/FeedCache.js)
+### 1. FeedItems (schema/FeedItems.js)
 Global object storage for timeline-eligible content:
 - Canonical `id` and `url` for federation
 - Global audience policies (`to`, `canReply`, `canReact`)
@@ -38,7 +38,7 @@ Global object storage for timeline-eligible content:
 
 ### 2. Feed (schema/Feed.js)
 Per-viewer fan-out table:
-- `actorId` (viewer) + `objectId` (→ FeedCache.id)
+- `actorId` (viewer) + `objectId` (→ FeedItems.id)
 - `reason` why it's in the feed: "follow" | "domain" | "audience" | "mention" | "self"
 - Per-viewer capabilities: `canReply` and `canReact` (booleans)
 - Optional `snapshot` for list rendering
@@ -52,7 +52,7 @@ Queue for async processing:
 ### 4. Fan-Out Worker (workers/feedFanOut.js)
 Background process that:
 - Polls for pending jobs every 5 seconds
-- Computes audience for each FeedCache entry
+- Computes audience for each FeedItems entry
 - Creates Feed entries for relevant viewers
 - Retries failed jobs with backoff
 
@@ -184,7 +184,7 @@ Enable debug logging:
 DEBUG=feed:* npm run worker:feed
 ```
 
-Manually trigger fan-out for a FeedCache entry:
+Manually trigger fan-out for a FeedItems entry:
 ```javascript
 import enqueueFeedFanOut from "#methods/feed/enqueueFanOut.js";
 

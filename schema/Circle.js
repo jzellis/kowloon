@@ -31,6 +31,7 @@ const CircleSchema = new Schema(
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
 CircleSchema.index({ "members.id": 1 }); // fast "is viewer a member?" checks
+CircleSchema.index({ "members.server": 1 });
 CircleSchema.virtual("reacts", {
   ref: "React",
   localField: "id",

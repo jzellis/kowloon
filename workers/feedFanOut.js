@@ -5,7 +5,16 @@
 
 import "dotenv/config";
 import mongoose from "mongoose";
-import { FeedFanOut, FeedCache, Feed, User, Circle, Group, Event, Settings } from "#schema";
+import {
+  FeedFanOut,
+  FeedItems,
+  Feed,
+  User,
+  Circle,
+  Group,
+  Event,
+  Settings,
+} from "#schema";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 import { loadSettings } from "#methods/settings/cache.js";
 
@@ -147,9 +156,7 @@ async function buildMembershipMap(objectIds) {
 
   // Batch fetch
   const [circles, groups, events] = await Promise.all([
-    circleIds.length > 0
-      ? Circle.find({ id: { $in: circleIds } }).lean()
-      : [],
+    circleIds.length > 0 ? Circle.find({ id: { $in: circleIds } }).lean() : [],
     groupIds.length > 0 ? Group.find({ id: { $in: groupIds } }).lean() : [],
     eventIds.length > 0 ? Event.find({ id: { $in: eventIds } }).lean() : [],
   ]);
@@ -231,10 +238,10 @@ async function processFanOutJob(job) {
       $inc: { attempts: 1 },
     });
 
-    // Fetch the FeedCache entry
-    const feedCache = await FeedCache.findOne({ id: job.feedCacheId }).lean();
+    // Fetch the FeedItems entry
+    const feedCache = await FeedItems.findOne({ id: job.feedCacheId }).lean();
     if (!feedCache) {
-      throw new Error(`FeedCache entry not found: ${job.feedCacheId}`);
+      throw new Error(`FeedItems entry not found: ${job.feedCacheId}`);
     }
 
     // Extract job audience data
@@ -251,7 +258,9 @@ async function processFanOutJob(job) {
 
     // 1. Author themselves (reason: "self")
     const { domain } = getServerSettings();
-    const isLocalAuthor = feedCache.actorId?.toLowerCase().endsWith(`@${domain?.toLowerCase()}`);
+    const isLocalAuthor = feedCache.actorId
+      ?.toLowerCase()
+      .endsWith(`@${domain?.toLowerCase()}`);
     if (isLocalAuthor) {
       viewerMap.set(feedCache.actorId, "self");
     }
@@ -287,7 +296,14 @@ async function processFanOutJob(job) {
     }
 
     // Create Feed entries
-    const counts = { total: 0, followers: 0, audience: 0, domain: 0, self: 0, mentions: 0 };
+    const counts = {
+      total: 0,
+      followers: 0,
+      audience: 0,
+      domain: 0,
+      self: 0,
+      mentions: 0,
+    };
     const feedEntries = [];
 
     for (const [viewerId, reason] of viewerMap.entries()) {
@@ -316,7 +332,7 @@ async function processFanOutJob(job) {
 
       const feedEntry = {
         actorId: viewerId, // The viewer
-        objectId: feedCache.id, // FeedCache.id
+        objectId: feedCache.id, // FeedItems.id
         activityActorId: feedCache.actorId, // Object author
         type: feedCache.objectType, // Main type (e.g., "Post", "Bookmark", "Page")
         objectType: feedCache.type, // Subtype (e.g., "Note", "Article", "Folder")
@@ -358,12 +374,16 @@ async function processFanOutJob(job) {
       counts,
     });
 
-    console.log(`Fan-out job ${jobId} completed: ${counts.total} Feed entries created`, counts);
+    console.log(
+      `Fan-out job ${jobId} completed: ${counts.total} Feed entries created`,
+      counts
+    );
   } catch (err) {
     console.error(`Fan-out job ${jobId} failed:`, err.message);
 
     // Calculate next retry delay
-    const retryDelay = RETRY_DELAYS[Math.min(job.attempts, RETRY_DELAYS.length - 1)];
+    const retryDelay =
+      RETRY_DELAYS[Math.min(job.attempts, RETRY_DELAYS.length - 1)];
     const nextAttemptAt = new Date(Date.now() + retryDelay * 1000);
 
     // Mark as failed if max attempts reached
@@ -376,7 +396,9 @@ async function processFanOutJob(job) {
     });
 
     if (status === "failed") {
-      console.error(`Fan-out job ${jobId} permanently failed after ${job.attempts} attempts`);
+      console.error(
+        `Fan-out job ${jobId} permanently failed after ${job.attempts} attempts`
+      );
     }
   }
 }

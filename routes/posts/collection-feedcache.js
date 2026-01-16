@@ -1,9 +1,9 @@
 // /routes/posts/collection-feedcache.js
-// Example: GET /posts using FeedCache as the read layer
-// This is the NEW pattern - all read endpoints should use FeedCache
+// Example: GET /posts using FeedItems as the read layer
+// This is the NEW pattern - all read endpoints should use FeedItems
 
 import route from "../utils/route.js";
-import { FeedCache } from "#schema";
+import { FeedItems } from "#schema";
 import {
   buildVisibilityFilter,
   buildFollowerMap,
@@ -45,8 +45,8 @@ export default route(async ({ req, query, set }) => {
     filter.publishedAt = { $lt: new Date(before) };
   }
 
-  // Query FeedCache
-  const items = await FeedCache.find(filter)
+  // Query FeedItems
+  const items = await FeedItems.find(filter)
     .sort({ publishedAt: -1, _id: -1 }) // Stable sort
     .limit(Number(limit) + 1) // Fetch one extra for hasMore
     .lean();
@@ -56,7 +56,7 @@ export default route(async ({ req, query, set }) => {
   if (hasMore) items.pop(); // Remove the extra item
 
   // Total count (expensive, consider caching or removing)
-  const totalItems = await FeedCache.countDocuments({
+  const totalItems = await FeedItems.countDocuments({
     objectType: "Post",
     ...buildVisibilityFilter(viewerId),
   });
@@ -66,7 +66,7 @@ export default route(async ({ req, query, set }) => {
   const followerMap = await buildFollowerMap(actorIds);
 
   // For local items, we'd need addressedIds - for now, pass empty
-  // TODO: Consider storing addressedIds in FeedCache for read optimization
+  // TODO: Consider storing addressedIds in FeedItems for read optimization
   const membershipMap = await buildMembershipMap([]);
 
   // Enrich items with per-viewer capabilities
@@ -75,7 +75,7 @@ export default route(async ({ req, query, set }) => {
       followerMap,
       membershipMap,
       grants: {}, // TODO: Implement remote grants from tokens
-      addressedIds: [], // TODO: Store in FeedCache or derive
+      addressedIds: [], // TODO: Store in FeedItems or derive
     })
   );
 

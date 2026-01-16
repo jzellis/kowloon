@@ -1,20 +1,24 @@
 // /methods/feed/visibility.js
-// Visibility and capability evaluators for FeedCache items
+// Visibility and capability evaluators for FeedItems items
 // Used by all GET endpoints to determine what viewers can see and do
 
 import { Circle, Group, Event } from "#schema";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 /**
- * Check if viewer can see a FeedCache item
- * @param {Object} feedCacheItem - FeedCache document
+ * Check if viewer can see a FeedItems item
+ * @param {Object} feedCacheItem - FeedItems document
  * @param {string|null} viewerId - Viewer's ID (null = anonymous)
  * @param {Object} context - Pre-loaded context { followerMap, membershipMap, grants }
  * @returns {Promise<boolean>}
  */
 export async function canView(feedCacheItem, viewerId, context = {}) {
   const { to, origin } = feedCacheItem;
-  const { followerMap = new Map(), membershipMap = new Map(), grants = {} } = context;
+  const {
+    followerMap = new Map(),
+    membershipMap = new Map(),
+    grants = {},
+  } = context;
 
   // "public" → everyone can see
   if (to === "public" || to === "@public") {
@@ -25,7 +29,9 @@ export async function canView(feedCacheItem, viewerId, context = {}) {
   if (to === "server") {
     if (!viewerId) return false; // Anonymous can't see server-only
     const { domain } = getServerSettings();
-    const isLocalViewer = viewerId?.toLowerCase().endsWith(`@${domain?.toLowerCase()}`);
+    const isLocalViewer = viewerId
+      ?.toLowerCase()
+      .endsWith(`@${domain?.toLowerCase()}`);
     return isLocalViewer;
   }
 
@@ -35,10 +41,10 @@ export async function canView(feedCacheItem, viewerId, context = {}) {
 
     if (origin === "local") {
       // Local: check if viewer is in addressed circles/groups/events
-      // This requires addressedIds which aren't stored in FeedCache
+      // This requires addressedIds which aren't stored in FeedItems
       // We need to parse from the original audience field or use Feed fan-out
       // For now, fall back to checking membership
-      // TODO: Consider storing addressedIds in FeedCache for reads
+      // TODO: Consider storing addressedIds in FeedItems for reads
       return false; // Conservative: deny unless we can verify
     } else {
       // Remote: check if viewer has a grant
@@ -214,8 +220,8 @@ export function evaluateCapability({
 }
 
 /**
- * Enrich FeedCache item with per-viewer capabilities
- * @param {Object} feedCacheItem - FeedCache document
+ * Enrich FeedItems item with per-viewer capabilities
+ * @param {Object} feedCacheItem - FeedItems document
  * @param {string|null} viewerId - Viewer's ID (null = anonymous)
  * @param {Object} context - Pre-loaded context { followerMap, membershipMap, grants, addressedIds }
  * @returns {Object} - Item with canReply/canReact booleans
@@ -260,7 +266,7 @@ export function enrichWithCapabilities(feedCacheItem, viewerId, context = {}) {
 }
 
 /**
- * Build visibility filter for FeedCache queries
+ * Build visibility filter for FeedItems queries
  * @param {string|null} viewerId - Viewer's ID (null = anonymous)
  * @returns {Object} - MongoDB filter
  */
@@ -276,7 +282,9 @@ export function buildVisibilityFilter(viewerId) {
 
   // Authenticated: public + server (if local) + audience (TODO)
   const { domain } = getServerSettings();
-  const isLocalViewer = viewerId?.toLowerCase().endsWith(`@${domain?.toLowerCase()}`);
+  const isLocalViewer = viewerId
+    ?.toLowerCase()
+    .endsWith(`@${domain?.toLowerCase()}`);
 
   const toFilter = isLocalViewer
     ? { $in: ["public", "@public", "server"] }

@@ -8,7 +8,7 @@ const { Schema } = mongoose;
 const FeedFanOutSchema = new Schema(
   {
     // Source object to fan out
-    feedCacheId: { type: String, required: true, index: true }, // FeedCache.id
+    feedCacheId: { type: String, required: true, index: true }, // FeedItems.id
     objectType: { type: String, required: true }, // Post/Reply/Event/etc
     actorId: { type: String, required: true, index: true }, // author
 
@@ -52,7 +52,10 @@ const FeedFanOutSchema = new Schema(
     dedupeHash: { type: String, unique: true, sparse: true }, // prevent duplicate jobs
 
     // TTL for cleanup
-    ttl: { type: Date, default: () => new Date(Date.now() + 7 * 24 * 3600 * 1000) }, // 7 days
+    ttl: {
+      type: Date,
+      default: () => new Date(Date.now() + 7 * 24 * 3600 * 1000),
+    }, // 7 days
   },
   {
     timestamps: true,

@@ -16,20 +16,20 @@ export default route(
     }
 
     try {
-      // For non-User objects, prefer FeedCache
+      // For non-User objects, prefer FeedItems
       let obj = null;
       const isUserQuery = id.startsWith("@");
 
       if (!isUserQuery) {
-        // Try FeedCache first for Posts, Groups, Events, etc.
-        const { FeedCache } = await import("#schema");
-        const cached = await FeedCache.findOne({ objectId: id }).lean();
+        // Try FeedItems first for Posts, Groups, Events, etc.
+        const { FeedItems } = await import("#schema");
+        const cached = await FeedItems.findOne({ objectId: id }).lean();
         if (cached) {
           obj = cached;
         }
       }
 
-      // Fallback to getObjectById if not in FeedCache or is a User
+      // Fallback to getObjectById if not in FeedItems or is a User
       if (!obj) {
         const result = await getObjectById(id, {
           viewerId: user?.id || null,

@@ -1,5 +1,5 @@
 // /methods/feed/enqueueFanOut.js
-// Enqueues a FeedCache entry for asynchronous fan-out to Feed collection
+// Enqueues a FeedItems entry for asynchronous fan-out to Feed collection
 // Follows the pattern established by methods/federation/enqueueOutbox.js
 
 import crypto from "crypto";
@@ -8,7 +8,7 @@ import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 /**
  * Generate a dedupe hash to prevent duplicate fan-out jobs
- * @param {string} feedCacheId - The FeedCache ID
+ * @param {string} feedCacheId - The FeedItems ID
  * @returns {string}
  */
 function generateDedupeHash(feedCacheId) {
@@ -50,9 +50,9 @@ function extractAddressedIds(to, canReply, canReact) {
 }
 
 /**
- * Enqueue a feed fan-out job for a FeedCache entry
+ * Enqueue a feed fan-out job for a FeedItems entry
  * @param {Object} options
- * @param {string} options.feedCacheId - The FeedCache.id to fan out
+ * @param {string} options.feedCacheId - The FeedItems.id to fan out
  * @param {string} options.objectType - The object type (Post/Reply/Event/etc)
  * @param {string} options.actorId - The author/creator
  * @param {Object} options.audience - Audience snapshot { to, canReply, canReact }

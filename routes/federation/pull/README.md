@@ -106,7 +106,7 @@ Makes pull requests TO remote servers to fetch content for local users.
    - **Errors**: Increments error count, applies exponential backoff
 
 5. **Ingest Items**
-   - Upserts into `FeedCache` by `id` (de-duplication)
+   - Upserts into `FeedItems` by `id` (de-duplication)
    - Sets `origin: "remote"`, `originDomain`, `to`, `canReply`, `canReact`
    - Applies content filters from `server.contentFilters`
    - Never stores circle IDs

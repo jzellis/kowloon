@@ -3,7 +3,7 @@
 // Our server A calls remote server B's /outbox/pull endpoint
 
 import route from "../../utils/route.js";
-import { Server, FeedCache, User, Circle } from "#schema";
+import { Server, FeedItems, User, Circle } from "#schema";
 import buildAudienceForPull from "#methods/federation/buildAudienceForPull.js";
 import signPullJwt from "#methods/federation/signPullJwt.js";
 import enqueueFeedFanOut from "#methods/feed/enqueueFanOut.js";
@@ -27,7 +27,7 @@ function normalizeDomain(domain) {
 }
 
 /**
- * Ingest items from pull response into FeedCache
+ * Ingest items from pull response into FeedItems
  */
 async function ingestItems(items = [], serverDomain) {
   const ingested = [];
@@ -40,7 +40,7 @@ async function ingestItems(items = [], serverDomain) {
 
     try {
       // Sanitize object: remove visibility, deletion, source, and MongoDB internal fields
-      // These will be stored at FeedCache top-level (visibility) or not at all (internal/metadata)
+      // These will be stored at FeedItems top-level (visibility) or not at all (internal/metadata)
       const sanitizedObject = { ...item };
       delete sanitizedObject.to;
       delete sanitizedObject.canReply;
@@ -62,11 +62,13 @@ async function ingestItems(items = [], serverDomain) {
       const normalizeCap = (val) => {
         if (!val) return "public";
         const v = String(val).toLowerCase().trim();
-        return ["public", "followers", "audience", "none"].includes(v) ? v : "public";
+        return ["public", "followers", "audience", "none"].includes(v)
+          ? v
+          : "public";
       };
 
-      // Upsert into FeedCache
-      const cached = await FeedCache.findOneAndUpdate(
+      // Upsert into FeedItems
+      const cached = await FeedItems.findOneAndUpdate(
         { id: item.id },
         {
           $setOnInsert: {
@@ -77,7 +79,9 @@ async function ingestItems(items = [], serverDomain) {
             actorId: item.actorId,
             objectType: item.objectType || "Post",
             type: item.type,
-            publishedAt: item.publishedAt ? new Date(item.publishedAt) : new Date(),
+            publishedAt: item.publishedAt
+              ? new Date(item.publishedAt)
+              : new Date(),
             object: sanitizedObject,
           },
           $set: {
@@ -182,7 +186,10 @@ export default route(
       return;
     }
 
-    console.log(`Pull client: Found server ${domain}, include:`, server.include);
+    console.log(
+      `Pull client: Found server ${domain}, include:`,
+      server.include
+    );
 
     // Check moderation status
     if (server.status === "blocked") {
@@ -385,7 +392,10 @@ export default route(
       );
 
       setStatus(response.status);
-      set({ error: `Remote server returned ${response.status}`, details: errorText });
+      set({
+        error: `Remote server returned ${response.status}`,
+        details: errorText,
+      });
       return;
     }
 
@@ -400,7 +410,10 @@ export default route(
     }
 
     // Validate response structure
-    if (responseData.type !== "OrderedCollection" && !Array.isArray(responseData.items)) {
+    if (
+      responseData.type !== "OrderedCollection" &&
+      !Array.isArray(responseData.items)
+    ) {
       setStatus(502);
       set({ error: "Invalid response structure from remote server" });
       return;
@@ -412,7 +425,8 @@ export default route(
     let filteredItems = items;
     if (server.contentFilters?.rejectObjectTypes?.length > 0) {
       filteredItems = filteredItems.filter(
-        (item) => !server.contentFilters.rejectObjectTypes.includes(item.objectType)
+        (item) =>
+          !server.contentFilters.rejectObjectTypes.includes(item.objectType)
       );
     }
     if (server.contentFilters?.rejectPostTypes?.length > 0) {
@@ -421,7 +435,7 @@ export default route(
       );
     }
 
-    // Ingest items into FeedCache
+    // Ingest items into FeedItems
     const ingested = await ingestItems(filteredItems, domain);
 
     // Fan out to local feeds (enqueue, don't block)
@@ -442,7 +456,10 @@ export default route(
           );
         }
         if (include.includes("audience")) {
-          await fanOutItems(ingested, "audience", { audience, serverDomain: domain });
+          await fanOutItems(ingested, "audience", {
+            audience,
+            serverDomain: domain,
+          });
         }
       } catch (err) {
         console.error(`Fan-out error for ${domain}:`, err.message);

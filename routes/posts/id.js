@@ -1,5 +1,5 @@
 import route from "../utils/route.js";
-import { FeedCache } from "#schema";
+import { FeedItems } from "#schema";
 import {
   canView,
   buildFollowerMap,
@@ -11,8 +11,8 @@ export default route(async ({ req, params, set, setStatus }) => {
   const { id } = params; // e.g. "post:123@domain.com"
   const viewerId = req.user?.id || null;
 
-  // Lookup in FeedCache by canonical ID (NEW: using FeedCache instead of Post)
-  const feedCacheItem = await FeedCache.findOne({
+  // Lookup in FeedItems by canonical ID (NEW: using FeedItems instead of Post)
+  const feedCacheItem = await FeedItems.findOne({
     id,
     objectType: "Post",
     deletedAt: null,
@@ -51,7 +51,7 @@ export default route(async ({ req, params, set, setStatus }) => {
 
   // Return the normalized object envelope with capabilities
   const response = {
-    ...enriched.object, // The full object data from FeedCache
+    ...enriched.object, // The full object data from FeedItems
     canReply: enriched.canReply, // NEW: Boolean for this viewer
     canReact: enriched.canReact, // NEW: Boolean for this viewer
     publishedAt: enriched.publishedAt,

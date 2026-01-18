@@ -247,17 +247,39 @@ async function processFanOutJob(job) {
     // Extract job audience data
     const { to, canReply, canReact, addressedIds } = job.audience || {};
     const isPublic = to?.includes("@public") || to?.includes("public");
-    const origin = feedCache.origin; // "local" or "remote"
+    const { domain } = getServerSettings();
+    const isServer = to?.includes(`@${domain}`);
 
-    // Build follower and membership maps (batch operations)
-    const followerMap = await buildFollowerMap();
+    // NEW ARCHITECTURE: No Feed entries for @public or @server posts
+    // They are queried directly from FeedItems
+    if (isPublic || isServer) {
+      console.log(`Fan-out job ${jobId}: Skipping @public/@server post (no Feed LUT needed)`);
+      await FeedFanOut.findByIdAndUpdate(job._id, {
+        status: "completed",
+        completedAt: new Date(),
+        counts: { total: 0, skipped: 1, reason: "public/server post" },
+      });
+      return;
+    }
+
+    // Only create Feed entries for Circle/Group/Event-addressed content
+    if (!addressedIds || addressedIds.length === 0) {
+      console.log(`Fan-out job ${jobId}: No addressed IDs, skipping`);
+      await FeedFanOut.findByIdAndUpdate(job._id, {
+        status: "completed",
+        completedAt: new Date(),
+        counts: { total: 0, skipped: 1, reason: "no addressed containers" },
+      });
+      return;
+    }
+
+    // Build membership maps (batch operations)
     const membershipMap = await buildMembershipMap(addressedIds || []);
 
     // Collect viewer IDs and reasons
     const viewerMap = new Map(); // viewerId -> reason
 
     // 1. Author themselves (reason: "self")
-    const { domain } = getServerSettings();
     const isLocalAuthor = feedCache.actorId
       ?.toLowerCase()
       .endsWith(`@${domain?.toLowerCase()}`);
@@ -265,32 +287,12 @@ async function processFanOutJob(job) {
       viewerMap.set(feedCache.actorId, "self");
     }
 
-    // 2. Followers (reason: "follow")
-    const followers = followerMap.get(feedCache.actorId) || new Set();
-    for (const followerId of followers) {
-      if (!viewerMap.has(followerId)) {
-        viewerMap.set(followerId, "follow");
-      }
-    }
-
-    // 3. Public (reason: "domain") - ONLY server followers, not all local users
-    if (isPublic) {
-      const serverFollowers = await getServerFollowers();
-      for (const userId of serverFollowers) {
-        if (!viewerMap.has(userId)) {
-          viewerMap.set(userId, "domain");
-        }
-      }
-    }
-
-    // 4. Audience members (reason: "audience") - ONLY for local content
-    if (origin === "local" && addressedIds && addressedIds.length > 0) {
-      for (const id of addressedIds) {
-        const members = membershipMap.get(id) || new Set();
-        for (const memberId of members) {
-          if (!viewerMap.has(memberId)) {
-            viewerMap.set(memberId, "audience");
-          }
+    // 2. Audience members (reason: "audience") - Circle/Group/Event members
+    for (const id of addressedIds) {
+      const members = membershipMap.get(id) || new Set();
+      for (const memberId of members) {
+        if (!viewerMap.has(memberId)) {
+          viewerMap.set(memberId, "audience");
         }
       }
     }

@@ -19,8 +19,12 @@ COPY . .
 # Create logs directory
 RUN mkdir -p logs
 
+# Copy and make start script executable
+COPY start-all.sh /app/start-all.sh
+RUN chmod +x /app/start-all.sh
+
 # Expose port
 EXPOSE 3000
 
-# Start the application
-CMD ["npm", "start"]
+# Start the application with workers
+CMD ["/app/start-all.sh"]

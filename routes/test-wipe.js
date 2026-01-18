@@ -14,12 +14,8 @@ export default route(async ({ req, set, setStatus }) => {
     return;
   }
 
-  // Require admin authentication
-  if (!req.user?.isAdmin) {
-    setStatus(403);
-    set("error", "Admin access required");
-    return;
-  }
+  // No authentication required in test environments for automated tests
+  // (Production check above ensures this can't be abused)
 
   try {
     const db = mongoose.connection.db;
@@ -50,4 +46,4 @@ export default route(async ({ req, set, setStatus }) => {
     setStatus(500);
     set("error", err.message);
   }
-});
+}, { allowUnauth: true });

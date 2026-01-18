@@ -11,6 +11,7 @@ import logger from "#methods/utils/logger.js";
  * @param {string[]} [options.authors] - Author IDs - return PUBLIC items by these authors
  * @param {string[]} [options.groups] - Group IDs - return items addressed to these groups (if public or members present)
  * @param {string[]} [options.events] - Event IDs - return items addressed to these events (if public or attendees present)
+ * @param {string[]} [options.types] - Post types to filter by (Note, Article, etc.)
  * @param {string|Date} [options.since] - Return items published/updated after this timestamp
  * @param {number} [options.limit=50] - Max items to return
  * @param {string} [options.requestingDomain] - Domain making the request (for remote queries)
@@ -21,6 +22,7 @@ export default async function queryItems({
   authors = [],
   groups = [],
   events = [],
+  types = [],
   since,
   limit = 50,
   requestingDomain,
@@ -30,6 +32,7 @@ export default async function queryItems({
   const authorIds = Array.isArray(authors) ? authors : authors ? [authors] : [];
   const groupIds = Array.isArray(groups) ? groups : groups ? [groups] : [];
   const eventIds = Array.isArray(events) ? events : events ? [events] : [];
+  const typeIds = Array.isArray(types) ? types : types ? [types] : [];
 
   // Build OR conditions
   const orConditions = [];
@@ -76,6 +79,11 @@ export default async function queryItems({
   if (since) {
     const sinceDate = since instanceof Date ? since : new Date(since);
     query.publishedAt = { $gte: sinceDate };
+  }
+
+  // Add types filter
+  if (typeIds.length > 0) {
+    query.type = { $in: typeIds };
   }
 
   // Execute query

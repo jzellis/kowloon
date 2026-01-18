@@ -17,21 +17,22 @@ export default route(async (api) => {
   }
 
   // Parse query parameters
-  const circle = req.query.circle;
-  const author = req.query.author;
-  const group = req.query.group;
-  const event = req.query.event;
-  const server = req.query.server;
+  const circleId = req.query.circle || req.query.circleId;
+  const types = req.query.types ? String(req.query.types).split(',').map(s => s.trim()).filter(Boolean) : [];
   const since = req.query.since;
   const limit = Math.min(Number(req.query.limit) || 50, 500);
 
+  // Require circleId
+  if (!circleId) {
+    setStatus(400);
+    set({ error: "circleId parameter is required" });
+    return;
+  }
+
   logger.info("feed/timeline: Request", {
     user: user.id,
-    circle,
-    author,
-    group,
-    event,
-    server,
+    circleId,
+    types: types.length,
     since,
     limit,
   });
@@ -39,11 +40,8 @@ export default route(async (api) => {
   try {
     const result = await Kowloon.feed.getTimeline({
       viewerId: user.id,
-      circle,
-      author,
-      group,
-      event,
-      server,
+      circleId,
+      types,
       since,
       limit,
     });

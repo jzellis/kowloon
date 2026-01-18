@@ -1,10 +1,17 @@
 // /methods/feed/getTimeline.js
-// Unified timeline assembly: combines Feed, FeedItems, and remote pulls
+// Simplified timeline assembly using new federation architecture
+//
+// Key principles:
+// - Circle ID is ALWAYS required (no default timeline)
+// - Pulls from Circle members only (scoped by user's choice)
+// - Also includes user's Groups/Events (regardless of Circle)
+// - Uses pullFromRemote() for remote content
+// - Queries FeedItems directly for public/server posts (no Feed LUT needed)
 
-import { Feed, FeedItems, Circle, Group, Event } from "#schema";
+import { FeedItems, Feed, Circle, User } from "#schema";
 import logger from "#methods/utils/logger.js";
-import fetch from "node-fetch";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+import Kowloon from "#kowloon";
 
 /**
  * Extract domain from actor ID or URL
@@ -15,457 +22,244 @@ function extractDomain(str) {
     const url = new URL(str);
     return url.hostname;
   } catch {
-    const parts = str.split('@').filter(Boolean);
+    const parts = str.split("@").filter(Boolean);
     return parts[parts.length - 1];
   }
 }
 
 /**
- * Assemble a user's timeline from multiple sources
+ * Get user's block/mute list (users to exclude from timeline)
+ */
+async function getBlockedMutedUsers(viewerId) {
+  const user = await User.findOne({ id: viewerId }).select("blocked muted").lean();
+  if (!user) return [];
+
+  const blockedMutedIds = new Set();
+
+  // Get blocked Circle members
+  if (user.blocked) {
+    const blockedCircle = await Circle.findOne({ id: user.blocked }).select("members").lean();
+    if (blockedCircle?.members) {
+      blockedCircle.members.forEach((m) => blockedMutedIds.add(m.id));
+    }
+  }
+
+  // Get muted Circle members
+  if (user.muted) {
+    const mutedCircle = await Circle.findOne({ id: user.muted }).select("members").lean();
+    if (mutedCircle?.members) {
+      mutedCircle.members.forEach((m) => blockedMutedIds.add(m.id));
+    }
+  }
+
+  return Array.from(blockedMutedIds);
+}
+
+/**
+ * Get user's group and event memberships
+ */
+async function getUserGroupsEvents(viewerId) {
+  const user = await User.findOne({ id: viewerId }).select("groups events").lean();
+  if (!user) return { groups: [], events: [] };
+
+  const groups = [];
+  const events = [];
+
+  // Get groups from user's groups Circle
+  if (user.groups) {
+    const groupsCircle = await Circle.findOne({ id: user.groups }).select("members").lean();
+    if (groupsCircle?.members) {
+      groups.push(...groupsCircle.members.map((m) => m.id).filter((id) => id.startsWith("group:")));
+    }
+  }
+
+  // Get events from user's events Circle
+  if (user.events) {
+    const eventsCircle = await Circle.findOne({ id: user.events }).select("members").lean();
+    if (eventsCircle?.members) {
+      events.push(...eventsCircle.members.map((m) => m.id).filter((id) => id.startsWith("event:")));
+    }
+  }
+
+  return { groups, events };
+}
+
+/**
+ * Assemble timeline for a user from a specific Circle
  *
  * @param {Object} options
- * @param {string} options.viewerId - The user requesting the timeline
- * @param {string} [options.circle] - Circle ID to show posts from members of this circle
- * @param {string} [options.author] - Author ID to show posts by this specific user
- * @param {string} [options.group] - Group ID to show posts addressed to this group
- * @param {string} [options.event] - Event ID to show posts addressed to this event
- * @param {string} [options.server] - Server domain to show public posts from
- * @param {string|Date} [options.since] - Only items after this timestamp
- * @param {number} [options.limit=50] - Max items to return
- * @returns {Promise<Object>} { items, nextCursor }
+ * @param {string} options.viewerId - Required: user requesting timeline
+ * @param {string} options.circleId - Required: Circle to view timeline for
+ * @param {string[]} [options.types=[]] - Filter by post types (Note, Article, etc.)
+ * @param {string|Date} [options.since=null] - Pagination cursor
+ * @param {number} [options.limit=50] - Max results
+ *
+ * @returns {Promise<{items: Array, nextCursor: string|null}>}
  */
 export default async function getTimeline({
   viewerId,
-  circle,
-  author,
-  group,
-  event,
-  server,
-  since,
+  circleId,
+  types = [],
+  since = null,
   limit = 50,
 } = {}) {
   if (!viewerId) {
     throw new Error("getTimeline requires viewerId");
   }
 
+  if (!circleId) {
+    throw new Error("getTimeline requires circleId");
+  }
+
+  const { domain: ourDomain } = getServerSettings();
+
   logger.info("getTimeline: Request", {
     viewerId,
-    circle,
-    author,
-    group,
-    event,
-    server,
+    circleId,
+    types: types.length,
     since,
     limit,
   });
 
-  const { domain: ourDomain } = getServerSettings();
-  const allItems = [];
-
-  // 1. CIRCLE TIMELINE - Posts by members of a specific Circle
-  if (circle) {
-    const items = await getCircleTimeline({ viewerId, circle, since, limit });
-    allItems.push(...items);
+  // 1. Get Circle members
+  const circle = await Circle.findOne({ id: circleId }).select("members").lean();
+  if (!circle || !circle.members || circle.members.length === 0) {
+    logger.warn("getTimeline: Circle not found or empty", { circleId });
+    return { items: [], nextCursor: null };
   }
 
-  // 2. AUTHOR TIMELINE - Posts by a specific user
-  else if (author) {
-    const items = await getAuthorTimeline({ viewerId, author, since, limit, ourDomain });
-    allItems.push(...items);
-  }
+  const allMembers = circle.members.map((m) => m.id).filter(Boolean);
 
-  // 3. GROUP TIMELINE - Posts addressed to a specific Group
-  else if (group) {
-    const items = await getGroupTimeline({ viewerId, group, since, limit, ourDomain });
-    allItems.push(...items);
-  }
+  // 2. Separate local vs remote members
+  const localMembers = [];
+  const remoteMembersByDomain = new Map();
 
-  // 4. EVENT TIMELINE - Posts addressed to a specific Event
-  else if (event) {
-    const items = await getEventTimeline({ viewerId, event, since, limit, ourDomain });
-    allItems.push(...items);
-  }
-
-  // 5. SERVER TIMELINE - Public posts from a server
-  else if (server) {
-    const items = await getServerTimeline({ viewerId, server, since, limit, ourDomain });
-    allItems.push(...items);
-  }
-
-  // 6. DEFAULT - User's combined feed from all sources
-  else {
-    const items = await getDefaultTimeline({ viewerId, since, limit });
-    allItems.push(...items);
-  }
-
-  // Deduplicate by ID, sort by publishedAt, and limit
-  const itemsMap = new Map();
-  for (const item of allItems) {
-    if (!itemsMap.has(item.id)) {
-      itemsMap.set(item.id, item);
+  for (const memberId of allMembers) {
+    const memberDomain = extractDomain(memberId);
+    if (memberDomain === ourDomain) {
+      localMembers.push(memberId);
+    } else {
+      if (!remoteMembersByDomain.has(memberDomain)) {
+        remoteMembersByDomain.set(memberDomain, []);
+      }
+      remoteMembersByDomain.get(memberDomain).push(memberId);
     }
   }
 
-  const sortedItems = Array.from(itemsMap.values())
-    .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt))
-    .slice(0, limit);
+  // 3. Get viewer's groups/events (for additional content)
+  const { groups, events } = await getUserGroupsEvents(viewerId);
 
-  logger.info("getTimeline: Assembled", {
+  // Separate local vs remote groups/events
+  const localGroups = groups.filter((g) => extractDomain(g) === ourDomain);
+  const localEvents = events.filter((e) => extractDomain(e) === ourDomain);
+
+  const remoteGroupsByDomain = new Map();
+  const remoteEventsByDomain = new Map();
+
+  groups.filter((g) => extractDomain(g) !== ourDomain).forEach((g) => {
+    const domain = extractDomain(g);
+    if (!remoteGroupsByDomain.has(domain)) {
+      remoteGroupsByDomain.set(domain, []);
+    }
+    remoteGroupsByDomain.get(domain).push(g);
+  });
+
+  events.filter((e) => extractDomain(e) !== ourDomain).forEach((e) => {
+    const domain = extractDomain(e);
+    if (!remoteEventsByDomain.has(domain)) {
+      remoteEventsByDomain.set(domain, []);
+    }
+    remoteEventsByDomain.get(domain).push(e);
+  });
+
+  // 4. Pull from remote servers
+  for (const [remoteDomain, remoteAuthors] of remoteMembersByDomain.entries()) {
+    const remoteGroups = remoteGroupsByDomain.get(remoteDomain) || [];
+    const remoteEvents = remoteEventsByDomain.get(remoteDomain) || [];
+
+    await Kowloon.federation.pullFromRemote({
+      remoteDomain,
+      authors: remoteAuthors, // People in this Circle
+      members: [viewerId], // For Circle-addressed content
+      groups: remoteGroups, // Groups viewer is in
+      events: remoteEvents, // Events viewer attends
+      types,
+      since,
+      limit,
+      forUser: viewerId,
+      createFeedLUT: true,
+    });
+  }
+
+  // 5. Get Feed LUT item IDs for this viewer (Circle-addressed content)
+  const feedLUT = await Feed.find({ actorId: viewerId }).select("objectId").lean();
+  const feedItemIds = feedLUT.map((f) => f.objectId).filter(Boolean);
+
+  // 6. Get blocked/muted users
+  const blockedMutedUsers = await getBlockedMutedUsers(viewerId);
+
+  // 7. Query local FeedItems
+  const orConditions = [
+    // Items in Feed LUT (Circle-addressed, groups, events)
+    { id: { $in: feedItemIds } },
+    // Public posts by Circle members
+    {
+      actorId: { $in: [...localMembers, ...allMembers] },
+      to: "@public",
+    },
+    // Server posts (local members only)
+    {
+      actorId: { $in: localMembers },
+      to: `@${ourDomain}`,
+    },
+  ];
+
+  // Add local groups
+  if (localGroups.length > 0) {
+    orConditions.push({
+      group: { $in: localGroups },
+    });
+  }
+
+  // Add local events
+  if (localEvents.length > 0) {
+    orConditions.push({
+      event: { $in: localEvents },
+    });
+  }
+
+  const query = {
+    $or: orConditions,
+    // Exclude blocked/muted
+    actorId: { $nin: blockedMutedUsers },
+    // Exclude tombstoned
+    tombstoned: { $ne: true },
+  };
+
+  // Add types filter
+  if (types.length > 0) {
+    query.type = { $in: types };
+  }
+
+  // Add since filter
+  if (since) {
+    const sinceDate = since instanceof Date ? since : new Date(since);
+    query.publishedAt = { $gte: sinceDate };
+  }
+
+  const items = await FeedItems.find(query)
+    .sort({ publishedAt: -1 })
+    .limit(Number(limit))
+    .lean();
+
+  logger.info("getTimeline: Retrieved items", {
     viewerId,
-    totalItems: allItems.length,
-    deduped: sortedItems.length,
+    circleId,
+    count: items.length,
   });
 
   return {
-    items: sortedItems,
-    nextCursor: sortedItems.length > 0
-      ? sortedItems[sortedItems.length - 1].publishedAt
-      : null,
+    items,
+    nextCursor: items.length > 0 ? items[items.length - 1].publishedAt.toISOString() : null,
   };
-}
-
-// ============================================================================
-// Timeline Type Implementations
-// ============================================================================
-
-/**
- * Circle Timeline: Posts by members of a specific Circle
- */
-async function getCircleTimeline({ viewerId, circle, since, limit }) {
-  // Get Circle members
-  const circleDoc = await Circle.findOne({ id: circle }).select("members").lean();
-  if (!circleDoc?.members) return [];
-
-  const memberIds = circleDoc.members.map(m => m.id).filter(Boolean);
-  if (memberIds.length === 0) return [];
-
-  // Get local items from Feed (includes Circle-based audience posts)
-  const feedQuery = {
-    actorId: viewerId,
-    activityActorId: { $in: memberIds },
-  };
-  if (since) feedQuery.createdAt = { $gte: new Date(since) };
-
-  const feedItems = await Feed.find(feedQuery)
-    .sort({ createdAt: -1 })
-    .limit(limit)
-    .lean();
-
-  // Hydrate with FeedItems data
-  const items = await hydrateFeedItems(feedItems.map(f => f.objectId));
-
-  // TODO: Pull remote items for remote members in this Circle
-  // const remoteMembers = memberIds.filter(id => extractDomain(id) !== ourDomain);
-  // const remoteItems = await pullFromRemoteServers(remoteMembers, since, limit);
-
-  return items;
-}
-
-/**
- * Author Timeline: Posts by a specific user
- */
-async function getAuthorTimeline({ viewerId, author, since, limit, ourDomain }) {
-  const authorDomain = extractDomain(author);
-  const isLocal = authorDomain === ourDomain;
-
-  if (isLocal) {
-    // Query FeedItems for local author
-    const query = {
-      actorId: author,
-      $or: [
-        { to: "public" },
-        { to: "server" },
-        { group: { $exists: true, $ne: null } }, // Group posts (check membership separately)
-        { event: { $exists: true, $ne: null } }, // Event posts (check membership separately)
-      ],
-    };
-    if (since) query.publishedAt = { $gte: new Date(since) };
-
-    const items = await FeedItems.find(query)
-      .sort({ publishedAt: -1 })
-      .limit(limit)
-      .lean();
-
-    // Filter out Group/Event posts if viewer isn't a member
-    return await filterByMembership(items, viewerId);
-  } else {
-    // Pull from remote server
-    return await pullFromRemote({
-      domain: authorDomain,
-      authors: [author],
-      since,
-      limit,
-    });
-  }
-}
-
-/**
- * Group Timeline: Posts addressed to a specific Group
- */
-async function getGroupTimeline({ viewerId, group, since, limit, ourDomain }) {
-  const groupDomain = extractDomain(group);
-  const isLocal = groupDomain === ourDomain;
-
-  if (isLocal) {
-    // Check if viewer has access to this group
-    const groupDoc = await Group.findOne({ id: group }).select("members rsvpPolicy").lean();
-    if (!groupDoc) return [];
-
-    const isPublic = groupDoc.rsvpPolicy === "open";
-    let isMember = false;
-
-    if (!isPublic && groupDoc.members) {
-      const membersCircle = await Circle.findOne({ id: groupDoc.members }).select("members").lean();
-      isMember = membersCircle?.members?.some(m => m.id === viewerId);
-    }
-
-    if (!isPublic && !isMember) {
-      logger.warn("getGroupTimeline: Access denied", { viewerId, group });
-      return [];
-    }
-
-    // Query FeedItems for this group
-    const query = { group };
-    if (since) query.publishedAt = { $gte: new Date(since) };
-
-    return await FeedItems.find(query)
-      .sort({ publishedAt: -1 })
-      .limit(limit)
-      .lean();
-  } else {
-    // Pull from remote server
-    return await pullFromRemote({
-      domain: groupDomain,
-      groups: [group],
-      members: [viewerId], // Include viewer to get their addressed posts too
-      since,
-      limit,
-    });
-  }
-}
-
-/**
- * Event Timeline: Posts addressed to a specific Event
- */
-async function getEventTimeline({ viewerId, event, since, limit, ourDomain }) {
-  const eventDomain = extractDomain(event);
-  const isLocal = eventDomain === ourDomain;
-
-  if (isLocal) {
-    // Check if viewer has access to this event
-    const eventDoc = await Event.findOne({ id: event }).select("attending rsvpPolicy").lean();
-    if (!eventDoc) return [];
-
-    const isPublic = eventDoc.rsvpPolicy === "open";
-    let isAttending = false;
-
-    if (!isPublic && eventDoc.attending) {
-      const attendingCircle = await Circle.findOne({ id: eventDoc.attending }).select("members").lean();
-      isAttending = attendingCircle?.members?.some(m => m.id === viewerId);
-    }
-
-    if (!isPublic && !isAttending) {
-      logger.warn("getEventTimeline: Access denied", { viewerId, event });
-      return [];
-    }
-
-    // Query FeedItems for this event
-    const query = { event };
-    if (since) query.publishedAt = { $gte: new Date(since) };
-
-    return await FeedItems.find(query)
-      .sort({ publishedAt: -1 })
-      .limit(limit)
-      .lean();
-  } else {
-    // Pull from remote server
-    return await pullFromRemote({
-      domain: eventDomain,
-      events: [event],
-      members: [viewerId],
-      since,
-      limit,
-    });
-  }
-}
-
-/**
- * Server Timeline: Public posts from a server
- */
-async function getServerTimeline({ viewerId, server, since, limit, ourDomain }) {
-  const isLocal = server === ourDomain || server === `@${ourDomain}`;
-
-  if (isLocal) {
-    // Query local public/server posts
-    const query = {
-      $or: [
-        { to: "public" },
-        { to: "server" },
-      ],
-    };
-    if (since) query.publishedAt = { $gte: new Date(since) };
-
-    return await FeedItems.find(query)
-      .sort({ publishedAt: -1 })
-      .limit(limit)
-      .lean();
-  } else {
-    // Pull public posts from remote server
-    const normalizedDomain = server.replace(/^@/, '');
-    return await pullFromRemote({
-      domain: normalizedDomain,
-      since,
-      limit,
-    });
-  }
-}
-
-/**
- * Default Timeline: Combined feed from all sources
- */
-async function getDefaultTimeline({ viewerId, since, limit }) {
-  // Get all items from Feed collection (pre-fanned local content)
-  const query = { actorId: viewerId };
-  if (since) query.createdAt = { $gte: new Date(since) };
-
-  const feedItems = await Feed.find(query)
-    .sort({ createdAt: -1 })
-    .limit(limit)
-    .lean();
-
-  // Hydrate with FeedItems data
-  return await hydrateFeedItems(feedItems.map(f => f.objectId));
-}
-
-// ============================================================================
-// Helper Functions
-// ============================================================================
-
-/**
- * Hydrate Feed objectIds with full FeedItems data
- */
-async function hydrateFeedItems(objectIds) {
-  if (objectIds.length === 0) return [];
-
-  return await FeedItems.find({ id: { $in: objectIds } })
-    .sort({ publishedAt: -1 })
-    .lean();
-}
-
-/**
- * Filter items by checking Group/Event membership
- */
-async function filterByMembership(items, viewerId) {
-  const filtered = [];
-
-  for (const item of items) {
-    if (item.to === "public" || item.to === "server") {
-      filtered.push(item);
-      continue;
-    }
-
-    // Check Group membership
-    if (item.group) {
-      const groupDoc = await Group.findOne({ id: item.group }).select("members rsvpPolicy").lean();
-      if (!groupDoc) continue;
-
-      if (groupDoc.rsvpPolicy === "open") {
-        filtered.push(item);
-        continue;
-      }
-
-      if (groupDoc.members) {
-        const membersCircle = await Circle.findOne({ id: groupDoc.members }).select("members").lean();
-        if (membersCircle?.members?.some(m => m.id === viewerId)) {
-          filtered.push(item);
-        }
-      }
-      continue;
-    }
-
-    // Check Event attendance
-    if (item.event) {
-      const eventDoc = await Event.findOne({ id: item.event }).select("attending rsvpPolicy").lean();
-      if (!eventDoc) continue;
-
-      if (eventDoc.rsvpPolicy === "open") {
-        filtered.push(item);
-        continue;
-      }
-
-      if (eventDoc.attending) {
-        const attendingCircle = await Circle.findOne({ id: eventDoc.attending }).select("members").lean();
-        if (attendingCircle?.members?.some(m => m.id === viewerId)) {
-          filtered.push(item);
-        }
-      }
-    }
-  }
-
-  return filtered;
-}
-
-/**
- * Pull items from a remote server
- */
-async function pullFromRemote({ domain, members, authors, groups, events, since, limit }) {
-  try {
-    const { domain: ourDomain } = getServerSettings();
-
-    // Build query string
-    const params = new URLSearchParams();
-    if (members) members.forEach(m => params.append('members', m));
-    if (authors) authors.forEach(a => params.append('authors', a));
-    if (groups) groups.forEach(g => params.append('groups', g));
-    if (events) events.forEach(e => params.append('events', e));
-    if (since) params.append('since', new Date(since).toISOString());
-    if (limit) params.append('limit', limit);
-
-    const url = `https://${domain}/.well-known/kowloon/pull?${params}`;
-
-    logger.info("pullFromRemote: Fetching", { domain, url });
-
-    // TODO: Sign request with HTTP Signature
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Accept': 'application/activity+json',
-      },
-    });
-
-    if (!response.ok) {
-      logger.error("pullFromRemote: Failed", {
-        domain,
-        status: response.status,
-        statusText: response.statusText,
-      });
-      return [];
-    }
-
-    const data = await response.json();
-    const items = data.orderedItems || data.items || [];
-
-    logger.info("pullFromRemote: Success", {
-      domain,
-      count: items.length,
-    });
-
-    // Upsert remote items into our FeedItems
-    for (const item of items) {
-      await FeedItems.findOneAndUpdate(
-        { id: item.id },
-        { $set: item },
-        { upsert: true, new: true }
-      );
-    }
-
-    return items;
-  } catch (error) {
-    logger.error("pullFromRemote: Error", {
-      domain,
-      error: error.message,
-      stack: error.stack,
-    });
-    return [];
-  }
 }

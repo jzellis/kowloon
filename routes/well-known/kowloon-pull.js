@@ -55,6 +55,7 @@ export default route(
     const authors = parseArray(req.query.authors);
     const groups = parseArray(req.query.groups);
     const events = parseArray(req.query.events);
+    const types = parseArray(req.query.types);
     const since = req.query.since; // ISO 8601 timestamp
     const limit = Math.min(Number(req.query.limit) || 50, 500); // Max 500
 
@@ -63,6 +64,7 @@ export default route(
       authors: authors.length,
       groups: groups.length,
       events: events.length,
+      types: types.length,
       since,
       limit,
     });
@@ -102,6 +104,7 @@ export default route(
         authors: localAuthors,
         groups: localGroups,
         events: localEvents,
+        types,
         since,
         limit,
         requestingDomain,

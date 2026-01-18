@@ -31,22 +31,22 @@ function extractDomain(str) {
  * Get user's block/mute list (users to exclude from timeline)
  */
 async function getBlockedMutedUsers(viewerId) {
-  const user = await User.findOne({ id: viewerId }).select("blocked muted").lean();
+  const user = await User.findOne({ id: viewerId }).select("circles").lean();
   if (!user) return [];
 
   const blockedMutedIds = new Set();
 
   // Get blocked Circle members
-  if (user.blocked) {
-    const blockedCircle = await Circle.findOne({ id: user.blocked }).select("members").lean();
+  if (user.circles?.blocked) {
+    const blockedCircle = await Circle.findOne({ id: user.circles.blocked }).select("members").lean();
     if (blockedCircle?.members) {
       blockedCircle.members.forEach((m) => blockedMutedIds.add(m.id));
     }
   }
 
   // Get muted Circle members
-  if (user.muted) {
-    const mutedCircle = await Circle.findOne({ id: user.muted }).select("members").lean();
+  if (user.circles?.muted) {
+    const mutedCircle = await Circle.findOne({ id: user.circles.muted }).select("members").lean();
     if (mutedCircle?.members) {
       mutedCircle.members.forEach((m) => blockedMutedIds.add(m.id));
     }
@@ -59,27 +59,22 @@ async function getBlockedMutedUsers(viewerId) {
  * Get user's group and event memberships
  */
 async function getUserGroupsEvents(viewerId) {
-  const user = await User.findOne({ id: viewerId }).select("groups events").lean();
+  const user = await User.findOne({ id: viewerId }).select("circles").lean();
   if (!user) return { groups: [], events: [] };
 
   const groups = [];
   const events = [];
 
   // Get groups from user's groups Circle
-  if (user.groups) {
-    const groupsCircle = await Circle.findOne({ id: user.groups }).select("members").lean();
+  if (user.circles?.groups) {
+    const groupsCircle = await Circle.findOne({ id: user.circles.groups }).select("members").lean();
     if (groupsCircle?.members) {
       groups.push(...groupsCircle.members.map((m) => m.id).filter((id) => id.startsWith("group:")));
     }
   }
 
-  // Get events from user's events Circle
-  if (user.events) {
-    const eventsCircle = await Circle.findOne({ id: user.events }).select("members").lean();
-    if (eventsCircle?.members) {
-      events.push(...eventsCircle.members.map((m) => m.id).filter((id) => id.startsWith("event:")));
-    }
-  }
+  // Events are no longer in a separate circle - they're just Posts with type: "Event"
+  // No need to fetch events separately
 
   return { groups, events };
 }

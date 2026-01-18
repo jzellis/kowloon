@@ -32,13 +32,13 @@ async function getServerFollowers() {
 
   // Followers are users whose "following" circle contains @server
   const users = await User.find({ deletedAt: null, active: { $ne: false } })
-    .select("id following")
+    .select("id circles")
     .lean();
 
   if (users.length === 0) return [];
 
   // Get all unique following circle IDs
-  const followingCircleIds = users.map((u) => u.following).filter(Boolean);
+  const followingCircleIds = users.map((u) => u.circles?.following).filter(Boolean);
   if (followingCircleIds.length === 0) return [];
 
   // Batch fetch all following circles
@@ -56,8 +56,8 @@ async function getServerFollowers() {
   // Find users whose following circle contains @server
   const serverFollowers = [];
   for (const user of users) {
-    if (!user.following) continue;
-    const members = circleMembers.get(user.following);
+    if (!user.circles?.following) continue;
+    const members = circleMembers.get(user.circles.following);
     if (members?.has(serverActorId)) {
       serverFollowers.push(user.id);
     }
@@ -72,13 +72,13 @@ async function getServerFollowers() {
  */
 async function buildFollowerMap() {
   const users = await User.find({ deletedAt: null, active: { $ne: false } })
-    .select("id following")
+    .select("id circles")
     .lean();
 
   if (users.length === 0) return new Map();
 
   // Get all unique following circle IDs
-  const followingCircleIds = users.map((u) => u.following).filter(Boolean);
+  const followingCircleIds = users.map((u) => u.circles?.following).filter(Boolean);
   if (followingCircleIds.length === 0) return new Map();
 
   // Batch fetch all following circles
@@ -96,8 +96,8 @@ async function buildFollowerMap() {
   // Build reverse map: actorId -> Set of followers
   const followerMap = new Map();
   for (const user of users) {
-    if (!user.following) continue;
-    const following = circleMembers.get(user.following) || [];
+    if (!user.circles?.following) continue;
+    const following = circleMembers.get(user.circles.following) || [];
     for (const followedId of following) {
       if (!followerMap.has(followedId)) {
         followerMap.set(followedId, new Set());

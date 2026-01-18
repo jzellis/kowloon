@@ -48,7 +48,7 @@ async function buildPullParamsForServer(remoteDomain) {
     deletedAt: null,
     active: { $ne: false },
   })
-    .select("id following groups events")
+    .select("id circles")
     .lean();
 
   for (const user of localUsers) {
@@ -56,8 +56,8 @@ async function buildPullParamsForServer(remoteDomain) {
     aggregated.members.add(user.id);
 
     // Get users they follow from remote server
-    if (user.following) {
-      const followingCircle = await Circle.findOne({ id: user.following })
+    if (user.circles?.following) {
+      const followingCircle = await Circle.findOne({ id: user.circles.following })
         .select("members")
         .lean();
 
@@ -72,8 +72,8 @@ async function buildPullParamsForServer(remoteDomain) {
     }
 
     // Get groups they're in on remote server
-    if (user.groups) {
-      const groupsCircle = await Circle.findOne({ id: user.groups })
+    if (user.circles?.groups) {
+      const groupsCircle = await Circle.findOne({ id: user.circles.groups })
         .select("members")
         .lean();
 
@@ -86,20 +86,8 @@ async function buildPullParamsForServer(remoteDomain) {
       }
     }
 
-    // Get events they're attending on remote server
-    if (user.events) {
-      const eventsCircle = await Circle.findOne({ id: user.events })
-        .select("members")
-        .lean();
-
-      if (eventsCircle?.members) {
-        for (const member of eventsCircle.members) {
-          if (member.id?.startsWith("event:") && extractDomain(member.id) === remoteDomain) {
-            aggregated.events.add(member.id);
-          }
-        }
-      }
-    }
+    // Events are now just Posts with type: "Event"
+    // No separate events circle needed - they appear in timeline like any other post
   }
 
   return {

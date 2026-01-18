@@ -34,6 +34,8 @@ const PostSchema = new Schema(
     attachments: { type: [String], default: [] }, // Array of File IDs
     tags: { type: [String], default: [] },
     location: { type: GeoPoint, default: undefined }, // A geotag for the post in the ActivityStreams geolocation format
+    startDate: { type: Date, default: undefined }, // A start time for Event posts
+    endDate: { type: Date, default: undefined }, // An end time for Event posts
     target: { type: String, default: undefined }, // For Links
     inReplyTo: { type: String, default: undefined }, // For Replies
     to: { type: String, default: "" },

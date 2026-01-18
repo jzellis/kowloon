@@ -50,11 +50,14 @@ const UserSchemaDef = {
   inbox: { type: String, alias: "inboxUrl" },
   outbox: { type: String, alias: "outboxUrl" },
 
-  following: { type: String, default: "" },
-  allFollowing: { type: String, default: "" },
-  groups: { type: String, default: "" },
-  blocked: { type: String, default: "" },
-  muted: { type: String, default: "" },
+  // User's system circles (nested for cleaner organization)
+  circles: {
+    following: { type: String, default: "" },
+    allFollowing: { type: String, default: "" },
+    groups: { type: String, default: "" },
+    blocked: { type: String, default: "" },
+    muted: { type: String, default: "" },
+  },
 
   lastLogin: { type: Date },
 
@@ -214,6 +217,9 @@ UserSchema.pre("save", async function (next) {
       url: this.url,
     };
 
+    // Initialize circles subobject
+    this.circles = this.circles || {};
+
     const followingCircle = await Circle.create({
       name: `${this.id} | Following`,
       actorId: this.id,
@@ -223,7 +229,7 @@ UserSchema.pre("save", async function (next) {
       canReact: this.id,
       members: [selfMember],
     });
-    this.following = followingCircle.id;
+    this.circles.following = followingCircle.id;
 
     const groupsCircle = await Circle.create({
       name: `${this.id} | Groups`,
@@ -234,7 +240,7 @@ UserSchema.pre("save", async function (next) {
       canReact: this.id,
       members: [selfMember],
     });
-    this.groups = groupsCircle.id;
+    this.circles.groups = groupsCircle.id;
 
     const allFollowingCircle = await Circle.create({
       name: `${this.id} | All Following`,
@@ -245,7 +251,7 @@ UserSchema.pre("save", async function (next) {
       canReact: this.id,
       members: [selfMember],
     });
-    this.allFollowing = allFollowingCircle.id;
+    this.circles.allFollowing = allFollowingCircle.id;
 
     const blockedCircle = await Circle.create({
       name: `${this.id} | Blocked`,
@@ -255,7 +261,7 @@ UserSchema.pre("save", async function (next) {
       canReply: this.id,
       canReact: this.id,
     });
-    this.blocked = blockedCircle.id;
+    this.circles.blocked = blockedCircle.id;
 
     const mutedCircle = await Circle.create({
       name: `${this.id} | Muted`,
@@ -265,7 +271,7 @@ UserSchema.pre("save", async function (next) {
       canReply: this.id,
       canReact: this.id,
     });
-    this.muted = mutedCircle.id;
+    this.circles.muted = mutedCircle.id;
 
     if (!this.profile.pronouns) {
       this.profile.pronouns = getSetting("defaultPronouns");
@@ -301,11 +307,11 @@ UserSchema.methods.getMemberships = async function () {
 };
 
 UserSchema.methods.getBlocked = async function () {
-  return (await Circle.findOne({ id: this.blocked })).members.map((m) => m.id);
+  return (await Circle.findOne({ id: this.circles?.blocked })).members.map((m) => m.id);
 };
 
 UserSchema.methods.getMuted = async function () {
-  return (await Circle.findOne({ id: this.muted })).members.map((m) => m.id);
+  return (await Circle.findOne({ id: this.circles?.muted })).members.map((m) => m.id);
 };
 
 UserSchema.methods.createUserSignature = function (timestamp) {

@@ -5,7 +5,7 @@
 
 import "dotenv/config";
 import mongoose from "mongoose";
-import { User, Circle, Server, Settings } from "#schema";
+import { User, Circle, FederatedServer, Settings } from "#schema";
 import { loadSettings } from "#methods/settings/cache.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 import Kowloon from "#kowloon";
@@ -104,14 +104,8 @@ async function buildPullParamsForServer(remoteDomain) {
 async function processBatch() {
   const now = new Date();
 
-  // Get servers ready to be polled
-  const servers = await Server.find({
-    status: { $ne: "blocked" },
-    $or: [{ nextPullAt: { $lte: now } }, { nextPullAt: { $exists: false } }],
-  })
-    .sort({ nextPullAt: 1 })
-    .limit(BATCH_SIZE)
-    .lean();
+  // Get servers ready to be polled using new FederatedServer model
+  const servers = await FederatedServer.getServersReadyForPull(BATCH_SIZE);
 
   if (servers.length === 0) {
     logger.info("federationPull: No servers ready to poll");
@@ -152,6 +146,7 @@ async function processBatch() {
       }
 
       // Pull from remote server
+      const startTime = Date.now();
       const result = await Kowloon.federation.pullFromRemote({
         remoteDomain,
         authors: params.authors,
@@ -162,34 +157,21 @@ async function processBatch() {
         limit: 100,
         createFeedLUT: true, // Create Feed entries for all relevant members
       });
+      const responseTimeMs = Date.now() - startTime;
 
-      totalItems += result.items?.length || 0;
+      const itemCount = result.items?.length || 0;
+      totalItems += itemCount;
 
-      // Update server metadata
-      const updateData = {
-        lastPullAttemptedAt: now,
-      };
-
+      // Update server using FederatedServer methods
       if (!result.error) {
-        updateData.lastPulledAt = now;
-        updateData.pullErrorCount = 0;
-        updateData.lastPullError = null;
-        // Next pull: 5min if items found, 15min if empty
-        updateData.nextPullAt = new Date(
-          Date.now() + (result.items?.length > 0 ? 300000 : 900000)
-        );
+        await FederatedServer.recordPullSuccess(remoteDomain, itemCount, responseTimeMs);
       } else {
-        updateData.pullErrorCount = (server.pullErrorCount || 0) + 1;
-        updateData.lastPullError = result.error;
-        // Exponential backoff: 5min, 15min, 30min, 1hr, 2hr (max)
-        const backoffMinutes = Math.min(5 * Math.pow(2, updateData.pullErrorCount - 1), 120);
-        updateData.nextPullAt = new Date(Date.now() + backoffMinutes * 60000);
+        await FederatedServer.recordPullError(remoteDomain, result.error);
       }
 
-      await Server.findOneAndUpdate({ domain: remoteDomain }, { $set: updateData });
-
       logger.info(`federationPull: Completed ${remoteDomain}`, {
-        items: result.items?.length || 0,
+        items: itemCount,
+        responseTimeMs,
         error: result.error,
       });
     } catch (error) {
@@ -198,18 +180,8 @@ async function processBatch() {
         stack: error.stack,
       });
 
-      // Update server with error
-      await Server.findOneAndUpdate(
-        { domain: remoteDomain },
-        {
-          $set: {
-            lastPullAttemptedAt: now,
-            pullErrorCount: (server.pullErrorCount || 0) + 1,
-            lastPullError: error.message,
-            nextPullAt: new Date(Date.now() + 900000), // 15 min retry
-          },
-        }
-      );
+      // Update server with error using FederatedServer
+      await FederatedServer.recordPullError(remoteDomain, error.message);
     }
   }
 

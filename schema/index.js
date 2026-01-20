@@ -20,6 +20,7 @@ import FeedFanOut from "./FeedFanOut.js";
 import FederationCursor from "./FederationCursor.js";
 import SignatureNonce from "./SignatureNonce.js";
 import Server from "./Server.js";
+import FederatedServer from "./FederatedServer.js";
 export {
   Activity,
   Bookmark,
@@ -43,4 +44,5 @@ export {
   FederationCursor,
   SignatureNonce,
   Server,
+  FederatedServer,
 };

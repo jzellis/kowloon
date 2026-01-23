@@ -3,9 +3,10 @@ import route from "../utils/route.js";
 import Kowloon from "#kowloon";
 import { getViewerContext } from "#methods/visibility/context.js";
 import { canSeeObject } from "#methods/visibility/helpers.js";
+import sanitizeObject from "#methods/sanitize/object.js";
 
 /**
- * Creates a GET-by-id route handler that uses Kowloon.get.objectById
+ * Creates a GET-by-id route handler that uses Kowloon.get.getObjectById
  *
  * @param {object} opts
  * @param {"local"|"remote"|"prefer-local"|"both"} [opts.mode="local"]  - default local-only
@@ -22,7 +23,7 @@ export default function makeGetById({
     const viewerId = req.user?.id || null;
 
     try {
-      const result = await Kowloon.get.objectById(id, {
+      const result = await Kowloon.get.getObjectById(id, {
         viewerId,
         mode,
         enforceLocalVisibility,
@@ -39,8 +40,13 @@ export default function makeGetById({
         return;
       }
 
+      // Sanitize the object to remove sensitive fields
+      const sanitized = sanitizeObject(result.object, {
+        objectType: result.object.objectType || result.object.type,
+      });
+
       setStatus(200);
-      set("item", result.object);
+      set("item", sanitized);
     } catch (err) {
       // Map common errors if your implementation throws typed errors
       const code =

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import "dotenv/config";
 import mongoose from "mongoose";
-import getCollection from "./methods/collections/getCollection.js";
+import getCollection from "./methods/core/getCollection.js";
 
 const MONGO_URI = process.env.MONGO_URI || process.env.MONGO_URL || "mongodb://127.0.0.1:27017/kowloon";
 

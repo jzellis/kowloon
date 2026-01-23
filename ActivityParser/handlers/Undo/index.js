@@ -1,5 +1,5 @@
 import { Activity, Post, React as ReactModel, User } from "#schema";
-import objectById from "#methods/get/objectById.js";
+import getObjectById from "#methods/core/getObjectById.js";
 
 export default async function Undo(activity) {
   try {

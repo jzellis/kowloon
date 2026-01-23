@@ -1,7 +1,7 @@
 // /ActivityParser/handlers/Flag/index.js
 
 import { Flag } from "#schema";
-import objectById from "#methods/get/objectById.js";
+import getObjectById from "#methods/core/getObjectById.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 import Settings from "#schema/Settings.js";
 
@@ -32,7 +32,7 @@ export default async function FlagHandler(activity) {
     }
 
     // ---- Identify target & federation signal ----
-    const targetDoc = await objectById(activity.target); // null if remote/unknown
+    const targetDoc = await getObjectById(activity.target); // null if remote/unknown
     const parsedTarget = kowloonId(activity.target);
     const ourDomain = await getOurDomain();
 

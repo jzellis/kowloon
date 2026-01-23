@@ -2,7 +2,7 @@
 // Check if an incoming actor is blocked by the target or recipient
 
 import { Circle } from "#schema";
-import getObjectById from "#methods/get/objectById.js";
+import getObjectById from "#methods/core/getObjectById.js";
 import logger from "#methods/utils/logger.js";
 
 /**

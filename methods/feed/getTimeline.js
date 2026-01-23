@@ -11,7 +11,6 @@
 import { FeedItems, Feed, Circle, User } from "#schema";
 import logger from "#methods/utils/logger.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
-import Kowloon from "#kowloon";
 
 /**
  * Extract domain from actor ID or URL
@@ -168,6 +167,9 @@ export default async function getTimeline({
   });
 
   // 4. Pull from remote servers
+  // Lazy-load Kowloon to avoid circular dependency during module initialization
+  const Kowloon = (await import("#kowloon")).default;
+
   for (const [remoteDomain, remoteAuthors] of remoteMembersByDomain.entries()) {
     const remoteGroups = remoteGroupsByDomain.get(remoteDomain) || [];
     const remoteEvents = remoteEventsByDomain.get(remoteDomain) || [];

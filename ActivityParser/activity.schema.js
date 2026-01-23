@@ -6,11 +6,10 @@ const patterns = {
   publicToken: "^@public$",
   circleId: `^circle:${idPart}@[a-z0-9.-]+$`,
   groupId: `^group:${idPart}@[a-z0-9.-]+$`,
-  eventId: `^event:${idPart}@[a-z0-9.-]+$`,
   postId: `^post:${idPart}@[a-z0-9.-]+$`,
   pageId: `^page:${idPart}@[a-z0-9.-]+$`,
   bookmarkId: `^bookmark:${idPart}@[a-z0-9.-]+$`,
-  objectId: `^(circle|group|event|post|page|bookmark):${idPart}@[a-z0-9.-]+$`,
+  objectId: `^(circle|group|post|page|bookmark):${idPart}@[a-z0-9.-]+$`,
 };
 
 const toRecipient = {
@@ -20,7 +19,6 @@ const toRecipient = {
     { type: "string", pattern: patterns.serverHandle },
     { type: "string", pattern: patterns.circleId },
     { type: "string", pattern: patterns.groupId },
-    { type: "string", pattern: patterns.eventId },
   ],
 };
 
@@ -31,7 +29,6 @@ const replyReactRecipient = {
     { type: "string", pattern: patterns.serverHandle },
     { type: "string", pattern: patterns.circleId },
     { type: "string", pattern: patterns.groupId },
-    { type: "string", pattern: patterns.eventId },
   ],
 };
 
@@ -70,7 +67,6 @@ const schema = {
       enum: [
         "Bookmark",
         "Circle",
-        "Event",
         "Group",
         "Page",
         "Post",

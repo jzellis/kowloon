@@ -2,7 +2,7 @@
 // Resolves activity recipients to concrete inbox URLs for outbound federation
 
 import { getSetting } from "#methods/settings/cache.js";
-import getObjectById from "#methods/get/objectById.js";
+import getObjectById from "#methods/core/getObjectById.js";
 import log from "#methods/utils/logger.js";
 
 /**

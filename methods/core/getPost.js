@@ -1,7 +1,7 @@
 // /methods/core/getPost.js
 // Get a post (local or remote) - works for Note, Article, Link, Event, etc.
 
-import objectById from "#methods/get/objectById.js";
+import getObjectById from "#methods/core/getObjectById.js";
 
 /**
  * Get a post by ID
@@ -19,7 +19,7 @@ export default async function getPost(id, {
 } = {}) {
   const mode = allowRemote ? "prefer-local" : "local";
 
-  const result = await objectById(id, {
+  const result = await getObjectById(id, {
     viewerId,
     mode,
     maxStaleSeconds,

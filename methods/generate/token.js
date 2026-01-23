@@ -46,7 +46,7 @@ export default async function (actorId) {
     settings.privateKey,
     {
       algorithm: "RS256",
-      issuer: `https://${process.env.DOMAIN}`,
+      issuer: `https://${settings.domain}`,
       keyid: createHash("sha256")
         .update(settings.publicKey)
         .digest("base64url"),

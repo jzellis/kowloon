@@ -37,7 +37,6 @@ const PostSchema = new Schema(
     startDate: { type: Date, default: undefined }, // A start time for Event posts
     endDate: { type: Date, default: undefined }, // An end time for Event posts
     target: { type: String, default: undefined }, // For Links
-    inReplyTo: { type: String, default: undefined }, // For Replies
     to: { type: String, default: "" },
     canReply: { type: String, default: "" },
     canReact: { type: String, default: "" },

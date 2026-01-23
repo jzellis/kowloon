@@ -35,13 +35,36 @@ export function sanitizeAudience(obj, ctx) {
   return out;
 }
 
-export function canSeeObject(obj, ctx) {
+export async function canSeeObject(obj, ctx) {
   if (!obj) return false;
   const to = obj.to;
+
+  // Public objects are always visible
   if (to === "@public") return true;
-  if (isDomain(to))
+
+  // Domain-scoped: viewer must be from that domain
+  if (isDomain(to)) {
     return !!(ctx?.viewerDomain && to.slice(1) === ctx.viewerDomain);
-  if (to?.startsWith("circle:")) return !!ctx?.circleIds?.has?.(to);
-  if (to?.startsWith("group:")) return !!ctx?.groupIds?.has?.(to);
+  }
+
+  // Circle-scoped: viewer must be a member of that circle
+  if (to?.startsWith("circle:")) {
+    return !!ctx?.circleIds?.has?.(to);
+  }
+
+  // Group-scoped: check if viewer is a member OR if group is public
+  if (to?.startsWith("group:")) {
+    // First check if user is a member
+    if (ctx?.groupIds?.has?.(to)) return true;
+
+    // If not a member, check if group itself is public
+    const { Group } = await import("#schema");
+    const group = await Group.findOne({ id: to }).select("to").lean();
+    if (!group) return false;
+
+    // Group is visible if it's addressed to @public
+    return group.to === "@public";
+  }
+
   return false;
 }

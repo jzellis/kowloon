@@ -56,8 +56,8 @@ export default route(
     }
 
     // Optional: toggleable self-registration (defaults to enabled)
-    const allowOpenRegistration = settings.allowOpenRegistration !== false;
-    if (!allowOpenRegistration) {
+    const registrationIsOpen = settings.registrationIsOpen !== false;
+    if (!registrationIsOpen) {
       setStatus(403);
       return { error: "Registration disabled" };
     }

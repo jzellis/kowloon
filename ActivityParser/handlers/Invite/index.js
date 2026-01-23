@@ -1,6 +1,6 @@
 // #ActivityParser/handlers/Invite/index.js
 import { Event, Group, Circle, User } from "#schema";
-import objectById from "#methods/get/objectById.js";
+import getObjectById from "#methods/core/getObjectById.js";
 import toMember from "#methods/parse/toMember.js";
 
 export default async function Invite(activity) {

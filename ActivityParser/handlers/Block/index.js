@@ -1,7 +1,7 @@
 // Block handler (replace the target resolution section with this)
 
 import { Circle, User } from "#schema";
-import objectById from "#methods/get/objectById.js";
+import getObjectById from "#methods/core/getObjectById.js";
 import toMember from "#methods/parse/toMember.js";
 
 export default async function Block(activity) {
@@ -35,7 +35,7 @@ export default async function Block(activity) {
           return toMember(u || { actorId: s });
         }
         // not an actorId → try DB id lookup
-        const obj = await objectById(s);
+        const obj = await getObjectById(s);
         return toMember(obj);
       }
       return null;

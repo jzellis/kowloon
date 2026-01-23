@@ -1,41 +1,72 @@
-// Leave: actor exits an Event or Group they're part of.
-// Event: remove from Attending and Interested (and Invited, if present).
+// Leave: actor exits a Group they're part of.
 // Group: remove from Members (and Invited, if present).
 // Idempotent; records which circles were touched in sideEffects.
 
-import { Event, Group, Circle } from "#schema";
+import { Group, Circle } from "#schema";
+import getFederationTargetsHelper from "../utils/getFederationTargets.js";
+
+/**
+ * Type-specific validation for Leave activities
+ * Per specification: target (Group ID) is REQUIRED
+ * @param {Object} activity
+ * @returns {{ valid: boolean, errors?: string[] }}
+ */
+export function validate(activity) {
+  const errors = [];
+
+  if (!activity?.actorId || typeof activity.actorId !== "string") {
+    errors.push("Leave: missing activity.actorId");
+  }
+
+  // Required: target (Group ID)
+  if (!activity?.target || typeof activity.target !== "string") {
+    errors.push("Leave: missing required field 'target' (Group ID)");
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors: errors.length > 0 ? errors : undefined,
+  };
+}
+
+/**
+ * Determine federation targets for Leave activity
+ * @param {Object} activity - The activity envelope
+ * @param {Object} result - The leave result
+ * @returns {Promise<FederationRequirements>}
+ */
+export async function getFederationTargets(activity, result) {
+  // Leave activities could notify group members
+  // For now, no federation (could be enhanced)
+  return { shouldFederate: false };
+}
 
 export default async function Leave(activity) {
   try {
-    // ---- Validate basics ----
-    if (!activity?.actorId || typeof activity.actorId !== "string") {
-      return { activity, error: "Leave: missing activity.actorId" };
-    }
-    if (!activity?.target || typeof activity.target !== "string") {
-      return { activity, error: "Leave: missing or malformed activity.target" };
+    // 1. Validate
+    const validation = validate(activity);
+    if (!validation.valid) {
+      return { activity, error: validation.errors.join("; ") };
     }
 
-    // ---- Resolve local target (Event or Group). If not found → federate only. ----
-    let targetType = null;
-    let eventDoc = await Event.findOne({ id: activity.target });
-    let groupDoc = null;
+    // ---- Resolve local target (Group). If not found → federate only. ----
+    const groupDoc = await Group.findOne({ id: activity.target });
 
-    if (eventDoc) targetType = "Event";
-    else {
-      groupDoc = await Group.findOne({ id: activity.target });
-      if (groupDoc) targetType = "Group";
-    }
-
-    if (!targetType) {
+    if (!groupDoc) {
       // Remote target → do not mutate locally; let upstream federate.
-      return { activity, federate: true };
+      const federation = { shouldFederate: true };
+      return {
+        activity,
+        created: { federate: true },
+        result: { federate: true },
+        federation,
+      };
     }
 
     // ---- Deleted guard ----
-    if (eventDoc?.deletedAt)
-      return { activity, error: "Leave: event is deleted" };
-    if (groupDoc?.deletedAt)
+    if (groupDoc?.deletedAt) {
       return { activity, error: "Leave: group is deleted" };
+    }
 
     // ---- Helpers ----
     const pull = async (circleId, userId) =>
@@ -50,37 +81,6 @@ export default async function Leave(activity) {
         : { modifiedCount: 0 };
 
     const removedFrom = [];
-
-    // ========================================================================
-    // EVENT LEAVE
-    // ========================================================================
-    if (targetType === "Event") {
-      const { invited, interested, attending } = eventDoc;
-      if (!interested || !attending) {
-        return { activity, error: "Leave: event circles not initialized" };
-      }
-
-      const ops = await Promise.all([
-        pull(attending, activity.actorId),
-        pull(interested, activity.actorId),
-        pull(invited, activity.actorId),
-      ]);
-
-      if ((ops[0].modifiedCount || 0) > 0) removedFrom.push("attending");
-      if ((ops[1].modifiedCount || 0) > 0) removedFrom.push("interested");
-      if ((ops[2].modifiedCount || 0) > 0) removedFrom.push("invited");
-
-      // annotate for Undo (note: "Leave" undo is optional / policy-dependent)
-      activity.objectId = activity.actorId;
-
-      return {
-        activity,
-        event: eventDoc,
-        left: removedFrom.length > 0,
-        removedFrom,
-        federate: false, // we can choose to federate user-initiated Leave later
-      };
-    }
 
     // ========================================================================
     // GROUP LEAVE
@@ -100,12 +100,20 @@ export default async function Leave(activity) {
 
     activity.objectId = activity.actorId;
 
-    return {
-      activity,
+    const result = {
       group: groupDoc,
       left: removedFrom.length > 0,
       removedFrom,
-      federate: false,
+    };
+
+    // 3. Determine federation requirements
+    const federation = await getFederationTargets(activity, result);
+
+    return {
+      activity,
+      created: result,
+      result,
+      federation,
     };
   } catch (err) {
     return { activity, error: err?.message || String(err) };

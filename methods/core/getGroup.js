@@ -1,7 +1,7 @@
 // /methods/core/getGroup.js
 // Get a Group (if visible to current user)
 
-import objectById from "#methods/get/objectById.js";
+import getObjectById from "#methods/core/getObjectById.js";
 
 /**
  * Get a Group
@@ -19,7 +19,7 @@ export default async function getGroup(id, {
 } = {}) {
   const mode = allowRemote ? "prefer-local" : "local";
 
-  const result = await objectById(id, {
+  const result = await getObjectById(id, {
     viewerId,
     mode,
     maxStaleSeconds,

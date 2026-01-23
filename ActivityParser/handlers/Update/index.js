@@ -3,7 +3,6 @@
 import {
   Bookmark,
   Circle,
-  Event,
   Group,
   Page,
   Post,
@@ -13,11 +12,11 @@ import {
   FeedItems,
 } from "#schema";
 import kowloonId from "#methods/parse/kowloonId.js";
+import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 
 const MODELS = {
   Bookmark,
   Circle,
-  Event,
   Group,
   Page,
   Post,
@@ -30,10 +29,8 @@ const MODELS = {
 const FEED_CACHEABLE_TYPES = [
   "Post",
   "Reply",
-  "Event",
   "Page",
   "Bookmark",
-  "React",
   "Group",
   "Circle",
 ];
@@ -112,13 +109,61 @@ async function updateFeedItems(updated, objectType, patchFields) {
   }
 }
 
+/**
+ * Type-specific validation for Update activities
+ * Per specification: objectType REQUIRED, object REQUIRED, target REQUIRED
+ * @param {Object} activity
+ * @returns {{ valid: boolean, errors?: string[] }}
+ */
+export function validate(activity) {
+  const errors = [];
+
+  // Required: objectType
+  if (!activity?.objectType || typeof activity.objectType !== "string") {
+    errors.push("Update: missing required field 'objectType'");
+  }
+
+  // Required: object (the patch data)
+  if (!activity?.object || typeof activity.object !== "object") {
+    errors.push("Update: missing required field 'object' (patch data)");
+  }
+
+  // Required: target (ID of object to update)
+  if (!activity?.target || typeof activity.target !== "string") {
+    errors.push("Update: missing required field 'target' (object ID)");
+  }
+
+  // Validate objectType is supported
+  if (activity?.objectType) {
+    const Model = MODELS[activity.objectType];
+    if (!Model) {
+      errors.push(`Update: unsupported objectType "${activity.objectType}"`);
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors: errors.length > 0 ? errors : undefined,
+  };
+}
+
+/**
+ * Determine federation targets for Update activity
+ * @param {Object} activity - The activity envelope
+ * @param {Object} updated - The updated object
+ * @returns {Promise<FederationRequirements>}
+ */
+export async function getFederationTargets(activity, updated) {
+  // Use the common helper based on the updated object's addressing
+  return getFederationTargetsHelper(activity, updated);
+}
+
 export default async function Update(activity) {
   try {
-    if (!activity?.target || typeof activity.target !== "string") {
-      return { activity, error: "Update: missing activity.target" };
-    }
-    if (!activity?.object || typeof activity.object !== "object") {
-      return { activity, error: "Update: missing activity.object (patch)" };
+    // 1. Validate
+    const validation = validate(activity);
+    if (!validation.valid) {
+      return { activity, error: validation.errors.join("; ") };
     }
 
     // Determine model from the target id
@@ -177,7 +222,15 @@ export default async function Update(activity) {
     // Update FeedItems to reflect changes
     await updateFeedItems(updated, parsed.type, activity.object);
 
-    return { activity, updated };
+    // 3. Determine federation requirements
+    const federation = await getFederationTargets(activity, updated);
+
+    return {
+      activity,
+      created: updated,
+      result: updated,
+      federation,
+    };
   } catch (err) {
     return { activity, error: err?.message || String(err) };
   }

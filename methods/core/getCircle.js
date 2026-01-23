@@ -1,7 +1,7 @@
 // /methods/core/getCircle.js
 // Get a Circle (if visible to current user)
 
-import objectById from "#methods/get/objectById.js";
+import getObjectById from "#methods/core/getObjectById.js";
 
 /**
  * Get a Circle
@@ -19,7 +19,7 @@ export default async function getCircle(id, {
 } = {}) {
   const mode = allowRemote ? "prefer-local" : "local";
 
-  const result = await objectById(id, {
+  const result = await getObjectById(id, {
     viewerId,
     mode,
     maxStaleSeconds,

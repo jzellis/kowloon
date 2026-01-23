@@ -1,5 +1,5 @@
 import { Event, Group, Circle, User } from "#schema";
-import objectById from "#methods/get/objectById.js";
+import getObjectById from "#methods/core/getObjectById.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 import getSettings from "#methods/settings/get.js";
 import isServerAdmin from "#methods/auth/isServerAdmin.js";
@@ -74,7 +74,7 @@ export default async function Add(activity) {
           return toMember(u || { actorId: s });
         }
         // not an actorId string → treat as DB id / other resolvable id
-        const o = await objectById(s);
+        const o = await getObjectById(s);
         return toMember(o);
       }
 

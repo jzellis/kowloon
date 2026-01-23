@@ -7,17 +7,29 @@
 function sanitizeUser(user) {
   if (!user) return null;
 
+  // Build ActivityPub-compatible publicKey object
+  const publicKeyObj = user.publicKey
+    ? {
+        id: `${user.actorId || user.id}#main-key`,
+        owner: user.actorId || user.id,
+        publicKeyPem: user.publicKey,
+      }
+    : undefined;
+
   // Always return only public fields
   return {
-    id: user.id,
-    username: user.username,
-    profile: user.profile,
-    publicKey: user.publicKey,
+    "@context": "https://www.w3.org/ns/activitystreams",
+    id: user.actorId || user.id,
     type: user.type || "Person",
     objectType: user.objectType || "User",
-    url: user.url,
+    preferredUsername: user.username,
+    name: user.profile?.name || user.username,
+    summary: user.profile?.description,
+    icon: user.profile?.icon,
+    url: user.url || user.actorId || user.id,
     inbox: user.inbox,
     outbox: user.outbox,
+    publicKey: publicKeyObj,
   };
 }
 
@@ -26,10 +38,16 @@ function sanitizeUser(user) {
  */
 function removeInternalFields(obj) {
   const sanitized = { ...obj };
+  // MongoDB internal fields
   delete sanitized._id;
   delete sanitized.__v;
+  // Security-sensitive fields
   delete sanitized.password;
   delete sanitized.privateKey;
+  delete sanitized.privateKeyPem;
+  // Kowloon internal fields
+  delete sanitized.cached;
+  delete sanitized.tombstoned;
   return sanitized;
 }
 

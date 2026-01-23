@@ -1,6 +1,6 @@
 // /ActivityParser/handlers/Remove/index.js
 import { Event, Group, Circle, User } from "#schema";
-import objectById from "#methods/get/objectById.js";
+import getObjectById from "#methods/core/getObjectById.js";
 import getSettings from "#methods/settings/get.js";
 import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import isServerMod from "#methods/auth/isServerMod.js";
@@ -97,7 +97,7 @@ export default async function Remove(activity) {
           return toMember(u || { actorId: s });
         }
         // not an actorId string → treat as DB id / other resolvable id
-        const o = await objectById(s);
+        const o = await getObjectById(s);
         return toMember(o);
       }
 

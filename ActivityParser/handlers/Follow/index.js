@@ -4,16 +4,94 @@ import toMember from "#methods/parse/toMember.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
 
+/**
+ * Type-specific validation for Follow activities
+ * Per specification: to (Circle ID) is REQUIRED, target (User/Server ID) is REQUIRED
+ * Note: Current implementation uses activity.object for followed user, but spec says target
+ * @param {Object} activity
+ * @returns {{ valid: boolean, errors?: string[] }}
+ */
+export function validate(activity) {
+  const errors = [];
+
+  if (!activity?.actorId || typeof activity.actorId !== "string") {
+    errors.push("Follow: missing activity.actorId");
+  }
+
+  // Per spec: to (Circle ID) is REQUIRED
+  // Implementation allows falling back to actor.following circle if not provided
+  if (!activity?.to || typeof activity.to !== "string") {
+    errors.push("Follow: missing required field 'to' (Circle ID)");
+  }
+
+  // Per spec: target (User/Server ID) is REQUIRED
+  // Current implementation uses activity.object, but spec says target
+  // Support both for backward compatibility
+  const hasTarget = (activity?.target && typeof activity.target === "string") ||
+                    (activity?.object && typeof activity.object === "string");
+
+  if (!hasTarget) {
+    errors.push("Follow: missing required field 'target' (User/Server ID to follow)");
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors: errors.length > 0 ? errors : undefined,
+  };
+}
+
+/**
+ * Determine federation targets for Follow activity
+ * @param {Object} activity - The activity envelope
+ * @param {Object} result - The result from executing the Follow
+ * @returns {Promise<FederationRequirements>}
+ */
+export async function getFederationTargets(activity, result) {
+  // Follow activities need to be sent to the followed user/domain
+  const followedUserId = activity.object;
+  const parsed = kowloonId(followedUserId);
+
+  // If following a remote user or domain, send Accept to their inbox
+  if (parsed?.domain && !isLocalDomain(parsed.domain)) {
+    const isServerFollow = parsed.type === "Server";
+
+    if (isServerFollow) {
+      // Server follow - send to server's inbox
+      return {
+        shouldFederate: true,
+        scope: "domain",
+        domains: [parsed.domain],
+        activityType: "Accept", // Send Accept back to the follower
+      };
+    } else {
+      // User follow - send Accept to the specific user's inbox
+      // We'll need to look up their inbox from the member object
+      const targetCircle = await Circle.findOne({ id: activity.target || activity.actorId });
+      const member = targetCircle?.members?.find(m => m.id === followedUserId);
+
+      if (member?.inbox) {
+        return {
+          shouldFederate: true,
+          scope: "direct",
+          inboxes: [member.inbox],
+          activityType: "Accept",
+        };
+      }
+    }
+  }
+
+  // Local follow - no federation needed
+  return {
+    shouldFederate: false,
+  };
+}
+
 export default async function Follow(activity) {
   try {
-    if (!activity?.actorId || typeof activity.actorId !== "string") {
-      return { activity, error: "Follow: missing activity.actorId" };
-    }
-    if (!activity?.object || typeof activity.object !== "string") {
-      return {
-        activity,
-        error: "Follow: object must be '@user@domain' string",
-      };
+    // 1. Validate
+    const validation = validate(activity);
+    if (!validation.valid) {
+      return { activity, error: validation.errors.join("; ") };
     }
 
     const actor = await User.findOne({ id: activity.actorId });
@@ -144,12 +222,20 @@ export default async function Follow(activity) {
       }
     }
 
+    const result = {
+      status: added ? "followed" : "already_following",
+      target: targetId,
+      member,
+    };
+
+    // 3. Determine federation requirements
+    const federation = await getFederationTargets(activity, result);
+
     return {
       activity,
-      result: {
-        status: added ? "followed" : "already_following",
-        target: targetId,
-      },
+      created: result,
+      result,
+      federation,
     };
   } catch (err) {
     return { activity, error: `Follow: ${err.message}` };

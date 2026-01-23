@@ -1,4 +1,4 @@
-import getObjectById from "#methods/get/objectById.js";
+import getObjectById from "#methods/core/getObjectById.js";
 import assertTypeFromId from "#utils/assertTypeFromId.js";
 
 // This method retrieves a inbox whether local or remote. Does not return deleted items.

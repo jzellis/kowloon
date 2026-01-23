@@ -17,10 +17,10 @@ import File from "./File.js";
 import Feed from "./Feed.js";
 import FeedItems from "./FeedItems.js";
 import FeedFanOut from "./FeedFanOut.js";
-import FederationCursor from "./FederationCursor.js";
 import SignatureNonce from "./SignatureNonce.js";
 import Server from "./Server.js";
 import FederatedServer from "./FederatedServer.js";
+import Notification from "./Notification.js";
 export {
   Activity,
   Bookmark,
@@ -41,8 +41,8 @@ export {
   Feed,
   FeedItems,
   FeedFanOut,
-  FederationCursor,
   SignatureNonce,
   Server,
   FederatedServer,
+  Notification,
 };

@@ -1,7 +1,7 @@
 // /methods/core/getUser.js
 // Get a user profile (local or remote)
 
-import objectById from "#methods/get/objectById.js";
+import getObjectById from "#methods/core/getObjectById.js";
 
 /**
  * Get a user profile
@@ -19,7 +19,7 @@ export default async function getUser(id, {
 } = {}) {
   const mode = allowRemote ? "prefer-local" : "local";
 
-  const result = await objectById(id, {
+  const result = await getObjectById(id, {
     viewerId,
     mode,
     maxStaleSeconds,

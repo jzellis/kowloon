@@ -3,7 +3,6 @@
 import {
   Bookmark,
   Circle,
-  Event,
   Group,
   Page,
   Post,
@@ -15,11 +14,12 @@ import {
 } from "#schema";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 import kowloonId from "#methods/parse/kowloonId.js";
+import getFederationTargetsHelper from "../utils/getFederationTargets.js";
+import createNotification from "#methods/notifications/create.js";
 
 const MODELS = {
   Bookmark,
   Circle,
-  Event,
   Group,
   Page,
   Post,
@@ -32,20 +32,49 @@ const MODELS = {
 const FEED_CACHEABLE_TYPES = [
   "Post",
   "Reply",
-  "Event",
   "Page",
   "Bookmark",
-  "React",
   "Group",
   "Circle",
 ];
+
+/**
+ * Determine if object should be written to FeedItems
+ * Rules:
+ * - Posts: Always (including private ones)
+ * - Circles/Bookmarks: Only if NOT self-addressed (to !== actorId)
+ * - Groups: Always
+ * - React: Never
+ * - Other types: Never
+ */
+function shouldWriteFeedItem(created, objectType) {
+  if (!FEED_CACHEABLE_TYPES.includes(objectType)) return false;
+
+  // Posts always create FeedItems
+  if (objectType === 'Post' || objectType === 'Reply' || objectType === 'Page') {
+    return true;
+  }
+
+  // Groups always create FeedItems
+  if (objectType === 'Group') {
+    return true;
+  }
+
+  // Circles and Bookmarks: only if NOT self-addressed
+  if (objectType === 'Circle' || objectType === 'Bookmark') {
+    const isPrivate = created.to === created.actorId;
+    return !isPrivate;
+  }
+
+  return false;
+}
 
 /**
  * Write created object to FeedItems for timeline delivery and enqueue fan-out
  */
 async function writeFeedItems(created, objectType) {
   try {
-    if (!FEED_CACHEABLE_TYPES.includes(objectType)) return;
+    if (!shouldWriteFeedItem(created, objectType)) return;
 
     if (!created || !created.id) {
       console.error(`FeedItems write skipped: created object missing id`, {
@@ -94,17 +123,14 @@ async function writeFeedItems(created, objectType) {
     delete sanitizedObject._id;
     delete sanitizedObject.__v;
 
-    // Extract group/event from 'to' field if it's an ID (not @public/@server)
-    // Groups and Events are public containers, so we can store their IDs in FeedItems
+    // Extract group from 'to' field if it's an ID (not @public/@server)
+    // Groups are public containers, so we can store their IDs in FeedItems
     let group = undefined;
-    let event = undefined;
 
     if (created.to && typeof created.to === 'string') {
       const toValue = created.to.trim();
       if (toValue.startsWith('group:')) {
         group = toValue;
-      } else if (toValue.startsWith('event:')) {
-        event = toValue;
       }
     }
 
@@ -120,7 +146,6 @@ async function writeFeedItems(created, objectType) {
       inReplyTo: created.inReplyTo,
       threadRoot: created.threadRoot,
       group, // Group ID if addressed to a group (public container)
-      event, // Event ID if addressed to an event (public container)
       object: sanitizedObject, // sanitized content envelope (no visibility/deletion/source)
       to: normalizeTo(created.to), // top-level coarse visibility
       canReply: normalizeCap(created.canReply), // top-level coarse capability
@@ -136,7 +161,6 @@ async function writeFeedItems(created, objectType) {
       type: cacheEntry.type,
       to: cacheEntry.to,
       group: cacheEntry.group,
-      event: cacheEntry.event,
     });
 
     await FeedItems.findOneAndUpdate(
@@ -173,21 +197,129 @@ async function writeFeedItems(created, objectType) {
   }
 }
 
+/**
+ * Create notifications for relevant activities
+ * - Reply: Notify the author of the post being replied to
+ * - Post with mentions: Notify mentioned users (TBD)
+ */
+async function createNotifications(activity, created, objectType) {
+  try {
+    // Only create notifications for Post/Reply types
+    if (objectType !== "Post") return;
+
+    // Check if this is a Reply (has inReplyTo)
+    if (created.inReplyTo) {
+      // This is a reply - notify the author of the original post
+      const originalPost = await Post.findOne({ id: created.inReplyTo }).lean();
+
+      if (originalPost && originalPost.actorId) {
+        await createNotification({
+          type: "reply",
+          recipientId: originalPost.actorId,
+          actorId: activity.actorId,
+          objectId: created.id,
+          objectType: "Reply",
+          activityId: activity.id,
+          activityType: "Create",
+          groupKey: `reply:${originalPost.id}`,
+        });
+      }
+    }
+
+    // TODO: Check for mentions in content and notify mentioned users
+
+  } catch (err) {
+    console.error("Failed to create notifications for Create activity:", err.message);
+    // Non-fatal: don't block object creation if notification fails
+  }
+}
+
+/**
+ * Type-specific validation for Create activities
+ * Per specification: objectType, object, to, canReply, canReact are REQUIRED
+ * @param {Object} activity
+ * @returns {{ valid: boolean, errors?: string[] }}
+ */
+export function validate(activity) {
+  const errors = [];
+
+  // Required: objectType
+  const type = activity?.objectType;
+  if (!type || typeof type !== "string") {
+    errors.push("Create: missing required field 'objectType'");
+  }
+
+  if (type && !MODELS[type]) {
+    errors.push(`Create: unsupported objectType "${type}"`);
+  }
+
+  // Required: object
+  if (!activity?.object || typeof activity.object !== "object") {
+    errors.push("Create: missing required field 'object'");
+  }
+
+  // Required: to
+  if (!activity?.to || typeof activity.to !== "string") {
+    errors.push("Create: missing required field 'to'");
+  }
+
+  // Required: canReply
+  if (activity?.canReply === undefined) {
+    errors.push("Create: missing required field 'canReply'");
+  }
+
+  // Required: canReact
+  if (activity?.canReact === undefined) {
+    errors.push("Create: missing required field 'canReact'");
+  }
+
+  // Additional validation for User creation
+  if (type === "User") {
+    const obj = activity.object;
+    const hasPassword = obj?.password || obj?.pass;
+    if (!hasPassword) {
+      errors.push("Create User: password is required");
+    }
+
+    const username = obj?.username;
+    const actorIdFromObject = obj?.actorId || obj?.id;
+    if (!username && !actorIdFromObject) {
+      errors.push("Create User: username or actorId is required");
+    }
+  }
+
+  return {
+    valid: errors.length === 0,
+    errors: errors.length > 0 ? errors : undefined,
+  };
+}
+
+/**
+ * Determine federation targets for Create activity
+ * @param {Object} activity - The activity envelope
+ * @param {Object} created - The created object
+ * @returns {Promise<FederationRequirements>}
+ */
+export async function getFederationTargets(activity, created) {
+  // Users don't federate via Create (they're discovered via webfinger)
+  if (activity.objectType === "User") {
+    return { shouldFederate: false };
+  }
+
+  // Use the common helper based on the created object's addressing
+  return getFederationTargetsHelper(activity, created);
+}
+
 export default async function Create(activity) {
   try {
-    const type = activity?.objectType;
-    if (!type || typeof type !== "string") {
-      return { activity, error: "Create: missing activity.objectType" };
+    // 1. Validate
+    const validation = validate(activity);
+    if (!validation.valid) {
+      return { activity, error: validation.errors.join("; ") };
     }
 
+    const type = activity.objectType;
     const Model = MODELS[type];
-    if (!Model) {
-      return { activity, error: `Create: unsupported objectType "${type}"` };
-    }
-
-    if (!activity?.object || typeof activity.object !== "object") {
-      return { activity, error: "Create: missing activity.object" };
-    }
 
     // ---- Special handling for Create → User --------------------------------
     if (type === "User") {
@@ -267,25 +399,18 @@ export default async function Create(activity) {
     // Write to FeedItems for timeline delivery
     await writeFeedItems(created, type);
 
-    // Check if this activity should be pushed to remote servers
-    try {
-      const { default: shouldFederate } = await import("#methods/federation/shouldFederate.js");
-      if (shouldFederate(activity)) {
-        const { default: enqueueOutbox } = await import("#methods/federation/enqueueOutbox.js");
-        await enqueueOutbox({
-          activity,
-          activityId: created.id,
-          actorId: created.actorId || activity.actor?.id,
-          reason: "Activity targets remote resource",
-        });
-        console.log(`Enqueued federation push for ${created.id}`);
-      }
-    } catch (err) {
-      console.error(`Federation push enqueue failed for ${created.id}:`, err.message);
-      // Non-fatal: don't block object creation if federation fails
-    }
+    // Create notifications for relevant activities
+    await createNotifications(activity, created, type);
 
-    return { activity, created };
+    // 3. Determine federation requirements
+    const federation = await getFederationTargets(activity, created);
+
+    return {
+      activity,
+      created,
+      result: created,
+      federation,
+    };
   } catch (err) {
     // Surface useful info for E11000 etc.
     const payload = {

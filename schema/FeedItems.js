@@ -18,11 +18,7 @@ const FeedItemsSchema = new Schema(
     // Canonical identifiers
     id: { type: String, key: true }, // global canonical id (remote as-is; local minted)
     url: { type: String, default: undefined }, // canonical URL (locals minted below)
-    server: { type: String, default: undefined }, // local server actor id (from settings)
-
-    // Provenance
-    origin: { type: String, enum: ["local", "remote"], required: true },
-    originDomain: { type: String, default: undefined }, // e.g. "serverb.org"
+    server: { type: String, default: undefined }, // originating server
 
     // Author
     actorId: { type: String, required: true }, // author @user@domain
@@ -55,7 +51,6 @@ const FeedItemsSchema = new Schema(
 
     // Audience targeting (public containers only - Circles are NEVER stored for privacy)
     group: { type: String, default: undefined, index: true }, // Group ID if addressed to a group
-    event: { type: String, default: undefined, index: true }, // Event ID if addressed to an event
 
     // Normalized content envelope for detail views (sanitized - no to/canReply/canReact/deletedAt/deletedBy/source)
     object: { type: Object, default: undefined },

@@ -9,7 +9,7 @@
 import { Activity } from "#schema";
 import ActivityParser from "#ActivityParser";
 import validateActivity from "#ActivityParser/validate.js";
-import ObjectById from "#methods/get/objectById.js";
+import ObjectById from "#methods/core/getObjectById.js";
 import toMember from "#methods/parse/toMember.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 import shouldFederate from "#methods/federation/shouldFederate.js";

@@ -1,18 +1,20 @@
-// Schema definition for Invite activity type
-// Invite activities invite users to groups
+// Schema definition for Unblock activity type
+// Unblock activities remove users from the blocked list
 
 export default {
+  mirror: 'Block',
+
   fields: {
     // Required fields
     actorId: {
       required: true,
       type: 'string',
-      description: 'ID of the actor sending the invitation'
+      description: 'ID of the actor unblocking'
     },
     target: {
       required: true,
       type: 'string',
-      description: 'Group ID where user is being invited'
+      description: 'User ID being unblocked'
     },
 
     // Optional fields
@@ -24,27 +26,27 @@ export default {
     object: {
       required: false,
       type: 'object',
-      description: 'Optional - may contain user ID being invited'
+      description: 'Optional unblock metadata'
     },
     to: {
       required: false,
       type: 'string',
-      description: 'Not typically used in Invite activities'
+      description: 'Not used in Unblock activities'
     },
     canReply: {
       required: false,
       type: 'string',
-      description: 'Not used in Invite activities'
+      description: 'Not used in Unblock activities'
     },
     canReact: {
       required: false,
       type: 'string',
-      description: 'Not used in Invite activities'
+      description: 'Not used in Unblock activities'
     }
   },
 
   federation: {
-    // Federate if the target group is on a remote server
-    checkRemote: 'target'
+    // Unblock activities never federate (local blocking only)
+    checkRemote: false
   }
 };

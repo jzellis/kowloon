@@ -16,13 +16,13 @@ export function validate(activity) {
     errors.push("Reply: missing activity.actorId");
   }
 
-  // Required: objectType (should be "Reply")
+  // Required: objectType (should be "Post" since Reply creates a Post object)
   if (!activity?.objectType || typeof activity.objectType !== "string") {
     errors.push("Reply: missing required field 'objectType'");
   }
 
-  if (activity?.objectType && activity.objectType !== "Reply") {
-    errors.push("Reply: objectType should be 'Reply'");
+  if (activity?.objectType && activity.objectType !== "Post") {
+    errors.push("Reply: objectType should be 'Post'");
   }
 
   // Required: object
@@ -76,6 +76,10 @@ export default async function Reply(activity, ctx = {}) {
   if (!a.object.inReplyTo) {
     a.object.inReplyTo = activity.to;
   }
+
+  // The 'to' field in Reply activity is the post ID being replied to
+  // For Create activity, 'to' should be empty to use defaults
+  a.to = "";
 
   // 3. Delegate to Create handler to persist the Post/Reply
   return await Create(a, ctx);

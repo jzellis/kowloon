@@ -2,6 +2,8 @@
 // Add activities add users/items to collections (e.g., adding to circles/groups)
 
 export default {
+  mirror: 'Remove',
+
   fields: {
     // Required fields
     actorId: {

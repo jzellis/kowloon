@@ -2,6 +2,8 @@
 // Leave activities remove group membership
 
 export default {
+  mirror: 'Join',
+
   fields: {
     // Required fields
     actorId: {

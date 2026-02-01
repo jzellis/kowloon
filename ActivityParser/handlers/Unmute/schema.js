@@ -1,18 +1,20 @@
-// Schema definition for Accept activity type
-// Accept activities approve pending join requests or self-accept invitations
+// Schema definition for Unmute activity type
+// Unmute activities remove users from the muted list
 
 export default {
+  mirror: 'Mute',
+
   fields: {
     // Required fields
     actorId: {
       required: true,
       type: 'string',
-      description: 'ID of the actor accepting (admin or invitee)'
+      description: 'ID of the actor unmuting'
     },
-    to: {
+    target: {
       required: true,
       type: 'string',
-      description: 'Group ID where acceptance is happening'
+      description: 'User ID being unmuted'
     },
 
     // Optional fields
@@ -24,27 +26,27 @@ export default {
     object: {
       required: false,
       type: 'object',
-      description: 'Optional - may contain the Join activity being accepted'
+      description: 'Optional unmute metadata'
     },
-    target: {
+    to: {
       required: false,
       type: 'string',
-      description: 'Not used in Accept activities'
+      description: 'Not used in Unmute activities'
     },
     canReply: {
       required: false,
       type: 'string',
-      description: 'Not used in Accept activities'
+      description: 'Not used in Unmute activities'
     },
     canReact: {
       required: false,
       type: 'string',
-      description: 'Not used in Accept activities'
+      description: 'Not used in Unmute activities'
     }
   },
 
   federation: {
-    // Accept activities never federate (local group management only)
+    // Unmute activities never federate (local muting only)
     checkRemote: false
   }
 };

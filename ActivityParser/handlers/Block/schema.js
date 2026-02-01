@@ -2,6 +2,8 @@
 // Block activities block users from viewing/interacting with actor's content
 
 export default {
+  mirror: 'Unblock',
+
   fields: {
     // Required fields
     actorId: {

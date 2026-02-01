@@ -1,27 +1,27 @@
-// Block handler (replace the target resolution section with this)
+// Unblock handler - removes a user from the actor's blocked circle
 
 import { Circle, User } from "#schema";
 import getObjectById from "#methods/core/getObjectById.js";
 import toMember from "#methods/parse/toMember.js";
 
-export default async function Block(activity) {
+export default async function Unblock(activity) {
   try {
     if (!activity?.actorId || typeof activity.actorId !== "string") {
-      return { activity, error: "Block: missing activity.actorId" };
+      return { activity, error: "Unblock: missing activity.actorId" };
     }
     if (!activity?.target || typeof activity.target !== "string") {
-      return { activity, error: "Block: missing or malformed activity.target" };
+      return { activity, error: "Unblock: missing or malformed activity.target" };
     }
     if (activity.target === activity.actorId) {
-      return { activity, error: "Block: cannot block yourself" };
+      return { activity, error: "Unblock: cannot unblock yourself" };
     }
 
     const actor = await User.findOne({ id: activity.actorId })
       .select("circles.blocked")
       .lean();
-    if (!actor) return { activity, error: "Block: actor not found" };
+    if (!actor) return { activity, error: "Unblock: actor not found" };
     if (!actor.circles?.blocked) {
-      return { activity, error: "Block: blocked circle not configured" };
+      return { activity, error: "Unblock: blocked circle not configured" };
     }
 
     // --- normalize target to a member (accepts @user@domain or DB id) ---
@@ -43,20 +43,20 @@ export default async function Block(activity) {
 
     const member = await resolveTargetToMember(activity.target);
     if (!member || !member.id) {
-      return { activity, error: "Block: invalid target" };
+      return { activity, error: "Unblock: invalid target" };
     }
 
-    // write to the actor's "blocked" circle
+    // remove from the actor's "blocked" circle
     const res = await Circle.updateOne(
-      { id: actor.circles.blocked, "members.id": { $ne: member.id } },
-      { $push: { members: member }, $inc: { memberCount: 1 } }
+      { id: actor.circles.blocked },
+      { $pull: { members: { id: member.id } }, $inc: { memberCount: -1 } }
     );
-    const didAdd = (res.modifiedCount || 0) > 0;
+    const didRemove = (res.modifiedCount || 0) > 0;
 
     return {
       activity,
       circleId: actor.circles.blocked,
-      blocked: didAdd,
+      unblocked: didRemove,
       federate: false,
     };
   } catch (err) {

@@ -21,6 +21,9 @@ export default async function ActivityParser() {
   await Promise.all(entries.filter(e => e.isDirectory()).map(async (dirent) => {
     const verb = dirent.name;
 
+    // Skip utility directories (not handlers)
+    if (verb === 'utils') return;
+
     // Try to load schema.js
     const schemaPath = join(HANDLERS_DIR, verb, "schema.js");
     try {
@@ -35,10 +38,16 @@ export default async function ActivityParser() {
     }
 
     // Load handler
-    const modUrl = pathToFileURL(join(HANDLERS_DIR, verb, "index.js")).href;
-    const mod = await import(modUrl);
-    if (typeof mod.default === "function") {
-      Object.defineProperty(activity, verb, { enumerable: true, value: mod.default });
+    const handlerPath = join(HANDLERS_DIR, verb, "index.js");
+    try {
+      await access(handlerPath, constants.R_OK);
+      const modUrl = pathToFileURL(handlerPath).href;
+      const mod = await import(modUrl);
+      if (typeof mod.default === "function") {
+        Object.defineProperty(activity, verb, { enumerable: true, value: mod.default });
+      }
+    } catch (err) {
+      // Handler doesn't exist or isn't readable - skip
     }
   }));
 

@@ -2,6 +2,8 @@
 // Mute activities hide content from specific users/groups
 
 export default {
+  mirror: 'Unmute',
+
   fields: {
     // Required fields
     actorId: {

@@ -2,6 +2,8 @@
 // Delete activities mark objects as deleted (tombstoning)
 
 export default {
+  mirror: 'Create',
+
   fields: {
     // Required fields
     actorId: {

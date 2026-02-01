@@ -12,24 +12,65 @@ import isEventAdmin from "#methods/events/isEventAdmin.js";
 export default async function Add(activity) {
   try {
     let settings = await getSettings();
-    if (!activity.target)
-      return { activity, error: "No target Circle specified" };
-    if (!activity.target.startsWith("circle:"))
-      return { activity, error: "Invalid target Circle" };
 
-    let targetCircle = await Circle.findOne({ id: activity.target });
-    if (!targetCircle) return { activity, error: "Target circle not found" };
+    // Support two patterns:
+    // 1. Legacy: target = circle ID (explicit circle)
+    // 2. New: to = group ID, target = optional circle ID (defaults to members)
+    let targetCircle;
+    let ownerId;
+    let ownerType;
 
-    const ownerId = targetCircle?.actorId || "";
-    const ownerType = /^event:[^@]+@[^@]+$/.test(ownerId)
-      ? "Event"
-      : /^group:[^@]+@[^@]+$/.test(ownerId)
-      ? "Group"
-      : /^@[^@]+@[^@]+$/.test(ownerId)
-      ? "User"
-      : /^@[^@]+$/.test(ownerId)
-      ? "Server"
-      : "Unknown";
+    if (activity.to && /^group:[^@]+@[^@]+$/.test(activity.to)) {
+      // New pattern: to = groupId, target = optional specific circle
+      const group = await Group.findOne({ id: activity.to }).select("circles").lean();
+      if (!group) return { activity, error: "Group not found" };
+
+      ownerId = activity.to;
+      ownerType = "Group";
+
+      // If target is specified, verify it belongs to this group
+      if (activity.target) {
+        if (!activity.target.startsWith("circle:"))
+          return { activity, error: "Invalid target Circle" };
+
+        // Verify the target circle belongs to this group
+        const circleIds = Object.values(group.circles || {});
+        if (!circleIds.includes(activity.target)) {
+          return { activity, error: "Target circle does not belong to this group" };
+        }
+
+        targetCircle = await Circle.findOne({ id: activity.target });
+        if (!targetCircle) return { activity, error: "Target circle not found" };
+      } else {
+        // Default to members circle
+        if (!group.circles?.members) {
+          return { activity, error: "Group members circle not found" };
+        }
+        targetCircle = await Circle.findOne({ id: group.circles.members });
+        if (!targetCircle) return { activity, error: "Group members circle not found" };
+        activity.target = group.circles.members; // Set for downstream code
+      }
+    } else {
+      // Legacy pattern: target = circle ID
+      if (!activity.target)
+        return { activity, error: "No target Circle specified" };
+      if (!activity.target.startsWith("circle:"))
+        return { activity, error: "Invalid target Circle" };
+
+      targetCircle = await Circle.findOne({ id: activity.target });
+      if (!targetCircle) return { activity, error: "Target circle not found" };
+
+      ownerId = targetCircle?.actorId || "";
+      ownerType = /^event:[^@]+@[^@]+$/.test(ownerId)
+        ? "Event"
+        : /^group:[^@]+@[^@]+$/.test(ownerId)
+        ? "Group"
+        : /^@[^@]+@[^@]+$/.test(ownerId)
+        ? "User"
+        : /^@[^@]+$/.test(ownerId)
+        ? "Server"
+        : "Unknown";
+    }
 
     switch (ownerType) {
       case "User":
@@ -106,6 +147,21 @@ export default async function Add(activity) {
         $inc: { memberCount: 1 },
       }
     );
+
+    // If adding to a Group's members circle, remove from pending circle
+    if (ownerType === "Group" && res.modifiedCount > 0) {
+      const group = await Group.findOne({ id: ownerId }).select("circles").lean();
+      if (group?.circles?.members === activity.target && group?.circles?.pending) {
+        // Remove from pending circle if they were there
+        await Circle.updateOne(
+          { id: group.circles.pending, "members.id": activity.object.id },
+          {
+            $pull: { members: { id: activity.object.id } },
+            $inc: { memberCount: -1 },
+          }
+        );
+      }
+    }
 
     return {
       activity,

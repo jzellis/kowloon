@@ -115,6 +115,7 @@ export default route(
     }
 
     const createdId =
+      created?.result?.created?.id ||
       created?.result?.id ||
       created?.activity?.object?.id ||
       created?.activity?.id;
@@ -149,7 +150,7 @@ export default route(
     setStatus(200);
     set("ok", true);
     set("activity", created.activity);
-    set("result", created.result);
+    set("result", created.result?.created || created.result);
     if (createdId) set("createdId", createdId);
     set("federate", !!created.federate);
     if (federationJob) {

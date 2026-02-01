@@ -12,31 +12,68 @@ export default async function Remove(activity) {
   try {
     const settings = await getSettings();
 
-    // ---- Basic validation ----
-    if (!activity?.target) {
-      return { activity, error: "No target Circle specified" };
-    }
-    if (!activity.target.startsWith("circle:")) {
-      return { activity, error: "Invalid target Circle" };
-    }
+    // Support two patterns:
+    // 1. Legacy: target = circle ID (explicit circle)
+    // 2. New: to = group ID, target = optional circle ID (defaults to members)
+    let targetCircle;
+    let ownerId;
+    let ownerType;
 
-    // ---- Load target circle ----
-    const targetCircle = await Circle.findOne({ id: activity.target });
-    if (!targetCircle) {
-      return { activity, error: "Target circle not found" };
-    }
+    if (activity.to && /^group:[^@]+@[^@]+$/.test(activity.to)) {
+      // New pattern: to = groupId, target = optional specific circle
+      const group = await Group.findOne({ id: activity.to }).select("circles").lean();
+      if (!group) return { activity, error: "Group not found" };
 
-    // ---- Determine owner type from the circle's actorId ----
-    const ownerId = targetCircle?.actorId || "";
-    const ownerType = /^event:[^@]+@[^@]+$/.test(ownerId)
-      ? "Event"
-      : /^group:[^@]+@[^@]+$/.test(ownerId)
-      ? "Group"
-      : /^@[^@]+@[^@]+$/.test(ownerId)
-      ? "User"
-      : /^@[^@]+$/.test(ownerId)
-      ? "Server"
-      : "Unknown";
+      ownerId = activity.to;
+      ownerType = "Group";
+
+      // If target is specified, verify it belongs to this group
+      if (activity.target) {
+        if (!activity.target.startsWith("circle:"))
+          return { activity, error: "Invalid target Circle" };
+
+        // Verify the target circle belongs to this group
+        const circleIds = Object.values(group.circles || {});
+        if (!circleIds.includes(activity.target)) {
+          return { activity, error: "Target circle does not belong to this group" };
+        }
+
+        targetCircle = await Circle.findOne({ id: activity.target });
+        if (!targetCircle) return { activity, error: "Target circle not found" };
+      } else {
+        // Default to members circle
+        if (!group.circles?.members) {
+          return { activity, error: "Group members circle not found" };
+        }
+        targetCircle = await Circle.findOne({ id: group.circles.members });
+        if (!targetCircle) return { activity, error: "Group members circle not found" };
+        activity.target = group.circles.members; // Set for downstream code
+      }
+    } else {
+      // Legacy pattern: target = circle ID
+      if (!activity?.target) {
+        return { activity, error: "No target Circle specified" };
+      }
+      if (!activity.target.startsWith("circle:")) {
+        return { activity, error: "Invalid target Circle" };
+      }
+
+      targetCircle = await Circle.findOne({ id: activity.target });
+      if (!targetCircle) {
+        return { activity, error: "Target circle not found" };
+      }
+
+      ownerId = targetCircle?.actorId || "";
+      ownerType = /^event:[^@]+@[^@]+$/.test(ownerId)
+        ? "Event"
+        : /^group:[^@]+@[^@]+$/.test(ownerId)
+        ? "Group"
+        : /^@[^@]+@[^@]+$/.test(ownerId)
+        ? "User"
+        : /^@[^@]+$/.test(ownerId)
+        ? "Server"
+        : "Unknown";
+    }
 
     // ---- Permissions ----
     switch (ownerType) {
@@ -131,10 +168,27 @@ export default async function Remove(activity) {
       }
     );
 
+    let removed = (res.modifiedCount || 0) > 0;
+
+    // If removing from a Group and not found in target circle, try pending circle
+    if (ownerType === "Group" && !removed) {
+      const group = await Group.findOne({ id: ownerId }).select("circles").lean();
+      if (group?.circles?.pending) {
+        const pendingRes = await Circle.updateOne(
+          { id: group.circles.pending, "members.id": activity.object.id },
+          {
+            $pull: { members: { id: activity.object.id } },
+            $inc: { memberCount: -1 },
+          }
+        );
+        removed = (pendingRes.modifiedCount || 0) > 0;
+      }
+    }
+
     return {
       activity,
       circleId: activity.target,
-      removed: (res.modifiedCount || 0) > 0,
+      removed,
       federate: false,
     };
   } catch (err) {

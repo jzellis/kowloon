@@ -2,6 +2,8 @@
 // Flag activities report content for moderation
 
 export default {
+  mirror: null, // Administrative action, no automatic reversal
+
   fields: {
     // Required fields
     actorId: {

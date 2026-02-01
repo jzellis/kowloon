@@ -2,6 +2,8 @@
 // Update activities modify existing objects
 
 export default {
+  mirror: 'Update', // Reverse via another Update with previous state
+
   fields: {
     // Required fields
     actorId: {

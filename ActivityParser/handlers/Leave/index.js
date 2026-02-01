@@ -85,18 +85,18 @@ export default async function Leave(activity) {
     // ========================================================================
     // GROUP LEAVE
     // ========================================================================
-    const { invited, members } = groupDoc;
-    if (!members) {
+    const { circles } = groupDoc;
+    if (!circles?.members) {
       return { activity, error: "Leave: group circles not initialized" };
     }
 
     const ops = await Promise.all([
-      pull(members, activity.actorId),
-      pull(invited, activity.actorId),
+      pull(circles.members, activity.actorId),
+      pull(circles.pending, activity.actorId),
     ]);
 
     if ((ops[0].modifiedCount || 0) > 0) removedFrom.push("members");
-    if ((ops[1].modifiedCount || 0) > 0) removedFrom.push("invited");
+    if ((ops[1].modifiedCount || 0) > 0) removedFrom.push("pending");
 
     activity.objectId = activity.actorId;
 

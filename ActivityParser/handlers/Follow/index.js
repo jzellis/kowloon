@@ -18,20 +18,16 @@ export function validate(activity) {
     errors.push("Follow: missing activity.actorId");
   }
 
-  // Per spec: to (Circle ID) is REQUIRED
-  // Implementation allows falling back to actor.following circle if not provided
-  if (!activity?.to || typeof activity.to !== "string") {
-    errors.push("Follow: missing required field 'to' (Circle ID)");
-  }
+  // to (Circle ID) is optional - will fall back to actor.circles.following if not provided
+  // No validation needed here since the handler has fallback logic
 
-  // Per spec: target (User/Server ID) is REQUIRED
-  // Current implementation uses activity.object, but spec says target
-  // Support both for backward compatibility
+  // object (User/Server ID to follow) is REQUIRED
+  // Support both object and target for backward compatibility
   const hasTarget = (activity?.target && typeof activity.target === "string") ||
                     (activity?.object && typeof activity.object === "string");
 
   if (!hasTarget) {
-    errors.push("Follow: missing required field 'target' (User/Server ID to follow)");
+    errors.push("Follow: missing required field 'object' (User/Server ID to follow)");
   }
 
   return {
@@ -154,12 +150,19 @@ export default async function Follow(activity) {
 
     let targetId = activity.target;
     if (!targetId) {
-      const followingCircle = await Circle.findOne({
-        id: actor.following,
-      });
-      targetId = followingCircle?.id;
+      // Fallback to actor's following circle if not specified
+      targetId = actor.circles?.following;
     }
     if (!targetId) return { activity, error: "Follow: no target circle found" };
+
+    // Verify the actor owns the target circle
+    const targetCircle = await Circle.findOne({ id: targetId }).select("actorId").lean();
+    if (!targetCircle) {
+      return { activity, error: "Follow: target circle not found" };
+    }
+    if (targetCircle.actorId !== activity.actorId) {
+      return { activity, error: "Follow: you can only follow into your own circles" };
+    }
 
     const res = await Circle.updateOne(
       { id: targetId, "members.id": { $ne: member.id } },

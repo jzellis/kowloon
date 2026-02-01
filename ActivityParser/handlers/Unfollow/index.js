@@ -19,20 +19,28 @@ export default async function Unfollow(activity) {
     const actor = await User.findOne({ id: activity.actorId });
     if (!actor) return { activity, error: "Unfollow: actor not found" };
 
-    const member = toMember(actor);
+    // The object is who is being removed from the circle
+    const objectUser = await User.findOne({ id: activity.object });
+    const member = objectUser ? toMember(objectUser) : { id: activity.object };
     if (!member || !member.id)
       return { activity, error: "Unfollow: could not resolve member" };
 
     let targetId = activity.target;
     if (!targetId) {
-      const followingCircle = await Circle.findOne({
-        "owner.id": actor.id,
-        subtype: "Following",
-      });
-      targetId = followingCircle?.id;
+      // Fallback to actor's following circle if not specified
+      targetId = actor.circles?.following;
     }
     if (!targetId)
       return { activity, error: "Unfollow: no target circle found" };
+
+    // Verify the actor owns the target circle
+    const targetCircle = await Circle.findOne({ id: targetId }).select("actorId").lean();
+    if (!targetCircle) {
+      return { activity, error: "Unfollow: target circle not found" };
+    }
+    if (targetCircle.actorId !== activity.actorId) {
+      return { activity, error: "Unfollow: you can only unfollow from your own circles" };
+    }
 
     const res = await Circle.updateOne(
       { id: targetId, "members.id": member.id },

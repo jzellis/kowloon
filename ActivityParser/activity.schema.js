@@ -19,6 +19,7 @@ const toRecipient = {
     { type: "string", pattern: patterns.serverHandle },
     { type: "string", pattern: patterns.circleId },
     { type: "string", pattern: patterns.groupId },
+    { type: "string", pattern: patterns.actorId }, // Allow user IDs (validated by handler to be self-addressed)
   ],
 };
 
@@ -29,6 +30,10 @@ const replyReactRecipient = {
     { type: "string", pattern: patterns.serverHandle },
     { type: "string", pattern: patterns.circleId },
     { type: "string", pattern: patterns.groupId },
+    { type: "string", pattern: patterns.actorId }, // Allow user IDs (validated by handler to be self-addressed)
+    { type: "string", pattern: patterns.postId }, // Allow post IDs for Reply/React targets
+    { type: "string", pattern: patterns.pageId }, // Allow page IDs for Reply/React targets
+    { type: "string", pattern: patterns.bookmarkId }, // Allow bookmark IDs for Reply/React targets
   ],
 };
 
@@ -41,23 +46,22 @@ const schema = {
     id: { type: "string" },
     type: {
       enum: [
-        "Accept",
         "Add",
         "Block",
         "Create",
         "Delete",
         "Flag",
         "Follow",
-        "Invite",
         "Join",
         "Leave",
         "Mute",
         "React",
-        "Reject",
         "Remove",
         "Reply",
+        "Unblock",
         "Undo",
         "Unfollow",
+        "Unmute",
         "Update",
       ],
     },
@@ -77,7 +81,7 @@ const schema = {
     object: {},
     target: { type: "string" },
     summary: { type: "string" },
-    to: toRecipient,
+    to: replyReactRecipient, // Allow both addressing patterns and object IDs (for Reply/React)
     canReply: replyReactRecipient,
     canReact: replyReactRecipient,
   },
@@ -87,6 +91,7 @@ const schema = {
       then: {
         required: ["objectType", "object"],
         properties: {
+          to: toRecipient, // Create activities use standard addressing (not object IDs)
           object: {
             type: "object",
             required: ["type"],
@@ -98,15 +103,33 @@ const schema = {
     {
       if: { properties: { type: { const: "Reply" } } },
       then: {
-        required: ["objectType", "object"],
+        required: ["objectType", "object", "to"],
         properties: {
           objectType: { const: "Post" },
+          to: { type: "string", pattern: patterns.objectId }, // Reply 'to' field must be a post/page/bookmark ID
           object: {
             type: "object",
             required: ["type", "inReplyTo"],
             properties: {
               type: { const: "Reply" },
               inReplyTo: { type: "string", pattern: patterns.objectId },
+            },
+          },
+        },
+      },
+    },
+    {
+      if: { properties: { type: { const: "React" } } },
+      then: {
+        required: ["objectType", "object", "to"],
+        properties: {
+          objectType: { const: "React" },
+          to: { type: "string", pattern: patterns.objectId }, // React 'to' field must be a post/page/bookmark ID
+          object: {
+            type: "object",
+            required: ["type"],
+            properties: {
+              type: { const: "React" },
             },
           },
         },

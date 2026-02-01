@@ -379,12 +379,59 @@ export default async function Create(activity) {
 
       return { activity, created };
     } else {
-      // For everything but User, we need to ensure object.actor is present
-      if (activity.object.actorId && !activity.object.actor)
+      // For everything but User, ensure actorId is set on the object
+      if (!activity.object.actorId) {
+        activity.object.actorId = activity.actorId;
+      }
+
+      // Ensure object.actor is present
+      if (activity.object.actorId && !activity.object.actor) {
         activity.object.actor = activity.actor || {};
+      }
     }
 
     // ---- Generic path for other object types -------------------------------
+    // Transform content field for Post/Reply types
+    // Post/Reply schemas expect source.content, but ActivityStreams uses top-level content
+    if ((type === "Post" || type === "Reply") && activity.object.content) {
+      if (!activity.object.source) {
+        activity.object.source = {};
+      }
+      // Only move content to source if source.content isn't already set
+      if (!activity.object.source.content) {
+        activity.object.source.content = activity.object.content;
+      }
+      // Keep the top-level content for compatibility
+    }
+
+    // Set Post/Reply source defaults
+    if (type === "Post" || type === "Reply") {
+      if (!activity.object.source) {
+        activity.object.source = {};
+      }
+      if (!activity.object.source.mediaType) {
+        activity.object.source.mediaType = "text/html";
+      }
+      if (!activity.object.source.contentEncoding) {
+        activity.object.source.contentEncoding = "utf-8";
+      }
+      if (!activity.object.source.language) {
+        activity.object.source.language = "en";
+      }
+    }
+
+    // Copy addressing from activity level to object level if not already set
+    // ActivityStreams uses activity.to/canReply/canReact, but our models store them on the object
+    if (activity.to !== undefined && (!activity.object.to || activity.object.to === "")) {
+      activity.object.to = activity.to;
+    }
+    if (activity.canReply !== undefined && (!activity.object.canReply || activity.object.canReply === "")) {
+      activity.object.canReply = activity.canReply;
+    }
+    if (activity.canReact !== undefined && (!activity.object.canReact || activity.object.canReact === "")) {
+      activity.object.canReact = activity.canReact;
+    }
+
     // If object.actorId is missing, many models will tolerate it, but your
     // outbox added a fallback already. We leave it as-is here.
     let created = await Model.create(activity.object);
@@ -393,8 +440,15 @@ export default async function Create(activity) {
 
     // Reload the document to ensure all pre-save hook fields are populated
     // (especially id, url, server which are computed in pre-save)
-    // Convert to plain object to access all fields including virtuals
-    created = created.toObject ? created.toObject() : created;
+    // For Groups, we must refetch since pre-save creates circles and those IDs
+    // aren't reflected in the returned document
+    if (type === "Group") {
+      const refetched = await Model.findOne({ id: created.id }).lean();
+      if (refetched) created = refetched;
+    } else {
+      // Convert to plain object to access all fields including virtuals
+      created = created.toObject ? created.toObject() : created;
+    }
 
     // Write to FeedItems for timeline delivery
     await writeFeedItems(created, type);
@@ -408,7 +462,6 @@ export default async function Create(activity) {
     return {
       activity,
       created,
-      result: created,
       federation,
     };
   } catch (err) {

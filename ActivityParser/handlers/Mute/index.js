@@ -17,10 +17,10 @@ export default async function Mute(activity) {
     }
 
     const actor = await User.findOne({ id: activity.actorId })
-      .select("muted")
+      .select("circles.muted")
       .lean();
     if (!actor) return { activity, error: "Mute: actor not found" };
-    if (!actor.muted) {
+    if (!actor.circles?.muted) {
       return { activity, error: "Mute: muted circle not configured" };
     }
 
@@ -48,14 +48,14 @@ export default async function Mute(activity) {
 
     // write to the actor's "muted" circle
     const res = await Circle.updateOne(
-      { id: actor.muted, "members.id": { $ne: member.id } },
+      { id: actor.circles.muted, "members.id": { $ne: member.id } },
       { $push: { members: member }, $inc: { memberCount: 1 } }
     );
     const didAdd = (res.modifiedCount || 0) > 0;
 
     return {
       activity,
-      circleId: actor.muted,
+      circleId: actor.circles.muted,
       muted: didAdd,
       federate: false,
     };

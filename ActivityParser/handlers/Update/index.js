@@ -111,17 +111,12 @@ async function updateFeedItems(updated, objectType, patchFields) {
 
 /**
  * Type-specific validation for Update activities
- * Per specification: objectType REQUIRED, object REQUIRED, target REQUIRED
+ * Per specification: object REQUIRED, target REQUIRED (objectType optional, inferred from target)
  * @param {Object} activity
  * @returns {{ valid: boolean, errors?: string[] }}
  */
 export function validate(activity) {
   const errors = [];
-
-  // Required: objectType
-  if (!activity?.objectType || typeof activity.objectType !== "string") {
-    errors.push("Update: missing required field 'objectType'");
-  }
 
   // Required: object (the patch data)
   if (!activity?.object || typeof activity.object !== "object") {
@@ -133,7 +128,7 @@ export function validate(activity) {
     errors.push("Update: missing required field 'target' (object ID)");
   }
 
-  // Validate objectType is supported
+  // Optional: Validate objectType if provided
   if (activity?.objectType) {
     const Model = MODELS[activity.objectType];
     if (!Model) {
@@ -199,7 +194,7 @@ export default async function Update(activity) {
       previous[k] = current?.[k];
     }
 
-    // Apply patch
+    // Apply patch - body regeneration for Post/Reply handled by schema hook
     const updated =
       (await Model.findOneAndUpdate(
         query,

@@ -2,6 +2,8 @@
 // Create activities create new objects (Posts, Users, Groups, etc.)
 
 export default {
+  mirror: 'Delete',
+
   fields: {
     // Required fields
     actorId: {

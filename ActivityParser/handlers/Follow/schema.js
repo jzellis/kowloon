@@ -2,6 +2,8 @@
 // Follow activities establish following relationships
 
 export default {
+  mirror: 'Unfollow',
+
   fields: {
     // Required fields
     actorId: {

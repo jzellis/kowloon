@@ -2,6 +2,8 @@
 // Remove activities remove users/items from collections
 
 export default {
+  mirror: 'Add',
+
   fields: {
     // Required fields
     actorId: {

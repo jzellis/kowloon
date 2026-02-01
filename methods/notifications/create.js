@@ -2,7 +2,7 @@
 // Notifications alert users about actions that involve them
 
 import { Notification, User } from "#schema";
-import { nanoid } from "nanoid";
+import mongoose from "mongoose";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 /**
@@ -66,9 +66,10 @@ export default async function createNotification(params) {
       }
     }
 
-    // Create notification ID
+    // Create notification ID using MongoDB ObjectId (same pattern as everything else)
     const { domain } = getServerSettings();
-    const notifId = `notif:${nanoid(12)}@${domain}`;
+    const mongoId = new mongoose.Types.ObjectId();
+    const notifId = `notification:${mongoId.toString()}@${domain}`;
 
     // Create notification
     const notification = await Notification.create({

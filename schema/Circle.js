@@ -1,7 +1,6 @@
 import mongoose from "mongoose";
-import { Settings, React, Reply } from "./index.js";
+import { React, Reply } from "./index.js";
 const Schema = mongoose.Schema;
-const ObjectId = mongoose.Types.ObjectId;
 import Member from "./subschema/Member.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
@@ -51,6 +50,31 @@ CircleSchema.pre("save", async function (next) {
   this.reactCount = (await React.find({ target: this.id }).lean()).length;
   this.replyCount = (await Reply.find({ target: this.id }).lean()).length;
   next();
+});
+
+// Update Group's memberCount when a Group's members circle is modified
+CircleSchema.post("updateOne", async function () {
+  try {
+    const query = this.getQuery();
+    const circleId = query.id;
+    if (!circleId) return;
+
+    // Check if this circle belongs to a Group as its members circle
+    // Import Group dynamically to avoid circular dependency
+    const Group = mongoose.model("Group");
+    const group = await Group.findOne({ members: circleId });
+    if (!group) return;
+
+    // Get the updated member count from the circle
+    const Circle = mongoose.model("Circle");
+    const circle = await Circle.findOne({ id: circleId }).select("members").lean();
+    const count = Array.isArray(circle?.members) ? circle.members.length : 0;
+
+    // Update the Group's memberCount
+    await Group.updateOne({ id: group.id }, { $set: { memberCount: count } });
+  } catch (err) {
+    console.error("Circle post-updateOne hook error:", err.message);
+  }
 });
 
 export default mongoose.model("Circle", CircleSchema);

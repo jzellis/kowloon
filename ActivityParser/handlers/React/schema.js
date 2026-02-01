@@ -2,6 +2,8 @@
 // React activities create reactions (emoji responses) to objects
 
 export default {
+  mirror: 'Delete', // Delete the React object to unreact
+
   fields: {
     // Required fields
     actorId: {

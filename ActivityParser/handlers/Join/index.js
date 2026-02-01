@@ -57,9 +57,9 @@ export default async function Join(activity, ctx = {}) {
     }
 
     // Blocked check
-    if (target.blocked) {
+    if (target.circles?.blocked) {
       const isBlocked = await Circle.exists({
-        id: target.blocked,
+        id: target.circles.blocked,
         "members.id": actorId,
       });
       if (isBlocked)
@@ -70,53 +70,50 @@ export default async function Join(activity, ctx = {}) {
     }
 
     // Policy
-    const policy = target.rsvpPolicy || "invite_only";
+    const policy = target.rsvpPolicy || "open";
 
-    if (policy === "invite_only") {
-      const invitedCircle = target.invited;
-      if (!invitedCircle) {
+    if (policy === "approval") {
+      // Add to pending circle for admin approval
+      const pendingCircle = target.circles?.pending;
+      if (!pendingCircle) {
         return {
           activity,
-          error: "Join: invite required (group is invite_only)",
+          error: "Join: approval pending queue not configured for this group",
         };
       }
-      const invited = await Circle.exists({
-        id: invitedCircle,
-        "members.id": actorId,
-      });
-      if (!invited) {
-        return {
-          activity,
-          error: "Join: invite required (group is invite_only)",
-        };
-      }
-    } else if (policy === "approval") {
-      // enqueue request/pending
-      const pendingCircle = target.requests;
-      if (pendingCircle) {
-        await Circle.updateOne(
-          { id: pendingCircle, "members.id": { $ne: actorId } },
-          { $push: { members: { id: actorId } }, $inc: { memberCount: 1 } }
-        );
 
-        const result = { type: "Group", status: "pending" };
-        const federation = await getFederationTargets(activity, result);
+      // Build member object (light enrichment if local user exists)
+      const u = await User.findOne({ id: actorId }).lean();
+      const member = u
+        ? {
+            id: u.id,
+            name: u?.profile?.name,
+            icon: u?.profile?.icon,
+            url: u?.url,
+            inbox: u?.inbox,
+            outbox: u?.outbox,
+            server: u?.server,
+          }
+        : { id: actorId };
 
-        return {
-          activity,
-          created: result,
-          result,
-          federation,
-        };
-      }
+      await Circle.updateOne(
+        { id: pendingCircle, "members.id": { $ne: actorId } },
+        { $push: { members: member }, $inc: { memberCount: 1 } }
+      );
+
+      const result = { type: "Group", status: "pending" };
+      const federation = await getFederationTargets(activity, result);
+
       return {
         activity,
-        error: "Join: approval pending queue not configured for this group",
+        created: result,
+        result,
+        federation,
       };
     } else if (policy !== "open") {
       return { activity, error: `Join: unsupported policy "${policy}"` };
     }
-    // Proceed for open and invite_only
+    // Proceed for open policy
 
     // Build member object (light enrichment if local user exists)
     const u = await User.findOne({ id: actorId }).lean();
@@ -132,7 +129,7 @@ export default async function Join(activity, ctx = {}) {
         }
       : { id: actorId };
 
-    const destCircle = target.members;
+    const destCircle = target.circles?.members;
     if (!destCircle) {
       return {
         activity,

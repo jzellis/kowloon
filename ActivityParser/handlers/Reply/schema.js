@@ -2,6 +2,8 @@
 // Reply activities create reply posts to existing objects
 
 export default {
+  mirror: 'Delete', // Delete the Reply post to remove it
+
   fields: {
     // Required fields
     actorId: {

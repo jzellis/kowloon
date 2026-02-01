@@ -2,6 +2,8 @@
 // Upload activities handle file uploads
 
 export default {
+  mirror: 'Delete', // Delete the uploaded object to remove it
+
   fields: {
     // Required fields
     actorId: {

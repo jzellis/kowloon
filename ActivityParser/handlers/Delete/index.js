@@ -118,12 +118,12 @@ export default async function Delete(activity) {
     const deleted =
       (await Model.findOneAndUpdate(
         query,
-        { $set: { deletedAt: new Date(), deletedBy: activity.actorId } },
+        { $set: { deletedAt: new Date(), deletedBy: activity.actorId, type: "Tombstone" } },
         { new: true }
       ).lean?.()) ??
       (await Model.findOneAndUpdate(
         query,
-        { $set: { deletedAt: new Date(), deletedBy: activity.actorId } },
+        { $set: { deletedAt: new Date(), deletedBy: activity.actorId, type: "Tombstone" } },
         { new: true }
       ));
 

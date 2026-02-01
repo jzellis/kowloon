@@ -9,12 +9,11 @@ export default async function (actorId) {
     "id username profile following blocked muted lastLogin"
   );
 
-  let blocked = (
-    await Circle.findOne({ id: user.blocked }).select("members")
-  ).members.map((m) => m.id);
-  let muted = (
-    await Circle.findOne({ id: user.muted }).select("members")
-  ).members.map((m) => m.id);
+  const blockedCircle = await Circle.findOne({ id: user.blocked }).select("members");
+  let blocked = blockedCircle?.members?.map((m) => m.id) || [];
+
+  const mutedCircle = await Circle.findOne({ id: user.muted }).select("members");
+  let muted = mutedCircle?.members?.map((m) => m.id) || [];
 
   let data = {
     user: {

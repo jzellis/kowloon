@@ -23,6 +23,7 @@ const PostSchema = new Schema(
       content: { type: String, default: "" }, // The raw content of the post -- plain text, HTML or Markdown
       mediaType: { type: String, default: "text/html" },
       contentEncoding: { type: String, default: "utf-8" },
+      language: { type: String, default: "en" },
     },
     body: { type: String, default: "" },
     wordCount: { type: Number, default: 0 },
@@ -72,6 +73,22 @@ PostSchema.virtual("attachmentFiles", {
   foreignField: "id",
 });
 
+// Helper function to generate body from source.content
+function generateBody(source) {
+  if (!source || !source.content) return "";
+
+  const mediaType = source.mediaType || "text/html";
+
+  switch (mediaType) {
+    case "text/markdown":
+      return `<p>${marked(source.content)}</p>`;
+    case "text/html":
+      return source.content;
+    default:
+      return `<p>${source.content.replace(/(?:\r\n|\r|\n)/g, "</p><p>")}</p>`;
+  }
+}
+
 PostSchema.pre("save", async function (next) {
   try {
     const { domain, actorId } = getServerSettings();
@@ -81,20 +98,8 @@ PostSchema.pre("save", async function (next) {
     this.server = this.server || actorId;
     this.source.mediaType = this.source.mediaType || "text/html";
 
-    switch (this.source.mediaType) {
-      case "text/markdown":
-        this.body = `<p>${marked(this.source.content)}</p>`;
-        break;
-      case "text/html":
-        this.body = this.source.content;
-        break;
-      default:
-        this.body = `<p>${this.source.content.replace(
-          /(?:\r\n|\r|\n)/g,
-          "</p><p>"
-        )}</p>`;
-        break;
-    }
+    // Generate body from source
+    this.body = generateBody(this.source);
     this.wordCount =
       this.wordCount ||
       this.body
@@ -160,6 +165,26 @@ PostSchema.pre("updateOne", async function (next) {
   this.charCount = this.charCount || this.body.replace(/<[^>]*>/g, "").length;
 
   let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
+
+  next();
+});
+
+// Hook for findOneAndUpdate - regenerate body when source.content is updated
+PostSchema.pre("findOneAndUpdate", async function (next) {
+  const update = this.getUpdate();
+
+  // Check if source.content is being updated
+  if (update?.$set?.source?.content) {
+    // Get the current document to merge source fields
+    const currentDoc = await this.model.findOne(this.getQuery()).lean();
+    const newSource = {
+      ...(currentDoc?.source || {}),
+      ...update.$set.source,
+    };
+
+    // Regenerate body from the merged source
+    update.$set.body = generateBody(newSource);
+  }
 
   next();
 });

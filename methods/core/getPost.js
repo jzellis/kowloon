@@ -1,5 +1,5 @@
 // /methods/core/getPost.js
-// Get a post (local or remote) - works for Note, Article, Link, Event, etc.
+// Get a post (local or remote) - works for Note, Article, Link, etc.
 
 import getObjectById from "#methods/core/getObjectById.js";
 

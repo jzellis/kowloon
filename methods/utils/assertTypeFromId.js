@@ -4,7 +4,7 @@
  * Other objects:   objecttype:uuid@domain
  */
 
-/** Return the canonical type for a Kowloon ID ("User", "Post", "Event", ...). */
+/** Return the canonical type for a Kowloon ID ("User", "Post", "Group", ...). */
 export function getTypeFromId(id) {
   if (typeof id !== "string" || !id.includes("@")) {
     throw new Error(`Invalid Kowloon ID: ${id}`);

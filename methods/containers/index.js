@@ -1,14 +1,13 @@
 // /methods/containers/index.js
-// Unified interface for Circle/Group/Event container operations
+// Unified interface for Circle/Group container operations
 
 import * as circles from "./circles.js";
 import * as groups from "./groups.js";
-import * as events from "./events.js";
-import { Circle, Group, Event } from "#schema";
+import { Circle, Group } from "#schema";
 
 /**
- * Get members from any container type (Circle, Group, or Event)
- * @param {string} containerId - Container ID (circle:*, group:*, or event:*)
+ * Get members from any container type (Circle or Group)
+ * @param {string} containerId - Container ID (circle:* or group:*)
  * @returns {Promise<Array<{id: string, name?: string, icon?: string}>>}
  */
 export async function getMembers(containerId) {
@@ -18,8 +17,6 @@ export async function getMembers(containerId) {
     return circles.getMembers(containerId);
   } else if (containerId.startsWith("group:")) {
     return groups.getMembers(containerId);
-  } else if (containerId.startsWith("event:")) {
-    return events.getMembers(containerId);
   }
 
   return [];
@@ -37,8 +34,6 @@ export async function getMemberIds(containerId) {
     return circles.getMemberIds(containerId);
   } else if (containerId.startsWith("group:")) {
     return groups.getMemberIds(containerId);
-  } else if (containerId.startsWith("event:")) {
-    return events.getMemberIds(containerId);
   }
 
   return [];
@@ -56,8 +51,6 @@ export async function getServerDomains(containerId) {
     return circles.getServerDomains(containerId);
   } else if (containerId.startsWith("group:")) {
     return groups.getServerDomains(containerId);
-  } else if (containerId.startsWith("event:")) {
-    return events.getServerDomains(containerId);
   }
 
   return [];
@@ -76,8 +69,6 @@ export async function isMember(containerId, userId) {
     return circles.isMember(containerId, userId);
   } else if (containerId.startsWith("group:")) {
     return groups.isMember(containerId, userId);
-  } else if (containerId.startsWith("event:")) {
-    return events.isMember(containerId, userId);
   }
 
   return false;
@@ -95,15 +86,13 @@ export async function getContainer(containerId) {
     return Circle.findOne({ id: containerId }).lean();
   } else if (containerId.startsWith("group:")) {
     return Group.findOne({ id: containerId }).lean();
-  } else if (containerId.startsWith("event:")) {
-    return Event.findOne({ id: containerId }).lean();
   }
 
   return null;
 }
 
 // Export type-specific utilities
-export { circles, groups, events };
+export { circles, groups };
 
 export default {
   getMembers,
@@ -113,5 +102,4 @@ export default {
   getContainer,
   circles,
   groups,
-  events,
 };

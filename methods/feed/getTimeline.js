@@ -4,7 +4,7 @@
 // Key principles:
 // - Circle ID is ALWAYS required (no default timeline)
 // - Pulls from Circle members only (scoped by user's choice)
-// - Also includes user's Groups/Events (regardless of Circle)
+// - Also includes user's Groups (regardless of Circle)
 // - Uses pullFromRemote() for remote content
 // - Queries FeedItems directly for public/server posts (no Feed LUT needed)
 
@@ -55,14 +55,13 @@ async function getBlockedMutedUsers(viewerId) {
 }
 
 /**
- * Get user's group and event memberships
+ * Get user's group memberships
  */
-async function getUserGroupsEvents(viewerId) {
+async function getUserGroups(viewerId) {
   const user = await User.findOne({ id: viewerId }).select("circles").lean();
-  if (!user) return { groups: [], events: [] };
+  if (!user) return [];
 
   const groups = [];
-  const events = [];
 
   // Get groups from user's groups Circle
   if (user.circles?.groups) {
@@ -72,10 +71,7 @@ async function getUserGroupsEvents(viewerId) {
     }
   }
 
-  // Events are no longer in a separate circle - they're just Posts with type: "Event"
-  // No need to fetch events separately
-
-  return { groups, events };
+  return groups;
 }
 
 /**
@@ -140,15 +136,13 @@ export default async function getTimeline({
     }
   }
 
-  // 3. Get viewer's groups/events (for additional content)
-  const { groups, events } = await getUserGroupsEvents(viewerId);
+  // 3. Get viewer's groups (for additional content)
+  const groups = await getUserGroups(viewerId);
 
-  // Separate local vs remote groups/events
+  // Separate local vs remote groups
   const localGroups = groups.filter((g) => extractDomain(g) === ourDomain);
-  const localEvents = events.filter((e) => extractDomain(e) === ourDomain);
 
   const remoteGroupsByDomain = new Map();
-  const remoteEventsByDomain = new Map();
 
   groups.filter((g) => extractDomain(g) !== ourDomain).forEach((g) => {
     const domain = extractDomain(g);
@@ -158,28 +152,18 @@ export default async function getTimeline({
     remoteGroupsByDomain.get(domain).push(g);
   });
 
-  events.filter((e) => extractDomain(e) !== ourDomain).forEach((e) => {
-    const domain = extractDomain(e);
-    if (!remoteEventsByDomain.has(domain)) {
-      remoteEventsByDomain.set(domain, []);
-    }
-    remoteEventsByDomain.get(domain).push(e);
-  });
-
   // 4. Pull from remote servers
   // Lazy-load Kowloon to avoid circular dependency during module initialization
   const Kowloon = (await import("#kowloon")).default;
 
   for (const [remoteDomain, remoteAuthors] of remoteMembersByDomain.entries()) {
     const remoteGroups = remoteGroupsByDomain.get(remoteDomain) || [];
-    const remoteEvents = remoteEventsByDomain.get(remoteDomain) || [];
 
     await Kowloon.federation.pullFromRemote({
       remoteDomain,
       authors: remoteAuthors, // People in this Circle
       members: [viewerId], // For Circle-addressed content
       groups: remoteGroups, // Groups viewer is in
-      events: remoteEvents, // Events viewer attends
       types,
       since,
       limit,
@@ -215,13 +199,6 @@ export default async function getTimeline({
   if (localGroups.length > 0) {
     orConditions.push({
       group: { $in: localGroups },
-    });
-  }
-
-  // Add local events
-  if (localEvents.length > 0) {
-    orConditions.push({
-      event: { $in: localEvents },
     });
   }
 

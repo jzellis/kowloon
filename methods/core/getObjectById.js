@@ -87,7 +87,6 @@ function modelFor(type, models) {
       Activity: "/activities",
       Post: "/posts",
       Reply: "/replies",
-      Event: "/events",
       Group: "/groups",
       Circle: "/circles",
       File: "/files",

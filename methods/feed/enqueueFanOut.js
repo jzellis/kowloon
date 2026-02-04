@@ -16,7 +16,7 @@ function generateDedupeHash(feedCacheId) {
 }
 
 /**
- * Extract LOCAL circle/group/event IDs from audience strings
+ * Extract LOCAL circle/group IDs from audience strings
  * @param {string} to - Audience "to" field
  * @param {string} canReply - Audience "canReply" field
  * @param {string} canReact - Audience "canReact" field
@@ -35,8 +35,7 @@ function extractAddressedIds(to, canReply, canReact) {
   const ids = allTokens.filter(
     (token) =>
       token.startsWith("circle:") ||
-      token.startsWith("group:") ||
-      token.startsWith("event:")
+      token.startsWith("group:")
   );
 
   // Filter to LOCAL IDs only (same domain)
@@ -53,7 +52,7 @@ function extractAddressedIds(to, canReply, canReact) {
  * Enqueue a feed fan-out job for a FeedItems entry
  * @param {Object} options
  * @param {string} options.feedCacheId - The FeedItems.id to fan out
- * @param {string} options.objectType - The object type (Post/Reply/Event/etc)
+ * @param {string} options.objectType - The object type (Post/Reply/Page/etc)
  * @param {string} options.actorId - The author/creator
  * @param {Object} options.audience - Audience snapshot { to, canReply, canReact }
  * @returns {Promise<Object>} The created fan-out job
@@ -105,7 +104,7 @@ export default async function enqueueFeedFanOut({
       to: audience.to || "public",
       canReply: audience.canReply || "public",
       canReact: audience.canReact || "public",
-      addressedIds, // LOCAL circle/group/event IDs only
+      addressedIds, // LOCAL circle/group IDs only
     },
     dedupeHash,
     attempts: 0,

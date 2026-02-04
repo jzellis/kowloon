@@ -5,7 +5,7 @@ const FlagSchema = new mongoose.Schema(
   {
     id: { type: String, unique: true }, // "flag:<dbid>@host"
     target: { type: String, index: true, required: true }, // object id being flagged
-    targetType: { type: String, index: true }, // "Post" | "Reply" | "Event" | ...
+    targetType: { type: String, index: true }, // "Post" | "Reply" | "Page" | ...
     targetActorId: { type: String }, // original author
     reason: { type: Object, required: true }, // validated against Settings
     notes: { type: String }, // optional user-provided context

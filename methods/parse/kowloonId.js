@@ -19,7 +19,6 @@ function cap(s) {
 
 const TYPE_MAP = {
   post: "Post",
-  event: "Event",
   reply: "Reply",
   react: "React",
   group: "Group",

@@ -39,7 +39,6 @@ async function buildPullParamsForServer(remoteDomain) {
     authors: new Set(),
     members: new Set(),
     groups: new Set(),
-    events: new Set(),
   };
 
   // Get all local users
@@ -86,15 +85,12 @@ async function buildPullParamsForServer(remoteDomain) {
       }
     }
 
-    // Events are now just Posts with type: "Event"
-    // No separate events circle needed - they appear in timeline like any other post
   }
 
   return {
     authors: Array.from(aggregated.authors),
     members: Array.from(aggregated.members),
     groups: Array.from(aggregated.groups),
-    events: Array.from(aggregated.events),
   };
 }
 
@@ -127,8 +123,7 @@ async function processBatch() {
       if (
         params.authors.length === 0 &&
         params.members.length === 0 &&
-        params.groups.length === 0 &&
-        params.events.length === 0
+        params.groups.length === 0
       ) {
         logger.info(`federationPull: No local interest in ${remoteDomain}`);
 
@@ -152,7 +147,6 @@ async function processBatch() {
         authors: params.authors,
         members: params.members,
         groups: params.groups,
-        events: params.events,
         since: server.lastPulledAt, // Only get items since last pull
         limit: 100,
         createFeedLUT: true, // Create Feed entries for all relevant members

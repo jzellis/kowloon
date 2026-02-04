@@ -2,7 +2,7 @@
 // Visibility and capability evaluators for FeedItems items
 // Used by all GET endpoints to determine what viewers can see and do
 
-import { Circle, Group, Event } from "#schema";
+import { Circle, Group } from "#schema";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 /**
@@ -40,7 +40,7 @@ export async function canView(feedCacheItem, viewerId, context = {}) {
     if (!viewerId) return false; // Anonymous can't see audience-only
 
     if (origin === "local") {
-      // Local: check if viewer is in addressed circles/groups/events
+      // Local: check if viewer is in addressed circles/groups
       // This requires addressedIds which aren't stored in FeedItems
       // We need to parse from the original audience field or use Feed fan-out
       // For now, fall back to checking membership
@@ -116,8 +116,8 @@ export function follows(viewerId, authorId, followerMap) {
 }
 
 /**
- * Build membership map for circles/groups/events
- * @param {string[]} objectIds - Circle/Group/Event IDs
+ * Build membership map for circles/groups
+ * @param {string[]} objectIds - Circle/Group IDs
  * @returns {Promise<Map<string, Set<string>>>}
  */
 export async function buildMembershipMap(objectIds) {
@@ -128,17 +128,15 @@ export async function buildMembershipMap(objectIds) {
   // Group by type
   const circleIds = objectIds.filter((id) => id.startsWith("circle:"));
   const groupIds = objectIds.filter((id) => id.startsWith("group:"));
-  const eventIds = objectIds.filter((id) => id.startsWith("event:"));
 
   // Batch fetch
-  const [circles, groups, events] = await Promise.all([
+  const [circles, groups] = await Promise.all([
     circleIds.length > 0 ? Circle.find({ id: { $in: circleIds } }).lean() : [],
     groupIds.length > 0 ? Group.find({ id: { $in: groupIds } }).lean() : [],
-    eventIds.length > 0 ? Event.find({ id: { $in: eventIds } }).lean() : [],
   ]);
 
   // Build map
-  for (const obj of [...circles, ...groups, ...events]) {
+  for (const obj of [...circles, ...groups]) {
     const memberIds = (obj.members || []).map((m) => m.id).filter(Boolean);
     membershipMap.set(obj.id, new Set(memberIds));
   }
@@ -149,7 +147,7 @@ export async function buildMembershipMap(objectIds) {
 /**
  * Check if viewer is in local audience
  * @param {string} viewerId - The viewer
- * @param {string[]} addressedIds - LOCAL circle/group/event IDs
+ * @param {string[]} addressedIds - LOCAL circle/group IDs
  * @param {Map<string, Set<string>>} membershipMap - Pre-built membership map
  * @returns {boolean}
  */
@@ -211,7 +209,7 @@ export function evaluateCapability({
       // Remote: use grants/token only (never resolve circles)
       return Boolean(grants[viewerId]);
     } else {
-      // Local: check if viewer is in addressed circles/groups/events
+      // Local: check if viewer is in addressed circles/groups
       return inLocalAudience(viewerId, addressedIds, membershipMap);
     }
   }

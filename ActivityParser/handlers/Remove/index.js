@@ -1,12 +1,11 @@
 // /ActivityParser/handlers/Remove/index.js
-import { Event, Group, Circle, User } from "#schema";
+import { Group, Circle, User } from "#schema";
 import getObjectById from "#methods/core/getObjectById.js";
 import getSettings from "#methods/settings/get.js";
 import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import isServerMod from "#methods/auth/isServerMod.js";
 import isGroupAdmin from "#methods/groups/isAdmin.js";
 import toMember from "#methods/parse/toMember.js";
-import isEventAdmin from "#methods/events/isEventAdmin.js";
 
 export default async function Remove(activity) {
   try {
@@ -64,9 +63,7 @@ export default async function Remove(activity) {
       }
 
       ownerId = targetCircle?.actorId || "";
-      ownerType = /^event:[^@]+@[^@]+$/.test(ownerId)
-        ? "Event"
-        : /^group:[^@]+@[^@]+$/.test(ownerId)
+      ownerType = /^group:[^@]+@[^@]+$/.test(ownerId)
         ? "Group"
         : /^@[^@]+@[^@]+$/.test(ownerId)
         ? "User"
@@ -105,12 +102,6 @@ export default async function Remove(activity) {
       case "Group": {
         if (!(await isGroupAdmin(activity.actorId, targetCircle.actorId))) {
           return { activity, error: "You are not a group admin" };
-        }
-        break;
-      }
-      case "Event": {
-        if (!(await isEventAdmin(activity.actorId, targetCircle.actorId))) {
-          return { activity, error: "You are not a event admin" };
         }
         break;
       }

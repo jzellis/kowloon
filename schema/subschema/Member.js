@@ -2,7 +2,7 @@
 import mongoose from "mongoose";
 const { Schema } = mongoose;
 
-// Base member fields used across Circle, Group, Event, etc.
+// Base member fields used across Circle and Group.
 const MemberSchema = new Schema(
   {
     id: { type: String, required: true }, // @user@domain

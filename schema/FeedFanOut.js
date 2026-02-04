@@ -9,7 +9,7 @@ const FeedFanOutSchema = new Schema(
   {
     // Source object to fan out
     feedCacheId: { type: String, required: true, index: true }, // FeedItems.id
-    objectType: { type: String, required: true }, // Post/Reply/Event/etc
+    objectType: { type: String, required: true }, // Post/Reply/Page/etc
     actorId: { type: String, required: true, index: true }, // author
 
     // Job status
@@ -25,7 +25,7 @@ const FeedFanOutSchema = new Schema(
       to: { type: String }, // original "to" value
       canReply: { type: String }, // original canReply
       canReact: { type: String }, // original canReact
-      addressedIds: { type: [String], default: [] }, // LOCAL circle/group/event IDs only
+      addressedIds: { type: [String], default: [] }, // LOCAL circle/group IDs only
     },
 
     // Fan-out results

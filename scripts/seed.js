@@ -19,7 +19,6 @@ const RUN_ID = (args.runId && String(args.runId)) || `seed_${Date.now()}`;
 const COUNTS = {
   users: args.users ?? 20,
   groups: args.groups ?? 6,
-  events: args.events ?? 8,
   circles: args.circles ?? 8,
   pageFolders: args.pageFolders ?? 6,
   pages: args.pages ?? 30,
@@ -70,29 +69,28 @@ const toMember = (u, fallbackServer) => ({
   server: u.server || fallbackServer,
 });
 
-// Single-recipient addressing: one of "@public", "@<server>", or one Circle/Group/Event ID
-function pickSingleAddress({ domain, circles = [], groups = [], events = [] }) {
+// Single-recipient addressing: one of "@public", "@<server>", or one Circle/Group ID
+function pickSingleAddress({ domain, circles = [], groups = [] }) {
   const r = Math.random();
   if (r < 0.7) return "@public"; // 70% public
   if (r < 0.85) return `@${domain}`; // 15% server-addressed
   const pools = [
     ...circles.map((c) => c.id),
     ...groups.map((g) => g.id),
-    ...events.map((e) => e.id),
   ];
   return pools.length ? randEl(pools) : "@public"; // 15% scoped
 }
 
-function addressingTriple({ domain, circles, groups, events }) {
-  const to = pickSingleAddress({ domain, circles, groups, events });
+function addressingTriple({ domain, circles, groups }) {
+  const to = pickSingleAddress({ domain, circles, groups });
   const canReply =
     Math.random() < 0.9
       ? to
-      : pickSingleAddress({ domain, circles, groups, events });
+      : pickSingleAddress({ domain, circles, groups });
   const canReact =
     Math.random() < 0.9
       ? to
-      : pickSingleAddress({ domain, circles, groups, events });
+      : pickSingleAddress({ domain, circles, groups });
   return { to, canReply, canReact };
 }
 
@@ -119,7 +117,6 @@ async function main() {
     React,
     Page,
     Bookmark,
-    Event,
     Group,
     Circle,
   } = Models;
@@ -130,7 +127,6 @@ async function main() {
     await Promise.all([
       User.deleteMany({ "meta.runId": args.runId }),
       Group.deleteMany({ "meta.runId": args.runId }),
-      Event.deleteMany({ "meta.runId": args.runId }),
       Circle.deleteMany({ "meta.runId": args.runId }),
       Page.deleteMany({ "meta.runId": args.runId }),
       Bookmark.deleteMany({ "meta.runId": args.runId }),
@@ -172,7 +168,6 @@ async function main() {
   // Declare containers up-front (avoid TDZ)
   const users = [];
   const groups = [];
-  const events = [];
   const circles = [];
   const pageFolders = [];
   const pages = [];
@@ -233,36 +228,11 @@ async function main() {
     groups.push(g);
   }
 
-  // ========== 3) EVENTS ==========
-  console.log(`→ Creating ${COUNTS.events} Events...`);
-  for (let i = 0; i < COUNTS.events; i++) {
-    const creator = randEl(users);
-    const start = faker.date.soon({ days: 90 });
-    const end = new Date(
-      start.getTime() + 1000 * 60 * (60 + Math.floor(Math.random() * 240))
-    ); // 1-5 hrs
-    const evAddr = addressingTriple({ domain, circles, groups, events: [] });
-
-    const e = await Event.create({
-      actorId: creator.id,
-      title: faker.company.catchPhrase(),
-      description: shortText(400),
-      startTime: start.toISOString(),
-      endTime: end.toISOString(),
-      location: makeGeoPoint(faker.company.name()), // GeoPoint
-      to: evAddr.to,
-      canReply: evAddr.canReply,
-      canReact: evAddr.canReact,
-      meta: { runId: RUN_ID },
-    });
-    events.push(e);
-  }
-
-  // ========== 4) CIRCLES ==========
+  // ========== 3) CIRCLES ==========
   console.log(`→ Creating ${COUNTS.circles} Circles...`);
   for (let i = 0; i < COUNTS.circles; i++) {
     const owner = randEl(users);
-    const cAddr = addressingTriple({ domain, circles: [], groups, events });
+    const cAddr = addressingTriple({ domain, circles: [], groups });
 
     const pool = users.filter((u) => u.id !== owner.id);
     const picked = randSubset(pool, Math.min(12, pool.length));
@@ -285,7 +255,7 @@ async function main() {
     circles.push(c);
   }
 
-  // ========== 5) PAGE FOLDERS ==========
+  // ========== 4) PAGE FOLDERS ==========
   console.log(`→ Creating ${COUNTS.pageFolders} Page folders...`);
   for (let i = 0; i < COUNTS.pageFolders; i++) {
     const owner = randEl(users);
@@ -299,7 +269,7 @@ async function main() {
     pageFolders.push(folder);
   }
 
-  // ========== 6) PAGES ==========
+  // ========== 5) PAGES ==========
   console.log(`→ Creating ${COUNTS.pages} Pages...`);
   for (let i = 0; i < COUNTS.pages; i++) {
     const owner = randEl(users);
@@ -310,7 +280,6 @@ async function main() {
       domain,
       circles,
       groups,
-      events,
     });
 
     const p = await Page.create({
@@ -328,7 +297,7 @@ async function main() {
     pages.push(p);
   }
 
-  // ========== 7) BOOKMARK FOLDERS ==========
+  // ========== 6) BOOKMARK FOLDERS ==========
   console.log(`→ Creating ${COUNTS.bookmarkFolders} Bookmark folders...`);
   for (let i = 0; i < COUNTS.bookmarkFolders; i++) {
     const owner = randEl(users);
@@ -343,7 +312,7 @@ async function main() {
     bookmarkFolders.push(folder);
   }
 
-  // ========== 8) BOOKMARKS ==========
+  // ========== 7) BOOKMARKS ==========
   console.log(`→ Creating ${COUNTS.bookmarks} Bookmarks...`);
   for (let i = 0; i < COUNTS.bookmarks; i++) {
     const owner = randEl(users);
@@ -375,7 +344,7 @@ async function main() {
     bookmarks.push(b);
   }
 
-  // ========== 9) POSTS ==========
+  // ========== 8) POSTS ==========
   console.log(
     `→ Creating ${COUNTS.posts} Posts (Note/Article/Link; no Media)...`
   );
@@ -387,7 +356,6 @@ async function main() {
       domain,
       circles,
       groups,
-      events,
     });
 
     const base = {
@@ -419,7 +387,7 @@ async function main() {
     posts.push(p);
   }
 
-  // ========== 10) REPLIES ==========
+  // ========== 9) REPLIES ==========
   console.log(`→ Creating ${COUNTS.replies} Replies...`);
   const replyTargets = [...posts, ...pages];
   for (let i = 0; i < COUNTS.replies; i++) {
@@ -439,7 +407,7 @@ async function main() {
     replies.push(r);
   }
 
-  // ========== 11) REACTS ==========
+  // ========== 10) REACTS ==========
   console.log(
     `→ Creating ${COUNTS.reacts} Reacts (using Settings.likeEmojis)...`
   );
@@ -467,7 +435,6 @@ async function main() {
     runId: RUN_ID,
     Users: users.length,
     Groups: groups.length,
-    Events: events.length,
     Circles: circles.length,
     "Page Folders": pageFolders.length,
     Pages: pages.length,

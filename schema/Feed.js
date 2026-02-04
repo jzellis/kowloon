@@ -23,7 +23,6 @@ const FeedSchema = new Schema(
       enum: [
         "Post",
         "Reply",
-        "Event",
         "Page",
         "Bookmark",
         "File",

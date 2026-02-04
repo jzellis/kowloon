@@ -1,6 +1,6 @@
 // /methods/feed/queryItems.js
 // Unified query builder for FeedItems - works for both local and federation queries
-import { FeedItems, Circle, Group, Event } from "#schema";
+import { FeedItems, Circle, Group } from "#schema";
 import logger from "#methods/utils/logger.js";
 
 /**
@@ -10,7 +10,6 @@ import logger from "#methods/utils/logger.js";
  * @param {string[]} [options.members] - Server A user IDs to filter for (items visible to these users)
  * @param {string[]} [options.authors] - Author IDs - return PUBLIC items by these authors
  * @param {string[]} [options.groups] - Group IDs - return items addressed to these groups (if public or members present)
- * @param {string[]} [options.events] - Event IDs - return items addressed to these events (if public or attendees present)
  * @param {string[]} [options.types] - Post types to filter by (Note, Article, etc.)
  * @param {string|Date} [options.since] - Return items published/updated after this timestamp
  * @param {number} [options.limit=50] - Max items to return
@@ -21,7 +20,6 @@ export default async function queryItems({
   members = [],
   authors = [],
   groups = [],
-  events = [],
   types = [],
   since,
   limit = 50,
@@ -31,13 +29,12 @@ export default async function queryItems({
   const memberIds = Array.isArray(members) ? members : members ? [members] : [];
   const authorIds = Array.isArray(authors) ? authors : authors ? [authors] : [];
   const groupIds = Array.isArray(groups) ? groups : groups ? [groups] : [];
-  const eventIds = Array.isArray(events) ? events : events ? [events] : [];
   const typeIds = Array.isArray(types) ? types : types ? [types] : [];
 
   // Build OR conditions
   const orConditions = [];
 
-  // 1. Items addressed to Groups/Events/Circles containing specified members
+  // 1. Items addressed to Groups/Circles containing specified members
   if (memberIds.length > 0) {
     const memberCondition = await buildMemberVisibilityCondition(memberIds, requestingDomain);
     if (memberCondition) orConditions.push(memberCondition);
@@ -57,15 +54,9 @@ export default async function queryItems({
     if (groupCondition) orConditions.push(groupCondition);
   }
 
-  // 4. Items addressed to specified events (if public or attendees present)
-  if (eventIds.length > 0) {
-    const eventCondition = await buildEventCondition(eventIds, requestingDomain);
-    if (eventCondition) orConditions.push(eventCondition);
-  }
-
   // If no conditions, return empty
   if (orConditions.length === 0) {
-    logger.warn("queryItems: No valid query conditions", { members, authors, groups, events });
+    logger.warn("queryItems: No valid query conditions", { members, authors, groups });
     return [];
   }
 
@@ -94,7 +85,7 @@ export default async function queryItems({
 
   logger.info("queryItems: Retrieved items", {
     count: items.length,
-    filters: { members: memberIds.length, authors: authorIds.length, groups: groupIds.length, events: eventIds.length },
+    filters: { members: memberIds.length, authors: authorIds.length, groups: groupIds.length },
   });
 
   return items;
@@ -102,7 +93,7 @@ export default async function queryItems({
 
 /**
  * Build condition for items visible to specific members
- * Returns items addressed to Groups/Events/Circles that contain these members
+ * Returns items addressed to Groups/Circles that contain these members
  */
 async function buildMemberVisibilityCondition(memberIds, requestingDomain) {
   // Find all Groups where any of these members are in the members Circle
@@ -130,46 +121,10 @@ async function buildMemberVisibilityCondition(memberIds, requestingDomain) {
     }
   }
 
-  // Find all Events where any of these members are attending
-  const events = await Event.find({ deletedAt: null })
-    .select("id attending")
-    .lean();
+  // Build condition: items addressed to these groups
+  if (groupsWithMembers.length === 0) return null;
 
-  const eventsWithAttendees = [];
-  for (const event of events) {
-    if (!event.attending) continue;
-
-    const attendingCircle = await Circle.findOne({ id: event.attending })
-      .select("members")
-      .lean();
-
-    if (!attendingCircle?.members) continue;
-
-    // Check if any requested member is attending this event
-    const hasRequestedAttendee = attendingCircle.members.some(m =>
-      memberIds.includes(m.id)
-    );
-
-    if (hasRequestedAttendee) {
-      eventsWithAttendees.push(event.id);
-    }
-  }
-
-  // Build condition: items addressed to these groups or events
-  const conditions = [];
-
-  if (groupsWithMembers.length > 0) {
-    conditions.push({ group: { $in: groupsWithMembers } });
-  }
-
-  if (eventsWithAttendees.length > 0) {
-    conditions.push({ event: { $in: eventsWithAttendees } });
-  }
-
-  // If no groups/events found, return null (no items visible)
-  if (conditions.length === 0) return null;
-
-  return { $or: conditions };
+  return { group: { $in: groupsWithMembers } };
 }
 
 /**
@@ -215,49 +170,4 @@ async function buildGroupCondition(groupIds, requestingDomain) {
   if (accessibleGroups.length === 0) return null;
 
   return { group: { $in: accessibleGroups } };
-}
-
-/**
- * Build condition for items addressed to specific events
- * Only returns items if event is public OR requesting domain has attendees
- */
-async function buildEventCondition(eventIds, requestingDomain) {
-  const accessibleEvents = [];
-
-  for (const eventId of eventIds) {
-    const event = await Event.findOne({ id: eventId, deletedAt: null })
-      .select("id attending rsvpPolicy")
-      .lean();
-
-    if (!event) continue;
-
-    // Check if event is public (rsvpPolicy: "open")
-    const isPublic = event.rsvpPolicy === "open";
-
-    if (isPublic) {
-      accessibleEvents.push(eventId);
-      continue;
-    }
-
-    // If not public, check if requesting domain has attendees
-    if (requestingDomain && event.attending) {
-      const attendingCircle = await Circle.findOne({ id: event.attending })
-        .select("members")
-        .lean();
-
-      if (attendingCircle?.members) {
-        const hasRemoteAttendees = attendingCircle.members.some(m =>
-          m.id && m.id.endsWith(`@${requestingDomain}`)
-        );
-
-        if (hasRemoteAttendees) {
-          accessibleEvents.push(eventId);
-        }
-      }
-    }
-  }
-
-  if (accessibleEvents.length === 0) return null;
-
-  return { event: { $in: accessibleEvents } };
 }

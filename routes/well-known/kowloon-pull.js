@@ -54,7 +54,6 @@ export default route(
     const members = parseArray(req.query.members);
     const authors = parseArray(req.query.authors);
     const groups = parseArray(req.query.groups);
-    const events = parseArray(req.query.events);
     const types = parseArray(req.query.types);
     const since = req.query.since; // ISO 8601 timestamp
     const limit = Math.min(Number(req.query.limit) || 50, 500); // Max 500
@@ -63,16 +62,15 @@ export default route(
       members: members.length,
       authors: authors.length,
       groups: groups.length,
-      events: events.length,
       types: types.length,
       since,
       limit,
     });
 
     // 3. Validate that at least one filter is provided
-    if (members.length === 0 && authors.length === 0 && groups.length === 0 && events.length === 0) {
+    if (members.length === 0 && authors.length === 0 && groups.length === 0) {
       setStatus(400);
-      set({ error: "At least one filter parameter required (members, authors, groups, or events)" });
+      set({ error: "At least one filter parameter required (members, authors, or groups)" });
       return;
     }
 
@@ -91,19 +89,12 @@ export default route(
       return domain === ourDomain;
     });
 
-    // Filter events to only local events
-    const localEvents = events.filter(eventId => {
-      const domain = extractDomain(eventId);
-      return domain === ourDomain;
-    });
-
     // 5. Query items using unified query builder
     try {
       const items = await Kowloon.feed.queryItems({
         members,
         authors: localAuthors,
         groups: localGroups,
-        events: localEvents,
         types,
         since,
         limit,

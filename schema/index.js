@@ -7,7 +7,6 @@ import React from "./React.js";
 import Reply from "./Reply.js";
 import Page from "./Page.js";
 import { Post } from "./Post.js";
-import Event from "./Event.js";
 import Settings from "./Settings.js";
 import User from "./User.js";
 import Inbox from "./Inbox.js";
@@ -31,7 +30,6 @@ export {
   Page,
   Post,
   Reply,
-  Event,
   Settings,
   User,
   Inbox,

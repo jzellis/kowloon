@@ -48,15 +48,6 @@ export default async function getFederationTargets(activity, created) {
     };
   }
 
-  if (to?.startsWith("event:")) {
-    // Event: send to all attendees of the event
-    return {
-      shouldFederate: true,
-      scope: "event",
-      eventId: to,
-    };
-  }
-
   // Default: no federation
   return {
     shouldFederate: false,

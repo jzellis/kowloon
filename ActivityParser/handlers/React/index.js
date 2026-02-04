@@ -1,7 +1,7 @@
 // #ActivityParser/handlers/React/index.js
 // Creates (idempotently) a React record and bumps reactCount on the target.
 // Ensures: objectType === "React", target is required, and object.react is provided.
-// Works for Post/Page/Bookmark/Event/Group targets if present in #schema.
+// Works for Post/Page/Bookmark/Group targets if present in #schema.
 
 import {
   React as ReactModel,

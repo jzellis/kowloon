@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { marked } from "marked";
 import crypto from "crypto";
-import { Settings, User, React, Reply } from "./index.js";
+import { Settings, User, React, Reply, Circle } from "./index.js";
 import GeoPoint from "./subschema/GeoPoint.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 const Schema = mongoose.Schema;
@@ -35,8 +35,11 @@ const PostSchema = new Schema(
     attachments: { type: [String], default: [] }, // Array of File IDs
     tags: { type: [String], default: [] },
     location: { type: GeoPoint, default: undefined }, // A geotag for the post in the ActivityStreams geolocation format
-    startDate: { type: Date, default: undefined }, // A start time for Event posts
-    endDate: { type: Date, default: undefined }, // An end time for Event posts
+    event: {
+      startDate: { type: Date, default: undefined }, // A start time for Event posts
+      endDate: { type: Date, default: undefined }, // An end time for Event posts
+      rsvp: { type: String },
+    },
     target: { type: String, default: undefined }, // For Links
     to: { type: String, default: "" },
     canReply: { type: String, default: "" },
@@ -45,7 +48,11 @@ const PostSchema = new Schema(
     deletedBy: { type: String, default: null }, // I`f the activity is deleted, who deleted it (usually the user unless an admin does it)
     signature: Buffer, // The creator's public signature for verification
   },
-  { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  },
 );
 
 PostSchema.index({
@@ -131,6 +138,16 @@ PostSchema.pre("save", async function (next) {
       this.signature = sign.sign(actor.privateKey, "base64");
     }
 
+    if (this.type === "Event") {
+      if (!this.event.rsvp) {
+        let rsvpCircle = await Circle.create({
+          title: `${this.title} RSVP`,
+          to: this.to,
+        });
+        this.rsvp = rsvpCircle.id;
+      }
+    }
+
     this.reactCount = await React.find({ target: this.id }).countDocuments();
     this.replyCount = await Reply.find({ target: this.id }).countDocuments();
     next();
@@ -151,7 +168,7 @@ PostSchema.pre("updateOne", async function (next) {
     default:
       this.body = `<p>${this.source.content.replace(
         /(?:\r\n|\r|\n)/g,
-        "</p><p>"
+        "</p><p>",
       )}</p>`;
       break;
   }
@@ -196,7 +213,7 @@ PostSchema.methods.verifySignature = async function () {
     "RSA-SHA256",
     stringject,
     actor.publicKey,
-    this.signature
+    this.signature,
   );
 };
 

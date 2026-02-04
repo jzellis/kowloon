@@ -49,7 +49,7 @@ async function main() {
   });
   await attachMethodDomains(Kowloon);
 
-  const { User, Post, Reply, React, Page, Bookmark, Event, Group, Circle } =
+  const { User, Post, Reply, React, Page, Bookmark, Group, Circle } =
     Models;
 
   const collections = {
@@ -59,7 +59,6 @@ async function main() {
     React,
     Page,
     Bookmark,
-    Event,
     Group,
     Circle,
   };

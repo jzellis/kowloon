@@ -12,7 +12,6 @@ import {
   User,
   Circle,
   Group,
-  Event,
   Settings,
 } from "#schema";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
@@ -122,9 +121,9 @@ function follows(viewerId, authorId, followerMap) {
 }
 
 /**
- * Check if viewer is in local audience (member of addressed circles/groups/events)
+ * Check if viewer is in local audience (member of addressed circles/groups)
  * @param {string} viewerId - The viewer
- * @param {string[]} addressedIds - LOCAL circle/group/event IDs
+ * @param {string[]} addressedIds - LOCAL circle/group IDs
  * @param {Map<string, Set<string>>} membershipMap - Pre-built membership map
  * @returns {boolean}
  */
@@ -140,8 +139,8 @@ function inLocalAudience(viewerId, addressedIds, membershipMap) {
 }
 
 /**
- * Build membership map for circles/groups/events (batch operation)
- * @param {string[]} objectIds - Circle/Group/Event IDs
+ * Build membership map for circles/groups (batch operation)
+ * @param {string[]} objectIds - Circle/Group IDs
  * @returns {Promise<Map<string, Set<string>>>} Map: objectId -> Set of member IDs
  */
 async function buildMembershipMap(objectIds) {
@@ -152,17 +151,15 @@ async function buildMembershipMap(objectIds) {
   // Group by type
   const circleIds = objectIds.filter((id) => id.startsWith("circle:"));
   const groupIds = objectIds.filter((id) => id.startsWith("group:"));
-  const eventIds = objectIds.filter((id) => id.startsWith("event:"));
 
   // Batch fetch
-  const [circles, groups, events] = await Promise.all([
+  const [circles, groups] = await Promise.all([
     circleIds.length > 0 ? Circle.find({ id: { $in: circleIds } }).lean() : [],
     groupIds.length > 0 ? Group.find({ id: { $in: groupIds } }).lean() : [],
-    eventIds.length > 0 ? Event.find({ id: { $in: eventIds } }).lean() : [],
   ]);
 
   // Build map
-  for (const obj of [...circles, ...groups, ...events]) {
+  for (const obj of [...circles, ...groups]) {
     const memberIds = (obj.members || []).map((m) => m.id).filter(Boolean);
     membershipMap.set(obj.id, new Set(memberIds));
   }
@@ -214,7 +211,7 @@ function hasCapability({
       // Remote: use grants/token only (never resolve circles)
       return Boolean(grants[viewerId]);
     } else {
-      // Local: check if viewer is in addressed circles/groups/events
+      // Local: check if viewer is in addressed circles/groups
       return inLocalAudience(viewerId, addressedIds, membershipMap);
     }
   }
@@ -262,7 +259,7 @@ async function processFanOutJob(job) {
       return;
     }
 
-    // Only create Feed entries for Circle/Group/Event-addressed content
+    // Only create Feed entries for Circle/Group-addressed content
     if (!addressedIds || addressedIds.length === 0) {
       console.log(`Fan-out job ${jobId}: No addressed IDs, skipping`);
       await FeedFanOut.findByIdAndUpdate(job._id, {
@@ -287,7 +284,7 @@ async function processFanOutJob(job) {
       viewerMap.set(feedCache.actorId, "self");
     }
 
-    // 2. Audience members (reason: "audience") - Circle/Group/Event members
+    // 2. Audience members (reason: "audience") - Circle/Group members
     for (const id of addressedIds) {
       const members = membershipMap.get(id) || new Set();
       for (const memberId of members) {

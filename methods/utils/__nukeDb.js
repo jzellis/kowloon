@@ -14,7 +14,6 @@ import {
   User,
   Settings,
   Page,
-  Event,
 } from "#schema";
 
 export default async function () {
@@ -26,7 +25,6 @@ export default async function () {
   await React.deleteMany({});
   await Reply.deleteMany({});
   await Page.deleteMany({});
-  await Event.deleteMany({});
   await Post.deleteMany({});
   await User.deleteMany({});
   await File.deleteMany({});

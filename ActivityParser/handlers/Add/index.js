@@ -1,13 +1,10 @@
-import { Event, Group, Circle, User } from "#schema";
+import { Group, Circle, User } from "#schema";
 import getObjectById from "#methods/core/getObjectById.js";
-import kowloonId from "#methods/parse/kowloonId.js";
 import getSettings from "#methods/settings/get.js";
 import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import isServerMod from "#methods/auth/isServerMod.js";
 import isGroupAdmin from "#methods/groups/isAdmin.js";
-import isGroupMod from "#methods/groups/isMod.js";
 import toMember from "#methods/parse/toMember.js";
-import isEventAdmin from "#methods/events/isEventAdmin.js";
 import createNotification from "#methods/notifications/create.js";
 
 export default async function Add(activity) {
@@ -62,9 +59,7 @@ export default async function Add(activity) {
       if (!targetCircle) return { activity, error: "Target circle not found" };
 
       ownerId = targetCircle?.actorId || "";
-      ownerType = /^event:[^@]+@[^@]+$/.test(ownerId)
-        ? "Event"
-        : /^group:[^@]+@[^@]+$/.test(ownerId)
+      ownerType = /^group:[^@]+@[^@]+$/.test(ownerId)
         ? "Group"
         : /^@[^@]+@[^@]+$/.test(ownerId)
         ? "User"
@@ -95,10 +90,6 @@ export default async function Add(activity) {
       case "Group":
         if (!(await isGroupAdmin(activity.actorId, targetCircle.actorId)))
           return { activity, error: "You are not a group admin" };
-        break;
-      case "Event":
-        if (!(await isEventAdmin(activity.actorId, targetCircle.actorId)))
-          return { activity, error: "You are not a event admin" };
         break;
     }
 

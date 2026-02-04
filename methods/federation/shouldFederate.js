@@ -86,7 +86,7 @@ export default function shouldFederate(activity) {
   // RULE: Push only when directly interacting with remote resources
   switch (type) {
     case "Create": {
-      // Push if creating inside a remote Group or Event
+      // Push if creating inside a remote Group
       const targetDomain = extractDomain(target);
       if (targetDomain && isRemote(target, localDomain)) return true;
 
@@ -128,15 +128,15 @@ export default function shouldFederate(activity) {
     }
 
     case "Invite": {
-      // Push if inviting to/from remote Group/Event, or inviting remote user
-      if (target && isRemote(target, localDomain)) return true; // Remote group/event
+      // Push if inviting to/from remote Group, or inviting remote user
+      if (target && isRemote(target, localDomain)) return true; // Remote group
       if (object && isRemote(object, localDomain)) return true; // Remote user
       return false;
     }
 
     case "Join":
     case "Leave": {
-      // Push if joining/leaving a remote Group or Event
+      // Push if joining/leaving a remote Group
       const joinTarget = object?.id || object || target;
       if (joinTarget && isRemote(joinTarget, localDomain)) return true;
       return false;

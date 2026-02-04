@@ -16,7 +16,6 @@ import { getServerSettings } from "#methods/settings/schemaHelpers.js";
  * @param {string[]} [options.authors=[]] - Authors to get posts from (usually Circle members)
  * @param {string[]} [options.members=[]] - Local users who should see Circle-addressed content
  * @param {string[]} [options.groups=[]] - Group IDs to get posts from
- * @param {string[]} [options.events=[]] - Event IDs to get posts from
  * @param {string|Date} [options.since] - Only items after this timestamp
  * @param {string[]} [options.types=[]] - Filter by post types (Note, Article, etc.)
  * @param {number} [options.limit=100] - Max items to retrieve
@@ -30,7 +29,6 @@ export default async function pullFromRemote({
   authors = [],
   members = [],
   groups = [],
-  events = [],
   since = null,
   types = [],
   limit = 100,
@@ -56,9 +54,6 @@ export default async function pullFromRemote({
     if (groups.length > 0) {
       groups.forEach((g) => params.append("groups", g));
     }
-    if (events.length > 0) {
-      events.forEach((e) => params.append("events", e));
-    }
     if (types.length > 0) {
       types.forEach((t) => params.append("types", t));
     }
@@ -75,7 +70,6 @@ export default async function pullFromRemote({
       authors: authors.length,
       members: members.length,
       groups: groups.length,
-      events: events.length,
       types: types.length,
       since,
       limit,

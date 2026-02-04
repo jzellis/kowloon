@@ -28,6 +28,10 @@
   "license": "ISC",
   "dependencies": {
     "@aws-sdk/client-s3": "^3.758.0",
+    "@aws-sdk/lib-storage": "^3.758.0",
+    "@aws-sdk/s3-request-presigner": "^3.758.0",
+    "@azure/storage-blob": "^12.26.0",
+    "@google-cloud/storage": "^7.15.0",
     "ajv": "^8.17.1",
     "ajv-formats": "^3.0.1",
     "bcryptjs": "^2.4.3",
@@ -42,6 +46,7 @@
     "jsonwebtoken": "^9.0.2",
     "link-preview-js": "^3.0.5",
     "marked": "^12.0.2",
+    "mime-types": "^2.1.35",
     "mongoose": "^8.3.5",
     "multer": "^2.0.2",
     "multer-s3": "^3.0.1",
@@ -50,6 +55,7 @@
     "qrcode": "^1.5.4",
     "random-words": "^2.0.1",
     "rss-parser": "^3.13.0",
+    "sharp": "^0.33.5",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^11.1.0",
     "winston": "^3.14.2"

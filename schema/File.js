@@ -15,6 +15,8 @@ const FileSchema = new Schema(
     mediaType: { type: String }, // MIME type (e.g., image/jpeg)
     extension: { type: String },
     url: { type: String, required: true }, // Public URL to the file
+    storageKey: { type: String }, // Storage adapter key for retrieval/deletion
+    thumbnails: { type: Schema.Types.Mixed }, // { '200': url, '400': url }
     server: { type: String }, // domain or server label
     size: { type: Number }, // File size in bytes
     width: { type: Number }, // Image/video width in pixels

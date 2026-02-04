@@ -44,6 +44,12 @@ const UserSchemaDef = {
     defaultEditorType: { type: String, default: "html" },
     lang: { type: String, default: "en" },
     theme: { type: String, default: "light" },
+    notifications: {
+      reply: { type: Boolean, default: true },
+      react: { type: Boolean, default: true },
+      join_request: { type: Boolean, default: true },
+      join_approved: { type: Boolean, default: true },
+    },
   },
 
   // ActivityPub endpoints (+ aliases)
@@ -91,7 +97,7 @@ const MetaSchema = new mongoose.Schema(
     runId: { type: String, index: true },
     externalId: { type: String },
   },
-  { _id: false }
+  { _id: false },
 );
 UserSchemaDef.meta = { type: MetaSchema };
 
@@ -307,11 +313,15 @@ UserSchema.methods.getMemberships = async function () {
 };
 
 UserSchema.methods.getBlocked = async function () {
-  return (await Circle.findOne({ id: this.circles?.blocked })).members.map((m) => m.id);
+  return (await Circle.findOne({ id: this.circles?.blocked })).members.map(
+    (m) => m.id,
+  );
 };
 
 UserSchema.methods.getMuted = async function () {
-  return (await Circle.findOne({ id: this.circles?.muted })).members.map((m) => m.id);
+  return (await Circle.findOne({ id: this.circles?.muted })).members.map(
+    (m) => m.id,
+  );
 };
 
 UserSchema.methods.createUserSignature = function (timestamp) {
@@ -330,7 +340,7 @@ UserSchema.methods.verifyUserSignature = function (timestamp, signature) {
     "sha256",
     hash,
     this.publicKey,
-    Buffer.from(signature, "base64")
+    Buffer.from(signature, "base64"),
   );
   return isValid ? isValid : new Error("User cannot be authenticated");
 };

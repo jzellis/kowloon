@@ -1,6 +1,7 @@
 // #ActivityParser/handlers/Join/index.js
 import { Group, Circle, User } from "#schema";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
+import createNotification from "#methods/notifications/create.js";
 
 /**
  * Type-specific validation for Join activities
@@ -96,10 +97,40 @@ export default async function Join(activity, ctx = {}) {
           }
         : { id: actorId };
 
-      await Circle.updateOne(
+      const updateRes = await Circle.updateOne(
         { id: pendingCircle, "members.id": { $ne: actorId } },
         { $push: { members: member }, $inc: { memberCount: 1 } }
       );
+
+      // Notify all group admins about the join request (only if actually added to pending)
+      if (updateRes.modifiedCount > 0 && target.circles?.admins) {
+        try {
+          const adminCircle = await Circle.findOne({ id: target.circles.admins })
+            .select("members")
+            .lean();
+
+          if (adminCircle?.members?.length > 0) {
+            // Create notification for each admin
+            await Promise.all(
+              adminCircle.members.map((admin) =>
+                createNotification({
+                  type: "join_request",
+                  recipientId: admin.id,
+                  actorId,
+                  objectId: targetId,
+                  objectType: "Group",
+                  activityId: activity.id,
+                  activityType: "Join",
+                  groupKey: `join_request:${targetId}:${actorId}`,
+                })
+              )
+            );
+          }
+        } catch (err) {
+          console.error("Failed to create join_request notifications:", err.message);
+          // Non-fatal
+        }
+      }
 
       const result = { type: "Group", status: "pending" };
       const federation = await getFederationTargets(activity, result);

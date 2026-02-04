@@ -18,13 +18,10 @@ const notificationSchema = new mongoose.Schema(
       type: String,
       required: true,
       enum: [
-        "reply",           // Someone replied to your post
-        "react",           // Someone reacted to your post
-        "mention",         // Someone mentioned you in a post
-        "new_post",        // Someone you follow posted (circle member posted)
-        "invite",          // Someone invited you to a group
-        "join_request",    // Someone requested to join your group
-        "join_approved",   // Your join request was approved
+        "reply", // Someone replied to your post
+        "react", // Someone reacted to your post
+        "join_request", // Someone requested to join your group
+        "join_approved", // Your join request was approved
       ],
       index: true,
     },
@@ -104,7 +101,7 @@ const notificationSchema = new mongoose.Schema(
   {
     timestamps: false, // We manage createdAt manually
     collection: "notifications",
-  }
+  },
 );
 
 // Compound indexes for common queries

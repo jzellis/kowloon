@@ -8,6 +8,7 @@ import isGroupAdmin from "#methods/groups/isAdmin.js";
 import isGroupMod from "#methods/groups/isMod.js";
 import toMember from "#methods/parse/toMember.js";
 import isEventAdmin from "#methods/events/isEventAdmin.js";
+import createNotification from "#methods/notifications/create.js";
 
 export default async function Add(activity) {
   try {
@@ -148,18 +149,37 @@ export default async function Add(activity) {
       }
     );
 
-    // If adding to a Group's members circle, remove from pending circle
+    // If adding to a Group's members circle, remove from pending circle and notify user
     if (ownerType === "Group" && res.modifiedCount > 0) {
-      const group = await Group.findOne({ id: ownerId }).select("circles").lean();
+      const group = await Group.findOne({ id: ownerId }).select("circles name").lean();
       if (group?.circles?.members === activity.target && group?.circles?.pending) {
         // Remove from pending circle if they were there
-        await Circle.updateOne(
+        const pendingRemoval = await Circle.updateOne(
           { id: group.circles.pending, "members.id": activity.object.id },
           {
             $pull: { members: { id: activity.object.id } },
             $inc: { memberCount: -1 },
           }
         );
+
+        // If user was in pending (i.e., this was an approval), notify them
+        if (pendingRemoval.modifiedCount > 0) {
+          try {
+            await createNotification({
+              type: "join_approved",
+              recipientId: activity.object.id,
+              actorId: activity.actorId, // The admin who approved
+              objectId: ownerId,
+              objectType: "Group",
+              activityId: activity.id,
+              activityType: "Add",
+              groupKey: `join_approved:${ownerId}:${activity.object.id}`,
+            });
+          } catch (err) {
+            console.error("Failed to create join_approved notification:", err.message);
+            // Non-fatal
+          }
+        }
       }
     }
 

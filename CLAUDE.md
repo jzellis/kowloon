@@ -45,6 +45,17 @@ Generic embedded doc used in Circle.members[]: `{ id, name, inbox, outbox, icon,
 
 Works for both User and Group references (e.g., in the Groups system circle, members are Group objects).
 
+## Design Decisions — DO NOT CHANGE
+
+These are settled architectural decisions. Do not deviate from them.
+
+- **Reply is a separate Mongoose model from Post.** It lives in the `replies` collection, has its own schema (`schema/Reply.js`), and its own ActivityParser handler (`ActivityParser/handlers/Reply/index.js`). It is NOT a Post subtype. The Reply handler is self-contained — it does not delegate to Create.
+- **Reply.target** links to the parent object's ID (e.g., a Post ID). Replies have `to`, `canReply`, and `canReact` fields but they are always blank (`""`). Visibility is inherited from the parent object. The fields exist for future-proofing only.
+- **React is a separate model** with its own `target` field and self-contained handler. Same pattern as Reply.
+- **The pattern for target-based handlers (Reply, React)**: Client sends `to: targetId` in the activity. The handler maps `activity.to` → model's `target` field. The handler creates the document, bumps the count on the parent, creates notifications, and handles federation — all without delegating to Create.
+- **System circles always start empty.** Users are never members of their own circles (Following, Groups, All Following, Blocked, Muted).
+- **No follow/unfollow.** Circles replace the social graph. Adding to a circle IS the follow.
+
 ## Key Patterns
 
 ### Route Wrapper (`routes/utils/route.js`)
@@ -133,11 +144,33 @@ MongoDB via Mongoose. Connection URI from env: `MONGO_URI` (or `MONGODB_URI`, `M
 - Federation basics (inbox/outbox, HTTP signatures)
 - All GET API routes (posts, users, circles, groups, bookmarks, search, notifications)
 - Convenience `/notifications` route (resolves user from JWT)
+- Reply handler fully self-contained (see below)
+
+### In Progress / Uncommitted Changes (as of 2026-03-04)
+
+The Reply ActivityParser handler was just refactored to be fully self-contained per design decisions. **These changes are not yet committed:**
+
+- `ActivityParser/handlers/Reply/index.js` — Complete rewrite. No longer delegates to Create. Now:
+  - Validates `objectType === "Reply"` (was `"Post"`)
+  - Uses `activity.to` as the parent object ID → stored as `Reply.target`
+  - Does NOT require `object.inReplyTo` (was previously required)
+  - Creates `Reply` model directly
+  - Bumps `replyCount` on parent (tries Post, Page, Bookmark, Group, Circle)
+  - Creates notification for parent author
+  - Calls federation helper
+- `ActivityParser/handlers/Reply/schema.js` — Updated: objectType = `"Reply"`, removed `inReplyTo`/`canReply`/`canReact` fields
+- `ActivityParser/activity.schema.js` — Added `"Reply"` to objectType enum; fixed Reply validation block (no longer requires `inReplyTo`, sets `objectType: "Reply"`)
+- `ActivityParser/preprocess.js` — Updated to require `objectType === "Reply"`, removed `inReplyTo` check
+- `schema/Reply.js` — Added `to`, `canReply`, `canReact` fields (always blank `""`, for future-proofing)
+- `schema/Bookmark.js` — Added `replyCount`, `reactCount`, `shareCount` fields
+
+**Next step**: Commit these changes, then write tests against seeded data to verify the Reply flow end-to-end.
 
 ### TODO
-- Admin API routes (`/admin/*`)
-- Client library testing against seeded data
+- Commit the Reply handler refactor above
+- Client library testing against seeded data (priority: Reply, React, Create flows)
 - Feed fan-out / timeline assembly testing
+- Admin API routes (`/admin/*`)
 - Full federation testing (S2S)
 - Event type (RSVP system)
 

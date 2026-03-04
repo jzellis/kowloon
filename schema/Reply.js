@@ -13,6 +13,9 @@ const ReplySchema = new Schema(
     actor: { type: Object, default: undefined },
     server: { type: String, default: undefined }, // The server of the actor
     target: { type: String, required: true },
+    to: { type: String, default: "" },
+    canReply: { type: String, default: "" },
+    canReact: { type: String, default: "" },
 
     parent: { type: String, default: null },
     href: { type: String },

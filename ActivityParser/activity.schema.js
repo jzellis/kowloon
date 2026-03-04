@@ -75,6 +75,7 @@ const schema = {
         "Page",
         "Post",
         "React",
+        "Reply",
         "User",
       ],
     },
@@ -105,14 +106,13 @@ const schema = {
       then: {
         required: ["objectType", "object", "to"],
         properties: {
-          objectType: { const: "Post" },
-          to: { type: "string", pattern: patterns.objectId }, // Reply 'to' field must be a post/page/bookmark ID
+          objectType: { const: "Reply" },
+          to: { type: "string", pattern: patterns.objectId }, // Reply 'to' = parent post ID
           object: {
             type: "object",
-            required: ["type", "inReplyTo"],
+            required: ["type"],
             properties: {
               type: { const: "Reply" },
-              inReplyTo: { type: "string", pattern: patterns.objectId },
             },
           },
         },

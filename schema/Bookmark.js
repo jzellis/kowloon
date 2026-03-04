@@ -53,6 +53,9 @@ const BookmarkSchema = new Schema(
 
     // Convenience
     url: { type: String, default: undefined },
+    replyCount: { type: Number, default: 0 }, // The number of replies to this bookmark
+    reactCount: { type: Number, default: 0 }, // The number of likes to this bookmark
+    shareCount: { type: Number, default: 0 }, // The number of shares of this bookmark
 
     // 🧯 Back-compat (deprecated): map to ownerId/ownerType if present
     actorId: { type: String, default: undefined }, // DEPRECATED
@@ -64,7 +67,7 @@ const BookmarkSchema = new Schema(
     timestamps: true,
     toJSON: { virtuals: true },
     toObject: { virtuals: true },
-  }
+  },
 );
 
 // ---- Indexes for common access patterns ----
@@ -138,7 +141,7 @@ BookmarkSchema.pre("save", async function (next) {
         default:
           this.body = `<p>${String(content).replace(
             /(?:\r\n|\r|\n)/g,
-            "</p><p>"
+            "</p><p>",
           )}</p>`;
           break;
       }

@@ -1,13 +1,23 @@
 // #ActivityParser/handlers/Reply/index.js
-// Canonicalizes Reply → Create/Post with object.type = "Reply" and calls Create handler.
+// Reply is its own model, NOT a Post subtype. This handler is self-contained:
+// validates, creates the Reply doc, bumps replyCount on parent, federates if
+// remote, and creates a notification for the parent author.
 
-import Create from "../Create/index.js";
+import {
+  Reply as ReplyModel,
+  Post,
+  Page,
+  Bookmark,
+  Group,
+  Circle,
+  User,
+} from "#schema";
+import getFederationTargetsHelper from "../utils/getFederationTargets.js";
+import createNotification from "#methods/notifications/create.js";
 
 /**
- * Type-specific validation for Reply activities
- * Per specification: objectType REQUIRED (should always be "Reply"), object REQUIRED, to REQUIRED (Post ID)
- * @param {Object} activity
- * @returns {{ valid: boolean, errors?: string[] }}
+ * Validate Reply activity
+ * Required: actorId, objectType ("Reply"), object (with content), to (parent ID)
  */
 export function validate(activity) {
   const errors = [];
@@ -16,28 +26,16 @@ export function validate(activity) {
     errors.push("Reply: missing activity.actorId");
   }
 
-  // Required: objectType (should be "Post" since Reply creates a Post object)
-  if (!activity?.objectType || typeof activity.objectType !== "string") {
-    errors.push("Reply: missing required field 'objectType'");
+  if (!activity?.objectType || activity.objectType !== "Reply") {
+    errors.push("Reply: objectType must be 'Reply'");
   }
 
-  if (activity?.objectType && activity.objectType !== "Post") {
-    errors.push("Reply: objectType should be 'Post'");
-  }
-
-  // Required: object
   if (!activity?.object || typeof activity.object !== "object") {
     errors.push("Reply: missing required field 'object'");
   }
 
-  // Required: to (Post ID being replied to)
   if (!activity?.to || typeof activity.to !== "string") {
-    errors.push("Reply: missing required field 'to' (Post ID)");
-  }
-
-  // object.inReplyTo is required
-  if (!activity.object?.inReplyTo || typeof activity.object.inReplyTo !== "string") {
-    errors.push("Reply: object.inReplyTo (string) is required");
+    errors.push("Reply: missing required field 'to' (parent object ID)");
   }
 
   return {
@@ -48,44 +46,118 @@ export function validate(activity) {
 
 /**
  * Determine federation targets for Reply activity
- * Replies are handled by the Create handler, which will determine federation
- * @param {Object} activity - The activity envelope
- * @param {Object} created - The created reply
- * @returns {Promise<FederationRequirements>}
  */
 export async function getFederationTargets(activity, created) {
-  // Federation is handled by the Create handler
-  return { shouldFederate: false };
+  return getFederationTargetsHelper(activity, created);
 }
 
 export default async function Reply(activity, ctx = {}) {
-  // 1. Validate
-  const validation = validate(activity);
-  if (!validation.valid) {
-    return { activity, error: validation.errors.join("; ") };
+  try {
+    // 1. Validate
+    const validation = validate(activity);
+    if (!validation.valid) {
+      return { activity, error: validation.errors.join("; ") };
+    }
+
+    const actorId = activity.actorId;
+    const targetId = activity.to;
+
+    // 2. Build the Reply document
+    const replyData = {
+      actorId,
+      actor: activity.actor || {},
+      target: targetId,
+      to: "",
+      canReply: "",
+      canReact: "",
+      source: {},
+    };
+
+    // Content: accept object.content or object.source.content
+    if (activity.object.source?.content) {
+      replyData.source = { ...activity.object.source };
+    } else if (activity.object.content) {
+      replyData.source.content = activity.object.content;
+    }
+
+    if (!replyData.source.mediaType) {
+      replyData.source.mediaType = "text/html";
+    }
+
+    if (activity.object.attachments) {
+      replyData.attachments = activity.object.attachments;
+    }
+
+    // 3. Create the Reply
+    const created = await ReplyModel.create(replyData);
+    activity.objectId = created.id;
+
+    // 4. Bump replyCount on the parent object
+    const inc = { $inc: { replyCount: 1 } };
+    const models = [Post, Page, Bookmark, Group, Circle];
+    for (const Model of models) {
+      try {
+        if (!Model) continue;
+        const r = await Model.updateOne({ id: targetId }, inc);
+        if (r && r.modifiedCount > 0) break;
+      } catch (e) {
+        // ignore model mismatches
+      }
+    }
+
+    // 5. Create notification for the parent object's author
+    try {
+      let targetAuthorId;
+      for (const Model of [Post, Page, Bookmark, Group]) {
+        try {
+          if (!Model) continue;
+          const target = await Model.findOne({ id: targetId })
+            .select("actorId")
+            .lean();
+          if (target?.actorId) {
+            targetAuthorId = target.actorId;
+            break;
+          }
+        } catch (e) {
+          // Continue to next model
+        }
+      }
+
+      if (targetAuthorId && targetAuthorId !== actorId) {
+        const recipient = await User.findOne({ id: targetAuthorId })
+          .select("prefs")
+          .lean();
+        const wantsNotification =
+          recipient?.prefs?.notifications?.reply !== false;
+
+        if (wantsNotification) {
+          await createNotification({
+            type: "reply",
+            recipientId: targetAuthorId,
+            actorId,
+            objectId: created.id,
+            objectType: "Reply",
+            activityId: activity.id,
+            activityType: "Reply",
+            groupKey: `reply:${targetId}`,
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to create notification for Reply:", err.message);
+      // Non-fatal
+    }
+
+    // 6. Federation
+    const createdObj = created.toObject ? created.toObject() : created;
+    const federation = await getFederationTargets(activity, createdObj);
+
+    return {
+      activity,
+      created: createdObj,
+      federation,
+    };
+  } catch (err) {
+    return { activity, error: err?.message || String(err) };
   }
-
-  // 2. Canonicalize to Create activity
-  const a = { ...activity };
-  a.type = "Create";
-  a.objectType = "Post";
-  a.object = { ...(a.object || {}) };
-  a.object.type = "Reply";
-
-  // Ensure inReplyTo is set from the 'to' field if not already present
-  if (!a.object.inReplyTo) {
-    a.object.inReplyTo = activity.to;
-  }
-
-  // The 'to' field in Reply activity is the post ID being replied to
-  // For Create activity, 'to' should be the audience for the reply
-  // Default to @public if no audience specified via an explicit audience field
-  a.to = activity.audience || "@public";
-
-  // Ensure canReply and canReact have defaults for replies
-  if (!a.canReply) a.canReply = "@public";
-  if (!a.canReact) a.canReact = "@public";
-
-  // 3. Delegate to Create handler to persist the Post/Reply
-  return await Create(a, ctx);
 }

@@ -204,12 +204,11 @@ async function writeFeedItems(created, objectType) {
  */
 async function createNotifications(activity, created, objectType) {
   try {
-    // Only create notifications for Post/Reply types
+    // Only create notifications for Post types (Reply handles its own notifications)
     if (objectType !== "Post") return;
 
-    // Check if this is a Reply (has inReplyTo)
+    // Check if this Post has inReplyTo (shouldn't happen now that Reply is separate)
     if (created.inReplyTo) {
-      // This is a reply - notify the author of the original post
       const originalPost = await Post.findOne({ id: created.inReplyTo }).lean();
 
       if (originalPost && originalPost.actorId) {

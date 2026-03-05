@@ -3,7 +3,7 @@
 // Passes { query, params } to handlers (in addition to { req, body, user, set, setStatus }).
 // Verifies RS256 JWTs using settings.publicKey and settings.domain as issuer.
 
-import jwt from "jsonwebtoken";
+import { jwtVerify, importSPKI } from "jose";
 
 const DEV =
   process.env.NODE_ENV === "development" ||
@@ -60,7 +60,8 @@ async function attachUserFromToken(req) {
     const issuer = issuerDomain ? `https://${issuerDomain}` : undefined;
 
     if (!pub) throw new Error("Missing public key for JWT verification");
-    const payload = jwt.verify(token, pub, {
+    const publicKey = await importSPKI(pub, "RS256");
+    const { payload } = await jwtVerify(token, publicKey, {
       algorithms: ["RS256"],
       ...(issuer ? { issuer } : {}),
     });
@@ -79,7 +80,8 @@ async function attachUserFromToken(req) {
   try {
     const secret = process.env.JWT_SECRET || process.env.JWT_KEY;
     if (secret) {
-      const payload = jwt.verify(token, secret);
+      const secretKey = new TextEncoder().encode(secret);
+      const { payload } = await jwtVerify(token, secretKey);
       const id =
         payload?.user?.id || payload?.id || payload?.sub || payload?.actorId;
       if (id) {

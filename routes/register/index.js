@@ -4,7 +4,7 @@
 // Body: { username, password, email?, profile?, ... }
 // Response (JSON): { user, token }
 
-import jwt from "jsonwebtoken";
+import { SignJWT, importPKCS8 } from "jose";
 import route from "#routes/utils/route.js";
 import getSettings from "#methods/settings/get.js";
 import { User, Invite } from "#schema";
@@ -176,12 +176,12 @@ export default route(
     }
 
     const issuer = `https://${domain}`;
-    const token = jwt.sign(payload, privateKey, {
-      algorithm: "RS256",
-      issuer,
-      // You can tune this; keeping long-lived to match your one-time login preference
-      expiresIn: "365d",
-    });
+    const pk = await importPKCS8(privateKey.replace(/\\n/g, "\n").trim(), "RS256");
+    const token = await new SignJWT(payload)
+      .setProtectedHeader({ alg: "RS256" })
+      .setIssuer(issuer)
+      .setExpirationTime("365d")
+      .sign(pk);
 
     const user = sanitizeUser(created);
 

@@ -146,9 +146,21 @@ MongoDB via Mongoose. Connection URI from env: `MONGO_URI` (or `MONGODB_URI`, `M
 - Convenience `/notifications` route (resolves user from JWT)
 - Reply handler fully self-contained (see below)
 
-### In Progress / Uncommitted Changes (as of 2026-03-04)
+### Completed (as of 2026-03-05)
 
-The Reply ActivityParser handler was just refactored to be fully self-contained per design decisions. **These changes are not yet committed:**
+- **JWT library migration**: Replaced `jsonwebtoken` (CJS, broke in Node.js ESM) with `jose` (pure ESM).
+  - `routes/utils/route.js` — JWT verification via `jwtVerify` + `importSPKI`
+  - `routes/register/index.js` — signing via `SignJWT` + `importPKCS8`
+  - `methods/generate/token.js` — signing via `SignJWT`; must call `.toObject({ depopulate: true })` before building payload (jose uses `structuredClone`, which fails on Mongoose subdocs)
+- **Bug fix**: `user.circles.*` fields (`following`, `allFollowing`, `blocked`, `muted`) are nested under `user.circles`, NOT top-level. Fixed selects and references in:
+  - `methods/generate/token.js` — select `circles`, use `u.circles?.following` etc.
+  - `methods/auth/login.js` — select `circles`, return `uo.circles?.following` etc.
+- **Seed script rewrite**: `scripts/seed-test.js` fully rewritten to use HTTP API calls (no direct Mongoose). Requires server running. Uses `POST /__test/wipe` (only works when `NODE_ENV !== "production"`).
+  - To re-seed: set `NODE_ENV=development` in `.env`, restart pm2, run `node scripts/seed-test.js --wipe`, restore `NODE_ENV=production`, restart pm2.
+
+### In Progress / Uncommitted Changes (as of 2026-03-05)
+
+The Reply ActivityParser handler was refactored to be fully self-contained per design decisions. **These changes are not yet committed:**
 
 - `ActivityParser/handlers/Reply/index.js` — Complete rewrite. No longer delegates to Create. Now:
   - Validates `objectType === "Reply"` (was `"Post"`)
@@ -164,10 +176,8 @@ The Reply ActivityParser handler was just refactored to be fully self-contained 
 - `schema/Reply.js` — Added `to`, `canReply`, `canReact` fields (always blank `""`, for future-proofing)
 - `schema/Bookmark.js` — Added `replyCount`, `reactCount`, `shareCount` fields
 
-**Next step**: Commit these changes, then write tests against seeded data to verify the Reply flow end-to-end.
-
 ### TODO
-- Commit the Reply handler refactor above
+- Commit all uncommitted changes above
 - Client library testing against seeded data (priority: Reply, React, Create flows)
 - Feed fan-out / timeline assembly testing
 - Admin API routes (`/admin/*`)

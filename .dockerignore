@@ -41,3 +41,4 @@ Dockerfile
 docker-compose.yml
 .dockerignore
 .env.bak
+docker/certs

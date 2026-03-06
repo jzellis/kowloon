@@ -2,6 +2,7 @@
 // Robust, parser-driven ID handling for local/remote lookup.
 import parseKowloonId from "#methods/parse/kowloonId.js";
 import getSettings from "#methods/settings/get.js";
+import { getServerActor } from "#methods/settings/schemaHelpers.js";
 
 // ---------- Errors ----------
 export class NotFound extends Error {
@@ -164,6 +165,16 @@ export default async function getObjectById(
     process.env.DOMAIN ||
     ""
   ).toLowerCase();
+
+  // ---- A0) Server actor (@domain — single @ with no user part) ----
+  // e.g. "@kwln1.local" — the server itself, derived from settings (no DB lookup needed)
+  if (idStr.startsWith("@") && !idStr.slice(1).includes("@")) {
+    const actor = getServerActor();
+    if (actor) {
+      return { object: actor, source: "local", visibility: "public", cached: false };
+    }
+    throw new NotFound(`Server actor not available: ${idStr}`);
+  }
 
   // ---- A) User handle (@name@domain) ----
   const handle = idStr.startsWith("@") ? parseHandle(idStr) : null;

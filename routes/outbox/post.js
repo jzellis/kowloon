@@ -124,13 +124,14 @@ export default route(
     let federationJob = null;
     if (created.federate && createdId) {
       try {
-        const { enqueueOutbox } = await import(
+        const { default: enqueueOutbox } = await import(
           "#methods/federation/enqueueOutbox.js"
         );
         federationJob = await enqueueOutbox({
           activity: created.activity,
           activityId: createdId,
           actorId: activity.actorId,
+          federation: created.federation,
           reason: "activity.federate = true",
         });
         if (DEV) {

@@ -1,95 +1,142 @@
-version: '3.8'
+# Two-server local federation test setup.
+#
+# Domains:  kwln1.local  kwln2.local
+# Add to /etc/hosts:  127.0.0.1  kwln1.local  kwln2.local
+#
+# First-time setup:
+#   bash docker/gen-certs.sh
+#   docker compose build
+#   docker compose up -d
+#
+# To seed a server (run from the host):
+#   TEST_BASE_URL=http://kwln1.local:8080 node scripts/seed-test.js --wipe
+#   TEST_BASE_URL=http://kwln2.local:8080 node scripts/seed-test.js --wipe
+#
+# To rebuild after package.json changes:
+#   docker compose build
+#   docker volume rm kowloon-federation_node_modules
+#   docker compose up -d
 
-# Kowloon Multi-Instance Infrastructure
-# This compose file provides shared services for all Kowloon instances
-# Use kowloon-instance.sh to manage individual instances
+name: kowloon-federation
+
+networks:
+  kowloon-net:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+  node_modules:   # shared across all app containers (same image)
 
 services:
-  # Shared MongoDB Database
+  # ── MongoDB ──────────────────────────────────────────────────────────────────
   mongodb:
     image: mongo:7
-    container_name: kowloon-mongodb
-    restart: unless-stopped
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_USERNAME:-kowloon}
-      MONGO_INITDB_ROOT_PASSWORD: ${MONGO_PASSWORD:-kowloon_password}
     volumes:
       - mongodb_data:/data/db
+    ports:
+      - "27018:27017"   # expose to host for MongoDB Compass (27017 taken by host mongod)
     networks:
-      - kowloon-network
+      - kowloon-net
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
       interval: 10s
       timeout: 5s
       retries: 5
 
-  # Shared MinIO Object Storage
-  minio:
-    image: minio/minio:latest
-    container_name: kowloon-minio
+  # ── nginx (aliases let server containers resolve domain names via Docker DNS) ─
+  nginx:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+      - "8443:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./docker/certs:/etc/nginx/certs:ro
+    networks:
+      kowloon-net:
+        aliases:
+          - kwln1.local
+          - kwln2.local
+    depends_on:
+      - kowloon1
+      - kowloon2
     restart: unless-stopped
-    command: server /data --console-address ":9001"
+
+  # ── Server 1 (kwln1.local) ───────────────────────────────────────────────
+  kowloon1:
+    build: .
+    env_file: .env
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+      DOMAIN: kwln1.local
+      PORT: 3000
+      MONGO_URI: mongodb://mongodb:27017/kowloon1
+      NODE_ENV: development
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"   # accept self-signed cert from nginx
     volumes:
-      - minio_data:/data
-    ports:
-      - "${MINIO_API_PORT:-9000}:9000"
-      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+      - ./:/app
+      - node_modules:/app/node_modules
     networks:
-      - kowloon-network
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  # Traefik Reverse Proxy
-  traefik:
-    image: traefik:v2.10
-    container_name: kowloon-traefik
+      - kowloon-net
+    depends_on:
+      mongodb:
+        condition: service_healthy
     restart: unless-stopped
-    command:
-      - "--api.insecure=true"
-      - "--api.dashboard=true"
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=kowloon-network"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      # Local HTTPS with mkcert (development)
-      - "--providers.file.directory=/traefik-config"
-      - "--providers.file.watch=true"
-      # Uncomment for Let's Encrypt (production)
-      # - "--certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL}"
-      # - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      # - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
-    ports:
-      - "80:80"
-      - "443:443"
-      - "8080:8080"  # Traefik dashboard
+
+  worker1:
+    build: .
+    command: node workers/outboxPush.js
+    env_file: .env
+    environment:
+      DOMAIN: kwln1.local
+      MONGO_URI: mongodb://mongodb:27017/kowloon1
+      NODE_ENV: development
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - traefik_letsencrypt:/letsencrypt
-      - ./certs:/certs:ro  # Local SSL certificates
-      - ./traefik:/traefik-config:ro  # Traefik dynamic config
+      - ./:/app
+      - node_modules:/app/node_modules
     networks:
-      - kowloon-network
-    healthcheck:
-      test: ["CMD", "traefik", "healthcheck", "--ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+      - kowloon-net
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
 
-volumes:
-  mongodb_data:
-    driver: local
-  minio_data:
-    driver: local
-  traefik_letsencrypt:
-    driver: local
+  # ── Server 2 (kwln2.local) ───────────────────────────────────────────────
+  kowloon2:
+    build: .
+    env_file: .env
+    environment:
+      DOMAIN: kwln2.local
+      PORT: 3000
+      MONGO_URI: mongodb://mongodb:27017/kowloon2
+      NODE_ENV: development
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    volumes:
+      - ./:/app
+      - node_modules:/app/node_modules
+    networks:
+      - kowloon-net
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped
 
-networks:
-  kowloon-network:
-    driver: bridge
+  worker2:
+    build: .
+    command: node workers/outboxPush.js
+    env_file: .env
+    environment:
+      DOMAIN: kwln2.local
+      MONGO_URI: mongodb://mongodb:27017/kowloon2
+      NODE_ENV: development
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+    volumes:
+      - ./:/app
+      - node_modules:/app/node_modules
+    networks:
+      - kowloon-net
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    restart: unless-stopped

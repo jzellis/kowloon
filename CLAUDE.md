@@ -178,11 +178,52 @@ The Reply ActivityParser handler was refactored to be fully self-contained per d
 
 ### TODO
 - Commit all uncommitted changes above
+- Fix federation bugs (see Docker/Federation section below)
 - Client library testing against seeded data (priority: Reply, React, Create flows)
 - Feed fan-out / timeline assembly testing
 - Admin API routes (`/admin/*`)
 - Full federation testing (S2S)
 - Event type (RSVP system)
+
+## Docker / Local Federation Setup
+
+Two-server federation test environment. Uses Docker Compose with nginx reverse proxy.
+
+- **Domains**: `kwln1.local` → kowloon1, `kwln2.local` → kowloon2
+- **Ports**: nginx on 8080 (HTTP) / 8443 (HTTPS); MongoDB on 27018
+- **`/etc/hosts`** must have: `127.0.0.1  kwln1.local  kwln2.local`
+- **Self-signed cert**: generated once with `bash docker/gen-certs.sh` (stored in `docker/certs/`, gitignored)
+
+### Starting up
+```bash
+docker compose up -d
+# First time only:
+bash docker/gen-certs.sh && docker compose restart nginx
+TEST_BASE_URL=http://kwln1.local:8080 node scripts/seed-test.js --wipe
+TEST_BASE_URL=http://kwln2.local:8080 node scripts/seed-test.js --wipe
+```
+
+### Key implementation notes
+- nginx uses `resolver 127.0.0.11` + `set $upstream` variable for dynamic DNS resolution (avoids startup failure when app containers aren't ready)
+- No fixed IPs — network aliases on nginx container (`kwln1.local`, `kwln2.local`) handle inter-container routing
+- `methods/utils/init.js` upserts null/undefined settings on startup (fix for stale DB values)
+- `methods/settings/schemaHelpers.js` always falls back to `process.env.DOMAIN` when cache value is falsy
+
+## Federation Status (as of 2026-03-05)
+
+| Test | Status |
+|------|--------|
+| WebFinger | ✅ |
+| Actor fetch | ✅ |
+| Login (`POST /auth/login`) | ✅ |
+| Create public post | ✅ |
+| Add remote user to circle | ⚠️ Stored with empty member data |
+| S2S delivery | ❌ `federate: false` on all activities |
+
+### Bugs to fix for S2S federation
+1. **`federate: false` everywhere** — outbox worker not delivering to remote inboxes
+2. **Remote actor resolution in Add handler** — `toMember({ actorId })` loses data; needs to fetch actor via WebFinger first
+3. **`actor.server = "@undefined"`** — server field on actor embed computed incorrectly
 
 ## Joplin Integration
 

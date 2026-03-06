@@ -12,8 +12,9 @@ import {
   Circle,
   User,
 } from "#schema";
-import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 import createNotification from "#methods/notifications/create.js";
+import kowloonId from "#methods/parse/kowloonId.js";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 /**
  * Validate Reply activity
@@ -45,10 +46,25 @@ export function validate(activity) {
 }
 
 /**
- * Determine federation targets for Reply activity
+ * Determine federation targets for Reply activity.
+ * Replies federate to the domain of the parent object if it's remote.
  */
 export async function getFederationTargets(activity, created) {
-  return getFederationTargetsHelper(activity, created);
+  const targetId = activity.to; // parent post/page/etc ID
+  if (!targetId) return { shouldFederate: false };
+
+  const parsed = kowloonId(targetId);
+  const { domain: serverDomain } = getServerSettings();
+
+  if (!parsed.domain || parsed.domain.toLowerCase() === serverDomain?.toLowerCase()) {
+    return { shouldFederate: false };
+  }
+
+  return {
+    shouldFederate: true,
+    scope: "domain",
+    domains: [parsed.domain],
+  };
 }
 
 export default async function Reply(activity, ctx = {}) {
@@ -93,13 +109,16 @@ export default async function Reply(activity, ctx = {}) {
     activity.objectId = created.id;
 
     // 4. Bump replyCount on the parent object
-    const inc = { $inc: { replyCount: 1 } };
+    // Use findOneAndUpdate (not updateOne) to avoid the broken pre("updateOne") hook on Post
     const models = [Post, Page, Bookmark, Group, Circle];
     for (const Model of models) {
       try {
         if (!Model) continue;
-        const r = await Model.updateOne({ id: targetId }, inc);
-        if (r && r.modifiedCount > 0) break;
+        const r = await Model.findOneAndUpdate(
+          { id: targetId },
+          { $inc: { replyCount: 1 } }
+        );
+        if (r) break;
       } catch (e) {
         // ignore model mismatches
       }

@@ -2,32 +2,21 @@
 // Creates HTTP signature for outbound federation requests
 
 import crypto from "crypto";
-import { User } from "#schema";
 import { getSetting } from "#methods/settings/cache.js";
 import log from "#methods/utils/logger.js";
 
 /**
- * Get server actor (the @domain user with keys)
- * @returns {Promise<Object|null>} The server actor user object
+ * Get server signing credentials from settings cache — no DB lookup needed.
+ * @returns {{ domain: string, privateKey: string, actorUrl: string } | null}
  */
-async function getServerActor() {
+function getServerSigningCredentials() {
   const domain = getSetting("domain") || process.env.DOMAIN;
-  if (!domain) {
-    log.error("Cannot get server actor: no domain configured");
+  const privateKey = getSetting("privateKey") || process.env.PRIVATE_KEY;
+  if (!domain || !privateKey) {
+    log.error("Cannot sign: missing domain or privateKey in settings cache");
     return null;
   }
-
-  const serverActorId = `@${domain}`;
-  const serverActor = await User.findOne({ id: serverActorId }).lean();
-
-  if (!serverActor || !serverActor.privateKey) {
-    log.error("Server actor not found or has no private key", {
-      serverActorId,
-    });
-    return null;
-  }
-
-  return serverActor;
+  return { domain, privateKey, actorUrl: `https://${domain}/users/@${domain}` };
 }
 
 /**
@@ -71,11 +60,12 @@ export default async function signHttpRequest({
   headers = {},
   body = "",
 }) {
-  // Get server actor with private key
-  const serverActor = await getServerActor();
-  if (!serverActor) {
-    throw new Error("Server actor not available for signing");
+  // Get server signing credentials from settings (no DB lookup)
+  const creds = getServerSigningCredentials();
+  if (!creds) {
+    throw new Error("Server signing credentials not available");
   }
+  const { domain, privateKey: serverPrivateKey, actorUrl } = creds;
 
   // Parse URL
   const parsedUrl = new URL(url);
@@ -120,11 +110,10 @@ export default async function signHttpRequest({
   const sign = crypto.createSign("SHA256");
   sign.update(signingString);
   sign.end();
-  const signature = sign.sign(serverActor.privateKey, "base64");
+  const signature = sign.sign(serverPrivateKey, "base64");
 
   // Build signature header
-  const domain = getSetting("domain") || process.env.DOMAIN;
-  const keyId = `https://${domain}/users/@${domain}#main-key`;
+  const keyId = `${actorUrl}#main-key`;
   const signatureHeader = [
     `keyId="${keyId}"`,
     `algorithm="rsa-sha256"`,

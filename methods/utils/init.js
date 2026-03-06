@@ -46,9 +46,21 @@ export default async function init(Kowloon, ctx = {}) {
   const defaults = defaultSettings(ctx);
   for (const [name, value] of Object.entries(defaults)) {
     const exists = await Settings.findOne({ name }).lean();
+    const isBadValue = (v) => {
+      if (!v) return true;
+      if (typeof v === "string" && (v.includes("undefined") || v.includes("null"))) return true;
+      return false;
+    };
+    // For settings that must be plain strings (PEM keys), also overwrite if stored as non-string
+    const mustBeString = ["publicKey", "privateKey"];
+    const wrongType = mustBeString.includes(name) && typeof exists?.value !== "string";
     if (!exists) {
       await Settings.create({ name, value });
       console.log("Created setting:", name);
+    } else if ((isBadValue(exists.value) || wrongType) && value) {
+      // Overwrite if previously saved as null/undefined/corrupted/wrong type
+      await Settings.updateOne({ name }, { value });
+      console.log("Updated setting:", name);
     }
   }
 

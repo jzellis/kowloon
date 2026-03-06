@@ -102,13 +102,47 @@ export default async function Add(activity) {
       if (typeof ref === "string") {
         const s = ref.trim();
         if (/^@[^@]+@[^@]+$/.test(s)) {
-          // actorId string → try local User, else fall back to minimal actor ref
+          // Try local User first — skip stale records with no useful data
           const u = await User.findOne({ id: s }).lean();
-          return toMember(u || { actorId: s });
+          if (u && (u.inbox || u.name || u.profile?.name)) return toMember(u);
+
+          // Remote actor: fetch via getObjectById (tries /resolve then /users/:username)
+          try {
+            const result = await getObjectById(s, { hydrateRemoteIntoDB: false });
+            if (result?.object) {
+              const a = result.object;
+              const [, username, domain] = s.match(/^@([^@]+)@(.+)$/) || [];
+              return {
+                id: s,
+                name: a.name || a.profile?.name || a.preferredUsername || username || "",
+                icon: a.icon?.url || a.icon || a.profile?.icon || "",
+                inbox: a.inbox || (domain && username ? `https://${domain}/users/${username}/inbox` : ""),
+                outbox: a.outbox || (domain && username ? `https://${domain}/users/${username}/outbox` : ""),
+                url: a.url || (domain && username ? `https://${domain}/users/${username}` : ""),
+                server: `@${domain || ""}`,
+              };
+            }
+          } catch {
+            // Fall through to minimal fallback
+          }
+
+          // Minimal fallback: construct from known ID format
+          const [, username, domain] = s.match(/^@([^@]+)@(.+)$/) || [];
+          if (username && domain) {
+            return {
+              id: s,
+              name: username,
+              icon: "",
+              inbox: `https://${domain}/users/${username}/inbox`,
+              outbox: `https://${domain}/users/${username}/outbox`,
+              url: `https://${domain}/users/${username}`,
+              server: `@${domain}`,
+            };
+          }
         }
         // not an actorId string → treat as DB id / other resolvable id
         const o = await getObjectById(s);
-        return toMember(o);
+        return toMember(o?.object || o);
       }
 
       // Object case
@@ -117,9 +151,7 @@ export default async function Add(activity) {
           typeof ref.actorId === "string" &&
           /^@[^@]+@[^@]+$/.test(ref.actorId)
         ) {
-          const s = ref.actorId.trim();
-          const u = await User.findOne({ id: s }).lean();
-          return toMember(u || { actorId: s });
+          return resolveActorToMember(ref.actorId);
         }
         // If it already looks like a User/Actor object, let toMember handle it
         return toMember(ref);
@@ -201,11 +233,26 @@ export default async function Add(activity) {
       }
     }
 
+    // Federate when a remote actor was added — set activity.to so resolveAudience
+    // can find their inbox via getObjectById.
+    const localDomain = settings?.domain || process.env.DOMAIN || "";
+    // Derive domain from server field, or fall back to parsing the member ID
+    const memberDomain =
+      member?.server?.replace(/^@/, "") ||
+      (member?.id?.match(/^@[^@]+@(.+)$/) || [])[1] ||
+      "";
+    const isRemoteMember =
+      member?.id && memberDomain && memberDomain !== localDomain;
+
+    if (isRemoteMember) {
+      activity.to = member.id; // @user@remotedomain — resolveAudience will fetch inbox
+    }
+
     return {
       activity,
       circleId: activity.target,
       added: (res.modifiedCount || 0) > 0,
-      federate: false,
+      federate: isRemoteMember,
     };
   } catch (err) {
     return { activity, error: err?.message || String(err) };

@@ -11,8 +11,9 @@ import {
   Group,
   User,
 } from "#schema";
-import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 import createNotification from "#methods/notifications/create.js";
+import kowloonId from "#methods/parse/kowloonId.js";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 /**
  * Type-specific validation for React activities
@@ -66,9 +67,21 @@ export function validate(activity) {
  * @returns {Promise<FederationRequirements>}
  */
 export async function getFederationTargets(activity, result) {
-  // Reactions are typically sent to the author of the target object
-  // For now, no federation (could be enhanced to notify the target author)
-  return { shouldFederate: false };
+  const targetId = activity.to; // target object ID
+  if (!targetId) return { shouldFederate: false };
+
+  const parsed = kowloonId(targetId);
+  const { domain: serverDomain } = getServerSettings();
+
+  if (!parsed.domain || parsed.domain.toLowerCase() === serverDomain?.toLowerCase()) {
+    return { shouldFederate: false };
+  }
+
+  return {
+    shouldFederate: true,
+    scope: "domain",
+    domains: [parsed.domain],
+  };
 }
 
 export default async function React(activity, ctx = {}) {
@@ -113,14 +126,17 @@ export default async function React(activity, ctx = {}) {
     }
 
     // Try to bump reactCount on a known target collection
-    const inc = { $inc: { reactCount: 1 } };
+    // Use findOneAndUpdate (not updateOne) to avoid the broken pre("updateOne") hook on Post
     let bumped = false;
     const models = [Post, Page, Bookmark, Group];
     for (const Model of models) {
       try {
         if (!Model) continue;
-        const r = await Model.updateOne({ id: targetId }, inc);
-        if (r && r.modifiedCount > 0) {
+        const r = await Model.findOneAndUpdate(
+          { id: targetId },
+          { $inc: { reactCount: 1 } }
+        );
+        if (r) {
           bumped = true;
           break;
         }

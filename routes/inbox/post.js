@@ -201,5 +201,5 @@ export default route(
       }
     });
   },
-  { middleware: [inboxRateLimiter] }
+  { allowUnauth: true, middleware: [inboxRateLimiter] }
 );

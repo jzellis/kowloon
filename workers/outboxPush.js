@@ -5,6 +5,8 @@
 import mongoose from "mongoose";
 import { startOutboxWorker } from "#methods/federation/outboxWorker.js";
 import logger from "#methods/utils/logger.js";
+import { Settings } from "#schema";
+import { loadSettings } from "#methods/settings/cache.js";
 
 // Configuration from environment
 const MONGO_URI = process.env.MONGO_URI || "mongodb://localhost:27017/kowloon";
@@ -23,6 +25,8 @@ async function main() {
   try {
     await mongoose.connect(MONGO_URI);
     logger.info("Connected to MongoDB");
+    await loadSettings(Settings);
+    logger.info("Settings cache loaded");
   } catch (err) {
     logger.error("MongoDB connection failed", {
       error: err.message,

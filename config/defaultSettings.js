@@ -9,9 +9,9 @@ const defaultSettings = (ctx) => {
   });
 
   return {
-    actorId: `@${ctx.DOMAIN}`,
+    actorId: `@${ctx.domain}`,
     profile: {
-      name: ctx.SITE_TITLE,
+      name: ctx.siteTitle,
       subtitle: "My brand new Kowloon server",
       description:
         "<p>This is a new Kowloon server that I've set up. It's going to be a great place for me and my community to share ideas with each other and the world!</p>",
@@ -22,9 +22,9 @@ const defaultSettings = (ctx) => {
         longitude: "114.190278",
       },
       icon: "/images/icons/server.png",
-      urls: [`https://${ctx.DOMAIN}`],
+      urls: [`https://${ctx.domain}`],
     },
-    domain: ctx.DOMAIN,
+    domain: ctx.domain,
     registrationIsOpen: true,
     maxUploadSize: 100,
     defaultPronouns: {

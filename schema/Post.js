@@ -148,8 +148,8 @@ PostSchema.pre("save", async function (next) {
       }
     }
 
-    this.reactCount = await React.find({ target: this.id }).countDocuments();
-    this.replyCount = await Reply.find({ target: this.id }).countDocuments();
+    // reactCount and replyCount are managed by the Reply/React ActivityParser handlers
+    // via findOneAndUpdate($inc). Do not recalculate here — it would overwrite handler increments.
     next();
   } catch (e) {
     console.log(e);

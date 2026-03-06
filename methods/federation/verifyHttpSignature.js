@@ -67,11 +67,14 @@ function verifyWithPem(pem, algo, data, sigB64) {
 
 function extractDomainFromUrl(url) {
   if (!url) return null;
-  // Handle Kowloon handle format: @user@domain or @domain
-  const handleMatch = String(url).match(/@([^@\s]+)$/);
-  if (handleMatch) return handleMatch[1].toLowerCase();
+  const s = String(url);
+  // Handle Kowloon handle format: @user@domain or @domain (starts with @)
+  if (s.startsWith("@")) {
+    const handleMatch = s.match(/@([^@\s]+)$/);
+    if (handleMatch) return handleMatch[1].toLowerCase();
+  }
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(s);
     return parsed.hostname;
   } catch (e) {
     return null;

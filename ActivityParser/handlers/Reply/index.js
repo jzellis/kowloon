@@ -109,16 +109,19 @@ export default async function Reply(activity, ctx = {}) {
     activity.objectId = created.id;
 
     // 4. Bump replyCount on the parent object
-    // Use findOneAndUpdate (not updateOne) to avoid the broken pre("updateOne") hook on Post
-    const models = [Post, Page, Bookmark, Group, Circle];
-    for (const Model of models) {
+    // Use raw collection driver to bypass all Mongoose middleware/hooks
+    const collections = [
+      Post?.collection,
+      Page?.collection,
+      Bookmark?.collection,
+      Group?.collection,
+      Circle?.collection,
+    ];
+    for (const col of collections) {
       try {
-        if (!Model) continue;
-        const r = await Model.findOneAndUpdate(
-          { id: targetId },
-          { $inc: { replyCount: 1 } }
-        );
-        if (r) break;
+        if (!col) continue;
+        const r = await col.updateOne({ id: targetId }, { $inc: { replyCount: 1 } });
+        if (r?.modifiedCount > 0) break;
       } catch (e) {
         // ignore model mismatches
       }

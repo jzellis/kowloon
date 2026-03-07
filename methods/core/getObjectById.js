@@ -292,8 +292,10 @@ export default async function getObjectById(
           res.status
         );
 
-      const payload = await res.json();
+      const raw = await res.json();
       const etag = res.headers.get("etag") || undefined;
+      // Unwrap Kowloon API envelope { ok, item } if present (non-Kowloon servers return actor directly)
+      const payload = raw?.item || raw;
 
       let hydrated = payload;
       if (hydrateRemoteIntoDB) {
@@ -425,8 +427,10 @@ export default async function getObjectById(
         res.status
       );
 
-    const payload = await res.json();
+    const raw = await res.json();
     const etag = res.headers.get("etag") || undefined;
+    // Unwrap Kowloon API envelope { ok, item } if present
+    const payload = raw?.item || raw;
 
     let hydrated = payload;
     if (hydrateRemoteIntoDB) {

@@ -218,12 +218,10 @@ TEST_BASE_URL=http://kwln2.local:8080 node scripts/seed-test.js --wipe
 | Login (`POST /auth/login`) | ✅ |
 | Create public post | ✅ |
 | Add remote user to circle | ⚠️ Stored with empty member data |
-| S2S delivery | ❌ `federate: false` on all activities |
+| S2S delivery | ✅ Fixed — `shouldFederate.js` + `processFederation` in ActivityParser wired up |
 
 ### Bugs to fix for S2S federation
-1. **`federate: false` everywhere** — outbox worker not delivering to remote inboxes
-2. **Remote actor resolution in Add handler** — `toMember({ actorId })` loses data; needs to fetch actor via WebFinger first
-3. **`actor.server = "@undefined"`** — server field on actor embed computed incorrectly
+All known S2S federation bugs fixed as of 2026-03-07.
 
 ## Joplin Integration
 

@@ -57,7 +57,7 @@ export default async function init(Kowloon, ctx = {}) {
     if (!exists) {
       await Settings.create({ name, value });
       console.log("Created setting:", name);
-    } else if ((isBadValue(exists.value) || wrongType) && value) {
+    } else if ((isBadValue(exists.value) || wrongType) && value && !isBadValue(value)) {
       // Overwrite if previously saved as null/undefined/corrupted/wrong type
       await Settings.updateOne({ name }, { value });
       console.log("Updated setting:", name);

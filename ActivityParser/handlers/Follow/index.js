@@ -116,11 +116,13 @@ export default async function Follow(activity) {
           });
 
           if (response.ok) {
-            const remoteUser = await response.json();
+            const raw = await response.json();
+            // Unwrap Kowloon API envelope { ok, item } if present
+            const remoteUser = raw?.item || raw;
             member = {
               id: followedUserId,
-              name: remoteUser.profile?.name || remoteUser.username || followedUserId,
-              icon: remoteUser.profile?.icon || "",
+              name: remoteUser.profile?.name || remoteUser.name || remoteUser.username || followedUserId,
+              icon: remoteUser.profile?.icon || remoteUser.icon || "",
               inbox: remoteUser.inbox || `https://${parsed.domain}/users/${encodeURIComponent(followedUserId)}/inbox`,
               outbox: remoteUser.outbox || `https://${parsed.domain}/users/${encodeURIComponent(followedUserId)}/outbox`,
               url: remoteUser.url || `https://${parsed.domain}/users/${encodeURIComponent(followedUserId)}`,

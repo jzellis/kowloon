@@ -9,7 +9,7 @@ const defaultSettings = (ctx) => {
   });
 
   return {
-    actorId: `@${ctx.domain}`,
+    actorId: ctx.domain ? `@${ctx.domain}` : null,
     profile: {
       name: ctx.siteTitle,
       subtitle: "My brand new Kowloon server",

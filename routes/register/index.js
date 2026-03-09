@@ -4,10 +4,12 @@
 // Body: { username, password, email?, profile?, ... }
 // Response (JSON): { user, token }
 
+import express from "express";
 import { SignJWT, importPKCS8 } from "jose";
 import route from "#routes/utils/route.js";
 import getSettings from "#methods/settings/get.js";
 import { User, Invite } from "#schema";
+import { strictRateLimiter } from "../middleware/rateLimiter.js";
 
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 const isNonEmpty = (s) => typeof s === "string" && s.trim().length > 0;
@@ -41,7 +43,7 @@ function sanitizeUser(u) {
   };
 }
 
-export default route(
+const registerHandler = route(
   async ({ body, set, setStatus }) => {
     if (!isObj(body)) {
       setStatus(400);
@@ -198,3 +200,8 @@ export default route(
     label: "REGISTER",
   }
 );
+
+const router = express.Router({ mergeParams: true });
+router.use(strictRateLimiter);
+router.post("/", registerHandler);
+export default router;

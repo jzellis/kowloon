@@ -140,7 +140,7 @@ MongoDB via Mongoose. Connection URI from env: `MONGO_URI` (or `MONGODB_URI`, `M
 - All CRUD via `POST /outbox` + ActivityParser pipeline
 - Circle/Group management (create, join, leave, add, remove, block, mute)
 - Notifications (create, list, read, unread, dismiss)
-- File uploads (S3/MinIO)
+- File uploads + authenticated proxy serving (S3/MinIO backend, Kowloon proxy)
 - S2S federation (inbox/outbox, HTTP signatures, batch-pull)
 - All GET API routes (posts, users, circles, groups, bookmarks, search, notifications)
 - Reply handler fully self-contained (creates Reply model, bumps replyCount, notifies author)
@@ -152,6 +152,18 @@ MongoDB via Mongoose. Connection URI from env: `MONGO_URI` (or `MONGODB_URI`, `M
 - Rate limiting: `strictRateLimiter` on `POST /auth/login` and `POST /register`
 - NodeInfo 2.0: real user/post counts from DB
 - Settings UI metadata: all settings have `ui: { type, label, group, order }` for admin UI rendering
+
+### File Serving Architecture
+- Files stored privately in MinIO/S3. Never exposed directly.
+- All file access goes through `GET /files/:id` (Kowloon authenticated proxy).
+- Thumbnails served via `GET /files/:id?size=<n>` (no separate File records).
+- File IDs: `file:<mongoId>@domain` (set by pre-save hook after first `.save()`).
+- **Visibility inheritance**: `File.parentObject` stores parent's Kowloon ID. At serve time, `serve.js` resolves the parent's current `to` field → `effectiveTo = parentTo ?? file.to ?? '@public'`. Parent visibility changes automatically propagate.
+- Upload flow: two-save pattern — first save triggers pre-save hook to set `file.id`, then set `file.url = https://<domain>/files/${file.id}` and save again.
+- `File.thumbnails`: `{ "200": "thumbnails/xxx_200.webp" }` — storage keys, not URLs.
+- nginx: `location /files/` has `proxy_buffering off` + 300s timeout for streaming.
+- File metadata endpoint: `GET /files/:id/meta`.
+- Delete: `DELETE /files/:id` — owner or server admin only; storage delete non-fatal (soft-delete always runs).
 
 ### Key implementation notes
 - **JWT**: `jose` (pure ESM), not `jsonwebtoken`. Always call `.toObject({ depopulate: true })` before building JWT payload (jose uses `structuredClone`, which fails on Mongoose subdocs).

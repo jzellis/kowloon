@@ -8,18 +8,15 @@ import isServerAdmin from '#methods/auth/isServerAdmin.js';
 
 export default route(
   async ({ params, user, setStatus, set }) => {
-    const { key } = params;
+    const { id } = params;
 
-    if (!key) {
+    if (!id) {
       setStatus(400);
-      set('error', 'File key is required');
+      set('error', 'File id is required');
       return;
     }
 
-    // Find the file record
-    let file = await File.findOne({ storageKey: key, deletedAt: null });
-    if (!file) file = await File.findOne({ id: key, deletedAt: null });
-    if (!file) file = await File.findOne({ id: `file:${key}`, deletedAt: null });
+    const file = await File.findOne({ id, deletedAt: null });
 
     if (!file) {
       setStatus(404);
@@ -38,7 +35,7 @@ export default route(
     // Delete from storage backend
     try {
       const storage = await getStorageAdapter();
-      await storage.delete(file.storageKey || key);
+      await storage.delete(file.storageKey);
     } catch (err) {
       console.error('[files/delete] Storage delete error (continuing with DB soft-delete):', err.message);
     }

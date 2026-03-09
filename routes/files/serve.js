@@ -1,16 +1,49 @@
 // /routes/files/serve.js
-// Authenticated file proxy. Streams from storage only if the viewer has access.
+// Authenticated file proxy. Resolves visibility from the file's parent object.
 //
-// Auth: Bearer token in Authorization header OR ?token= query param (for <img src>).
-// Visibility: File.to uses same addressing as Post.to — @public, @domain, circleId, userId.
+// GET /files/:id          — serve original file
+// GET /files/:id?size=200 — serve thumbnail at that size
+//
+// Auth: Bearer token in Authorization header OR ?token= query param (for <img src="...?token=...">).
+//
+// Visibility is inherited from the parent object (post, user, group, etc.).
+// If no parentObject, falls back to file.to (defaults @public).
 
 import { jwtVerify, importSPKI } from 'jose';
+import kowloonId from '#methods/parse/kowloonId.js';
 import File from '#schema/File.js';
 import { getStorageAdapter } from '#methods/files/index.js';
 import { getViewerContext } from '#methods/visibility/context.js';
 import getSettings from '#methods/settings/get.js';
+import { Post, Reply, User, Group, Page, Bookmark, Circle } from '#schema';
 
-// ── token extraction ──────────────────────────────────────────────────────────
+// ── parent model map ──────────────────────────────────────────────────────────
+
+const PARENT_MODELS = { Post, Reply, User, Group, Page, Bookmark, Circle };
+
+async function getParentTo(parentId) {
+  if (!parentId) return null;
+  const parsed = kowloonId(parentId);
+  if (!parsed?.type) return null;
+
+  // User visibility: use user.to (their own visibility setting)
+  if (parsed.type === 'User') {
+    const user = await User.findOne({ id: parentId, deletedAt: null })
+      .select('to actorId')
+      .lean();
+    return user?.to ?? null;
+  }
+
+  const Model = PARENT_MODELS[parsed.type];
+  if (!Model) return null;
+
+  const doc = await Model.findOne({ id: parentId, deletedAt: null })
+    .select('to actorId')
+    .lean();
+  return doc?.to ?? null;
+}
+
+// ── token / viewer resolution ─────────────────────────────────────────────────
 
 function extractToken(req) {
   const auth = req.headers?.authorization || '';
@@ -38,96 +71,97 @@ async function resolveViewer(token) {
 
 // ── visibility check ──────────────────────────────────────────────────────────
 
-async function canAccess(file, viewerId) {
-  const to = file.to || '@public';
+async function canAccess(to, file, viewerId) {
+  const visibility = to || '@public';
 
-  // Public — anyone
-  if (to === '@public') return true;
-
-  // Must be authenticated from here
+  if (visibility === '@public') return true;
   if (!viewerId) return false;
-
-  // Owner always has access
-  if (file.actorId === viewerId) return true;
+  if (file.actorId === viewerId) return true; // owner always has access
 
   const ctx = await getViewerContext(viewerId);
 
-  // Server-scoped
-  if (to.startsWith('@')) {
-    const domain = to.slice(1);
-    return ctx.viewerDomain === domain;
+  // Server-scoped: @domain
+  if (visibility.startsWith('@')) {
+    return ctx.viewerDomain === visibility.slice(1);
   }
 
-  // Circle or Group membership
-  if (ctx.circleIds.has(to) || ctx.groupIds.has(to)) return true;
-
   // Direct user-to-user (private)
-  if (to === viewerId) return true;
+  if (visibility === viewerId) return true;
 
-  return false;
+  // Circle or Group membership
+  return ctx.circleIds.has(visibility) || ctx.groupIds.has(visibility);
 }
 
 // ── handler ───────────────────────────────────────────────────────────────────
 
 export default async function serve(req, res) {
-  // key may contain subdirectory (e.g. thumbnails/abc_200.webp)
-  const key = req.params[0];
+  const fileId = req.params.id;
+  const sizeParam = req.query.size ? String(req.query.size) : null;
 
-  if (!key) {
-    return res.status(400).json({ error: 'File key is required' });
+  if (!fileId) {
+    return res.status(400).json({ error: 'File id is required' });
   }
 
   try {
-    // Find by storageKey — thumbnail keys won't have a File record, look up parent
-    let file = await File.findOne({ storageKey: key, deletedAt: null }).lean();
-
-    // Thumbnail: strip the thumbnail path and find the parent file
-    if (!file && key.startsWith('thumbnails/')) {
-      // thumbnails/1234-abcd_200.webp → 1234-abcd.png (or similar)
-      const base = key.replace(/^thumbnails\//, '').replace(/_\d+\.webp$/, '');
-      file = await File.findOne({
-        storageKey: { $regex: `^${base}` },
-        deletedAt: null,
-      }).lean();
-    }
-
+    const file = await File.findOne({ id: fileId, deletedAt: null }).lean();
     if (!file) {
       return res.status(404).json({ error: 'File not found' });
     }
 
-    // Resolve viewer from JWT (header or query param)
+    // Resolve effective visibility: inherit from parent if set, else own to
+    const parentTo = file.parentObject
+      ? await getParentTo(file.parentObject)
+      : null;
+    const effectiveTo = parentTo ?? file.to ?? '@public';
+
+    // Auth
     const token = extractToken(req);
     const viewerId = await resolveViewer(token);
 
-    // Check visibility
-    const allowed = await canAccess(file, viewerId);
+    const allowed = await canAccess(effectiveTo, file, viewerId);
     if (!allowed) {
       return res.status(viewerId ? 403 : 401).json({
         error: viewerId ? 'Access denied' : 'Authentication required',
       });
     }
 
-    // Stream from storage
-    const storage = await getStorageAdapter();
+    // Resolve which storage key to serve
+    let storageKey = file.storageKey;
 
-    const exists = await storage.exists(key);
+    if (sizeParam) {
+      const thumbKey = file.thumbnails?.[sizeParam];
+      if (!thumbKey) {
+        return res.status(404).json({ error: `No thumbnail at size ${sizeParam}` });
+      }
+      storageKey = thumbKey;
+    }
+
+    if (!storageKey) {
+      return res.status(404).json({ error: 'File has no storage key' });
+    }
+
+    const storage = await getStorageAdapter();
+    const exists = await storage.exists(storageKey);
     if (!exists) {
       return res.status(404).json({ error: 'File not found in storage' });
     }
 
-    const metadata = await storage.getMetadata(key);
+    const metadata = await storage.getMetadata(storageKey);
+    const contentType = sizeParam
+      ? 'image/webp'
+      : (metadata.contentType || file.mediaType || 'application/octet-stream');
 
-    res.setHeader('Content-Type', metadata.contentType || 'application/octet-stream');
+    res.setHeader('Content-Type', contentType);
     if (metadata.size) res.setHeader('Content-Length', metadata.size);
 
-    // Cache: public files get long-lived cache; restricted files must revalidate
-    if ((file.to || '@public') === '@public') {
+    // Public files: long-lived immutable cache. Restricted: no caching.
+    if (effectiveTo === '@public') {
       res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     } else {
       res.setHeader('Cache-Control', 'private, no-store');
     }
 
-    const stream = await storage.getStream(key);
+    const stream = await storage.getStream(storageKey);
     stream.pipe(res);
     stream.on('error', (err) => {
       console.error('[files/serve] stream error:', err.message);
@@ -135,6 +169,8 @@ export default async function serve(req, res) {
     });
   } catch (err) {
     console.error('[files/serve] Error:', err);
-    if (!res.headersSent) res.status(500).json({ error: err.message || 'Failed to serve file' });
+    if (!res.headersSent) {
+      res.status(500).json({ error: err.message || 'Failed to serve file' });
+    }
   }
 }

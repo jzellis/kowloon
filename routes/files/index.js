@@ -52,13 +52,14 @@ router.post('/', dynamicUpload, upload);
 // POST /files/upload  — upload alias
 router.post('/upload', dynamicUpload, upload);
 
-// GET  /files/download/* — serve file content (local storage)
-router.get('/download/*', serve);
+// GET  /files/:id/meta — get file metadata (must come before /:id)
+router.get('/:id/meta', get);
 
-// GET  /files/:key    — get file metadata
-router.get('/:key', get);
+// GET  /files/:id      — serve file content (auth-controlled proxy)
+// GET  /files/:id?size=200 — serve thumbnail at that size
+router.get('/:id', serve);
 
-// DELETE /files/:key  — delete a file
-router.delete('/:key', deleteFile);
+// DELETE /files/:id  — delete a file
+router.delete('/:id', deleteFile);
 
 export default router;

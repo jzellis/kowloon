@@ -22,10 +22,7 @@ export default route(
     }
 
     const { originalname: originalFileName, buffer, mimetype } = req.file;
-    const { title, summary, generateThumbnail, thumbnailSizes } = body;
-
-    // Visibility: default @public; caller may restrict to a circle/domain/userId
-    const to = typeof body.to === 'string' && body.to.trim() ? body.to.trim() : '@public';
+    const { title, summary, generateThumbnail, thumbnailSizes, parentObject } = body;
 
     // Admins may specify an explicit actorId; otherwise use auth user
     let actorId = user.id;
@@ -42,7 +39,7 @@ export default route(
     try {
       const storage = await getStorageAdapter();
 
-      // Always store private — the app proxies and enforces visibility
+      // Always store private in the backend — visibility enforced by the proxy
       const result = await storage.upload(buffer, {
         originalFileName,
         actorId,
@@ -54,31 +51,34 @@ export default route(
         isPublic: false,
       });
 
-      // Build the app-proxied URL — serves via /files/download/:key
-      const settings = await getSettings();
-      const domain = settings?.domain || process.env.DOMAIN || 'localhost';
-      const appUrl = `https://${domain}/files/download/${result.key}`;
-
-      // Build thumbnail app URLs too
+      // Store thumbnail storage keys (not URLs) — proxy builds URLs at serve time
       let thumbnails = null;
       if (result.thumbnails) {
         thumbnails = {};
-        for (const [size, _] of Object.entries(result.thumbnails)) {
-          const thumbKey = `thumbnails/${result.key.replace(/\.[^.]+$/, '')}_${size}.webp`;
-          thumbnails[size] = `https://${domain}/files/download/${thumbKey}`;
+        for (const [size] of Object.entries(result.thumbnails)) {
+          thumbnails[size] = `thumbnails/${result.key.replace(/\.[^.]+$/, '')}_${size}.webp`;
         }
       }
 
-      const file = await File.create({
+      // Create the File record first so we get the canonical file.id from the pre-save hook
+      const settings = await getSettings();
+      const domain = settings?.domain || process.env.DOMAIN || 'localhost';
+
+      const file = new File({
         actorId,
-        to,
+        // If parentObject is provided, visibility is inherited from it at serve time.
+        // to is left as the fallback for standalone files (defaults to @public).
+        to: typeof body.to === 'string' && body.to.trim() ? body.to.trim() : '@public',
+        parentObject: typeof parentObject === 'string' && parentObject.trim()
+          ? parentObject.trim()
+          : undefined,
         originalFileName,
         name: title || originalFileName,
         summary,
         type: getFileType(mimetype),
         mediaType: result.metadata.contentType,
         extension: originalFileName.split('.').pop()?.toLowerCase(),
-        url: appUrl,
+        url: 'pending', // filled in below once we have the id
         size: result.metadata.size,
         width: result.metadata.width,
         height: result.metadata.height,
@@ -86,11 +86,27 @@ export default route(
         thumbnails,
       });
 
+      await file.save(); // pre-save hook sets file.id = file:<_id>@domain
+
+      // Now set the canonical app-proxied URL and save again
+      file.url = `https://${domain}/files/${file.id}`;
+      await file.save();
+
+      // Build thumbnail response URLs (same pattern: /files/<id>?size=<n>)
+      const thumbnailUrls = thumbnails
+        ? Object.fromEntries(
+            Object.keys(thumbnails).map((size) => [
+              size,
+              `https://${domain}/files/${file.id}?size=${size}`,
+            ])
+          )
+        : null;
+
       setStatus(200);
       set('file', {
         id: file.id,
-        url: appUrl,
-        thumbnails,
+        url: file.url,
+        thumbnails: thumbnailUrls,
         metadata: result.metadata,
       });
     } catch (error) {

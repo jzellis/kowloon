@@ -3,7 +3,6 @@ import webfinger from "./webfinger.js";
 import hostMeta from "./hostMeta.js";
 import nodeinfo from "./nodeinfo.js";
 import nodeinfo20 from "./nodeinfo20.js";
-
 const router = express.Router({ mergeParams: true });
 
 // Mount well-known subroutes

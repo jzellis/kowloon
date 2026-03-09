@@ -1,82 +1,75 @@
 // /methods/federation/pullFromRemote.js
-// Universal function for retrieving content from remote servers
-// Used by both on-demand timeline requests and background polling worker
+// Pull content from a remote server using the batch-pull protocol.
+//
+// Sends GET /outbox?from=...&to=...&since=... to the remote server.
+// Remote server returns:
+//   { items: [...FeedItems], recipients: [{ itemId, to: [...localUserIds] }] }
+//
+// Upserts all items into local FeedItems, then enqueues per-user FeedFanOut
+// records based on the recipients map returned by the remote server.
 
+import crypto from "crypto";
 import fetch from "node-fetch";
 import https from "https";
-import { FeedItems, Feed } from "#schema";
+import { FeedItems, FeedFanOut } from "#schema";
 import logger from "#methods/utils/logger.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
+function dedupeHash(feedItemId, to) {
+  return crypto.createHash("sha256").update(`${feedItemId}:${to}`).digest("hex");
+}
+
 /**
- * Pull content from a remote server
+ * Pull content from a remote server on behalf of local users.
  *
  * @param {Object} options
- * @param {string} options.remoteDomain - Required: which server to pull from
- * @param {string[]} [options.authors=[]] - Authors to get posts from (usually Circle members)
- * @param {string[]} [options.members=[]] - Local users who should see Circle-addressed content
- * @param {string[]} [options.groups=[]] - Group IDs to get posts from
- * @param {string|Date} [options.since] - Only items after this timestamp
- * @param {string[]} [options.types=[]] - Filter by post types (Note, Article, etc.)
- * @param {number} [options.limit=100] - Max items to retrieve
- * @param {string} [options.forUser=null] - Specific local user (creates Feed LUT for them only)
- * @param {boolean} [options.createFeedLUT=true] - Whether to create Feed entries
+ * @param {string}   options.remoteDomain  - Required: remote server to pull from
+ * @param {string[]} options.from          - Remote users/servers to pull from
+ *                                           (user: "@alice@kwln2.local", server: "@kwln2.local")
+ * @param {string[]} options.to            - Local user IDs pulling on behalf of
+ * @param {string|Date} [options.since]    - Only items after this timestamp
+ * @param {number}   [options.limit=100]   - Max items to retrieve
  *
- * @returns {Promise<{items: Array, nextCursor: string|null, error: string|null}>}
+ * @returns {Promise<{ items: Array, nextCursor: string|null, error: string|null }>}
  */
 export default async function pullFromRemote({
   remoteDomain,
-  authors = [],
-  members = [],
-  groups = [],
+  from = [],
+  to = [],
   since = null,
-  types = [],
   limit = 100,
-  forUser = null,
-  createFeedLUT = true,
 } = {}) {
   if (!remoteDomain) {
     return { items: [], nextCursor: null, error: "remoteDomain is required" };
+  }
+  if (from.length === 0) {
+    return { items: [], nextCursor: null, error: "from is required" };
+  }
+  if (to.length === 0) {
+    return { items: [], nextCursor: null, error: "to is required" };
   }
 
   const { domain: ourDomain } = getServerSettings();
 
   try {
-    // Build query string
     const params = new URLSearchParams();
-
-    if (authors.length > 0) {
-      authors.forEach((a) => params.append("authors", a));
-    }
-    if (members.length > 0) {
-      members.forEach((m) => params.append("members", m));
-    }
-    if (groups.length > 0) {
-      groups.forEach((g) => params.append("groups", g));
-    }
-    if (types.length > 0) {
-      types.forEach((t) => params.append("types", t));
-    }
+    from.forEach((f) => params.append("from", f));
+    to.forEach((t) => params.append("to", t));
     if (since) {
       const sinceDate = since instanceof Date ? since : new Date(since);
       params.append("since", sinceDate.toISOString());
     }
     params.append("limit", String(limit));
 
-    const url = `https://${remoteDomain}/.well-known/kowloon/pull?${params}`;
+    const url = `https://${remoteDomain}/outbox?${params}`;
 
     logger.info("pullFromRemote: Fetching", {
       remoteDomain,
-      authors: authors.length,
-      members: members.length,
-      groups: groups.length,
-      types: types.length,
+      from: from.length,
+      to: to.length,
       since,
       limit,
     });
-
-    // TODO: Sign request with HTTP Signature
-    // For now, using unsigned requests (will fail on production servers)
 
     // Allow self-signed certs for local development
     const agent = new https.Agent({
@@ -90,7 +83,7 @@ export default async function pullFromRemote({
         "User-Agent": `Kowloon/${ourDomain}`,
       },
       agent,
-      timeout: 30000, // 30 second timeout
+      timeout: 30000,
     });
 
     if (!response.ok) {
@@ -109,33 +102,30 @@ export default async function pullFromRemote({
     }
 
     const data = await response.json();
-    const items = data.orderedItems || data.items || [];
+    const items = data.items || data.orderedItems || [];
+    const recipients = data.recipients || []; // [{ itemId, to: [userId, ...] }]
     const nextCursor = data.next || null;
 
-    logger.info("pullFromRemote: Retrieved items", {
+    logger.info("pullFromRemote: Retrieved", {
       remoteDomain,
-      count: items.length,
-      nextCursor,
+      items: items.length,
+      recipientEntries: recipients.length,
     });
 
-    // Upsert items into FeedItems collection
-    let upserted = 0;
-    const itemIds = [];
-
+    // Upsert all items into local FeedItems
+    const upsertedIds = new Set();
     for (const item of items) {
       if (!item.id) {
         logger.warn("pullFromRemote: Item missing ID, skipping", { item });
         continue;
       }
-
       try {
         await FeedItems.findOneAndUpdate(
           { id: item.id },
           { $set: item },
           { upsert: true, new: true }
         );
-        upserted++;
-        itemIds.push(item.id);
+        upsertedIds.add(item.id);
       } catch (err) {
         logger.error("pullFromRemote: Upsert failed", {
           remoteDomain,
@@ -148,72 +138,45 @@ export default async function pullFromRemote({
     logger.info("pullFromRemote: Upserted items", {
       remoteDomain,
       total: items.length,
-      upserted,
+      upserted: upsertedIds.size,
     });
 
-    // Create Feed LUT entries if requested
-    if (createFeedLUT && itemIds.length > 0) {
-      const targetUsers = forUser ? [forUser] : members;
-
-      if (targetUsers.length > 0) {
-        await createFeedEntries(itemIds, targetUsers, remoteDomain);
-      }
+    // Build itemId → FeedItem map for fan-out metadata
+    const feedItemMap = new Map();
+    if (recipients.length > 0 && upsertedIds.size > 0) {
+      const feedItems = await FeedItems.find({
+        id: { $in: [...upsertedIds] },
+      }).lean();
+      for (const fi of feedItems) feedItemMap.set(fi.id, fi);
     }
 
-    return {
-      items,
-      nextCursor,
-      error: null,
-    };
-  } catch (error) {
-    logger.error("pullFromRemote: Error", {
-      remoteDomain,
-      error: error.message,
-      stack: error.stack,
-    });
-    return {
-      items: [],
-      nextCursor: null,
-      error: error.message,
-    };
-  }
-}
+    // Create per-user FeedFanOut records directly from the recipients map.
+    // We bypass enqueueFeedFanOut/parseAudience here because the remote server
+    // has already resolved exact recipients — no audience parsing needed.
+    let fanOutCount = 0;
+    const fanOutOps = [];
 
-/**
- * Create Feed LUT entries for pulled items
- *
- * @param {string[]} itemIds - FeedItems IDs
- * @param {string[]} userIds - Local user IDs to create entries for
- * @param {string} remoteDomain - Remote domain (for logging)
- */
-async function createFeedEntries(itemIds, userIds, remoteDomain) {
-  try {
-    // Fetch the FeedItems to get metadata
-    const feedItems = await FeedItems.find({ id: { $in: itemIds } }).lean();
+    for (const { itemId, to: recipientIds } of recipients) {
+      if (!upsertedIds.has(itemId)) continue;
+      const feedItem = feedItemMap.get(itemId);
+      if (!feedItem) continue;
 
-    const bulkOps = [];
-
-    for (const item of feedItems) {
-      for (const userId of userIds) {
-        bulkOps.push({
+      for (const userId of recipientIds) {
+        const hash = dedupeHash(itemId, userId);
+        fanOutOps.push({
           updateOne: {
-            filter: {
-              actorId: userId, // The local viewer
-              objectId: item.id, // The FeedItems ID
-            },
+            filter: { dedupeHash: hash },
             update: {
-              $set: {
-                actorId: userId,
-                objectId: item.id,
-                activityActorId: item.actorId, // Original author
-                type: item.objectType, // Main type (Post, Bookmark, etc.)
-                objectType: item.type, // Subtype (Note, Article, etc.)
-                reason: "remote", // Mark as remotely pulled
-                createdAt: item.publishedAt || item.createdAt || new Date(),
-                fetchedAt: new Date(),
-                // Capabilities will be computed later during timeline assembly
-                canReply: false, // Default conservative
-                canReact: false, // Default conservative
+              $setOnInsert: {
+                feedItemId: itemId,
+                objectType: feedItem.objectType,
+                actorId: feedItem.actorId,
+                to: userId,
+                groupId: null,
+                reason: "circle",
+                canReply: feedItem.canReply || "public",
+                canReact: feedItem.canReact || "public",
+                dedupeHash: hash,
               },
             },
             upsert: true,
@@ -222,19 +185,30 @@ async function createFeedEntries(itemIds, userIds, remoteDomain) {
       }
     }
 
-    if (bulkOps.length > 0) {
-      await Feed.bulkWrite(bulkOps);
-      logger.info("pullFromRemote: Created Feed LUT entries", {
-        remoteDomain,
-        items: feedItems.length,
-        users: userIds.length,
-        total: bulkOps.length,
-      });
+    if (fanOutOps.length > 0) {
+      try {
+        const result = await FeedFanOut.bulkWrite(fanOutOps);
+        fanOutCount = result.upsertedCount || 0;
+      } catch (err) {
+        logger.error("pullFromRemote: FeedFanOut bulkWrite failed", {
+          remoteDomain,
+          error: err.message,
+        });
+      }
     }
-  } catch (err) {
-    logger.error("pullFromRemote: Feed LUT creation failed", {
+
+    logger.info("pullFromRemote: Enqueued FeedFanOut entries", {
       remoteDomain,
-      error: err.message,
+      fanOutCount,
     });
+
+    return { items, nextCursor, error: null };
+  } catch (error) {
+    logger.error("pullFromRemote: Error", {
+      remoteDomain,
+      error: error.message,
+      stack: error.stack,
+    });
+    return { items: [], nextCursor: null, error: error.message };
   }
 }

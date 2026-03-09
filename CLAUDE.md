@@ -178,12 +178,53 @@ The Reply ActivityParser handler was refactored to be fully self-contained per d
 
 ### TODO
 - Commit all uncommitted changes above
-- Fix federation bugs (see Docker/Federation section below)
+- **Implement batch-pull outbox federation** (see below) ← IN PROGRESS
 - Client library testing against seeded data (priority: Reply, React, Create flows)
 - Feed fan-out / timeline assembly testing
 - Admin API routes (`/admin/*`)
 - Full federation testing (S2S)
 - Event type (RSVP system)
+
+## Batch-Pull Outbox Federation (IN PROGRESS as of 2026-03-09)
+
+Instead of kwln2 pushing to each kwln1 user's inbox individually, kwln1 batch-pulls all relevant content for its users from kwln2 in one request.
+
+### GET /outbox — S2S batch-pull mode
+
+**Request params (kwln1 → kwln2):**
+- `from` — kwln2 user IDs/handles to pull posts from
+- `to` — kwln1 user IDs/handles we're requesting on behalf of
+- `since` — ISO timestamp of last pull (omit for all time)
+
+**kwln2 query logic:**
+
+`from` entries can be individual users (`@alice@kwln2.local`) or a bare server (`@kwln2.local`).
+
+For **user** `from` entries:
+1. `@public` posts by that user → recipients = `to` users who have that user in one of their Circles
+2. Circle-addressed posts by that user → recipients = `to` users who are members of that circle
+
+For **server** `from` entries (e.g. `@kwln2.local`):
+1. All `@public` posts from that server → recipients = `to` users who have the bare server ID in one of their Circles
+
+All results filtered by `since`, sorted newest-first, deduplicated.
+
+**Response shape:**
+```json
+{
+  "@context": "https://www.w3.org/ns/activitystreams",
+  "type": "OrderedCollection",
+  "items": [ ...FeedItem docs... ],
+  "recipients": [
+    { "itemId": "post:abc@kwln2.local", "to": ["@alice@kwln1.local", "@bob@kwln1.local"] },
+    { "itemId": "post:def@kwln2.local", "to": ["@alice@kwln1.local"] }
+  ]
+}
+```
+
+**kwln1 side (`methods/federation/pullFromRemote.js`):**
+- Upserts items into local FeedItems collection
+- Uses `recipients` map to fan out to each user's feed
 
 ## Docker / Local Federation Setup
 

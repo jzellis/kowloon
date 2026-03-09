@@ -101,6 +101,22 @@ export default async function Add(activity) {
       // String case
       if (typeof ref === "string") {
         const s = ref.trim();
+
+        // Bare server entry: "@domain" (one @ at start, no second @)
+        // Store as a lightweight member with just the server id — no inbox/outbox
+        if (/^@[^@]+$/.test(s)) {
+          const domain = s.slice(1);
+          return {
+            id: s,
+            name: domain,
+            icon: "",
+            inbox: "",
+            outbox: "",
+            url: `https://${domain}`,
+            server: s,
+          };
+        }
+
         if (/^@[^@]+@[^@]+$/.test(s)) {
           // Try local User first — skip stale records with no useful data
           const u = await User.findOne({ id: s }).lean();

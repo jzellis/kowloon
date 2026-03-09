@@ -177,15 +177,11 @@ The Reply ActivityParser handler was refactored to be fully self-contained per d
 - `schema/Bookmark.js` — Added `replyCount`, `reactCount`, `shareCount` fields
 
 ### TODO
-- Commit all uncommitted changes above
-- **Implement batch-pull outbox federation** (see below) ← IN PROGRESS
-- Client library testing against seeded data (priority: Reply, React, Create flows)
-- Feed fan-out / timeline assembly testing
 - Admin API routes (`/admin/*`)
-- Full federation testing (S2S)
 - Event type (RSVP system)
+- Alpha housekeeping (see below)
 
-## Batch-Pull Outbox Federation (IN PROGRESS as of 2026-03-09)
+## Batch-Pull Outbox Federation (COMPLETE as of 2026-03-09)
 
 Instead of kwln2 pushing to each kwln1 user's inbox individually, kwln1 batch-pulls all relevant content for its users from kwln2 in one request.
 

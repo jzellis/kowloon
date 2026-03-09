@@ -6,6 +6,15 @@ import { jwtVerify, importSPKI } from "jose";
 import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import getSettings from "#methods/settings/get.js";
 import { create, list, getOne, deactivate } from "./invites.js";
+import activitiesRouter from "./activities.js";
+import usersRouter from "./users.js";
+import groupsRouter from "./groups.js";
+import postsRouter from "./posts.js";
+import circlesRouter from "./circles.js";
+import flaggedRouter from "./flagged.js";
+import settingsRouter from "./settings.js";
+import pagesRouter from "./pages.js";
+import systemRouter from "./system.js";
 
 const router = express.Router({ mergeParams: true });
 
@@ -51,5 +60,17 @@ router.post("/invites", create);
 router.get("/invites", list);
 router.get("/invites/:id", getOne);
 router.delete("/invites/:id", deactivate);
+
+// ── Sub-routers ───────────────────────────────────────────────────────────────
+
+router.use("/activities", activitiesRouter);
+router.use("/users", usersRouter);
+router.use("/groups", groupsRouter);
+router.use("/posts", postsRouter);
+router.use("/circles", circlesRouter);
+router.use("/flagged", flaggedRouter);
+router.use("/settings", settingsRouter);
+router.use("/pages", pagesRouter);
+router.use("/system", systemRouter);
 
 export default router;

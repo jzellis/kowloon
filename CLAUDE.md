@@ -158,28 +158,22 @@ MongoDB via Mongoose. Connection URI from env: `MONGO_URI` (or `MONGODB_URI`, `M
 - **Seed script rewrite**: `scripts/seed-test.js` fully rewritten to use HTTP API calls (no direct Mongoose). Requires server running. Uses `POST /__test/wipe` (only works when `NODE_ENV !== "production"`).
   - To re-seed: set `NODE_ENV=development` in `.env`, restart pm2, run `node scripts/seed-test.js --wipe`, restore `NODE_ENV=production`, restart pm2.
 
-### In Progress / Uncommitted Changes (as of 2026-03-05)
+### Completed (as of 2026-03-09)
 
-The Reply ActivityParser handler was refactored to be fully self-contained per design decisions. **These changes are not yet committed:**
-
-- `ActivityParser/handlers/Reply/index.js` — Complete rewrite. No longer delegates to Create. Now:
-  - Validates `objectType === "Reply"` (was `"Post"`)
-  - Uses `activity.to` as the parent object ID → stored as `Reply.target`
-  - Does NOT require `object.inReplyTo` (was previously required)
-  - Creates `Reply` model directly
-  - Bumps `replyCount` on parent (tries Post, Page, Bookmark, Group, Circle)
-  - Creates notification for parent author
-  - Calls federation helper
-- `ActivityParser/handlers/Reply/schema.js` — Updated: objectType = `"Reply"`, removed `inReplyTo`/`canReply`/`canReact` fields
-- `ActivityParser/activity.schema.js` — Added `"Reply"` to objectType enum; fixed Reply validation block (no longer requires `inReplyTo`, sets `objectType: "Reply"`)
-- `ActivityParser/preprocess.js` — Updated to require `objectType === "Reply"`, removed `inReplyTo` check
-- `schema/Reply.js` — Added `to`, `canReply`, `canReact` fields (always blank `""`, for future-proofing)
-- `schema/Bookmark.js` — Added `replyCount`, `reactCount`, `shareCount` fields
+- **Reply handler rewrite**: Fully self-contained per design decisions. No longer delegates to Create.
+- **Admin API** (`/admin/*`): Activities, users, groups, posts, circles, flagged content, settings, pages, system stats
+- **Admin invites** (`/admin/invites`): Create/list/revoke server invites (individual + open link types)
+- **Batch-pull outbox federation**: S2S content pull with per-user fan-out (see section below)
+- **Settings UI metadata**: All settings have `ui: { type, label, group, order }` for admin UI rendering
+- **Update activity handler**: Authorization (owner/admin), per-type field allowlists, password change flow, sensitive field sanitization
+- **Delete activity handler**: Authorization (owner/admin), proper User deactivation (`active: false`), sensitive field sanitization
+- **Rate limiting**: `strictRateLimiter` (20 req / 5 min) applied to `POST /auth/login` and `POST /register`
+- **NodeInfo 2.0**: Real user/post counts, pulls `openRegistrations` and `siteTitle` from settings
 
 ### TODO
-- Admin API routes (`/admin/*`)
 - Event type (RSVP system)
-- Alpha housekeeping (see below)
+- Email sending (SMTP config exists, no sending code yet)
+- Full federation testing (S2S edge cases)
 
 ## Batch-Pull Outbox Federation (COMPLETE as of 2026-03-09)
 

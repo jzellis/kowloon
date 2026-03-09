@@ -9,7 +9,7 @@ const patterns = {
   postId: `^post:${idPart}@[a-z0-9.-]+$`,
   pageId: `^page:${idPart}@[a-z0-9.-]+$`,
   bookmarkId: `^bookmark:${idPart}@[a-z0-9.-]+$`,
-  objectId: `^(circle|group|post|page|bookmark):${idPart}@[a-z0-9.-]+$`,
+  objectId: `^(circle|group|post|page|bookmark|reply):${idPart}@[a-z0-9.-]+$`,
 };
 
 const toRecipient = {
@@ -34,6 +34,7 @@ const replyReactRecipient = {
     { type: "string", pattern: patterns.postId }, // Allow post IDs for Reply/React targets
     { type: "string", pattern: patterns.pageId }, // Allow page IDs for Reply/React targets
     { type: "string", pattern: patterns.bookmarkId }, // Allow bookmark IDs for Reply/React targets
+    { type: "string", pattern: `^reply:${idPart}@[a-z0-9.-]+$` }, // Allow reply IDs for threaded replies
   ],
 };
 

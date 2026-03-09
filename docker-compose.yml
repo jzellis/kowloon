@@ -114,6 +114,7 @@ services:
       MONGO_URI: mongodb://mongodb:27017/kowloon1
       NODE_ENV: development
       NODE_TLS_REJECT_UNAUTHORIZED: "0"   # accept self-signed cert from nginx
+      RATE_LIMITING_ENABLED: "false"      # disable rate limiting in dev/test
       S3_ENDPOINT: http://minio:9000
       S3_BUCKET: kwln1
       S3_PUBLIC_URL: "http://localhost:${MINIO_API_PORT:-9000}/kwln1"
@@ -161,6 +162,7 @@ services:
       MONGO_URI: mongodb://mongodb:27017/kowloon2
       NODE_ENV: development
       NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      RATE_LIMITING_ENABLED: "false"      # disable rate limiting in dev/test
       S3_ENDPOINT: http://minio:9000
       S3_BUCKET: kwln2
       S3_PUBLIC_URL: "http://localhost:${MINIO_API_PORT:-9000}/kwln2"

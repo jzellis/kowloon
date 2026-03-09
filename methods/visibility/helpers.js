@@ -37,7 +37,19 @@ export function sanitizeAudience(obj, ctx) {
 
 export async function canSeeObject(obj, ctx) {
   if (!obj) return false;
+
+  // The object's owner can always see their own content
+  if (ctx?.viewerId) {
+    if (obj.actorId && obj.actorId === ctx.viewerId) return true;
+    if (obj.id && obj.id === ctx.viewerId) return true; // User objects use id as the actor handle
+  }
+
   const to = obj.to;
+
+  // Empty/missing `to` defaults to server-wide visibility
+  if (!to || to === "") {
+    return !!(ctx?.isAuthenticated && ctx.viewerDomain);
+  }
 
   // Public objects are always visible
   if (to === "@public") return true;

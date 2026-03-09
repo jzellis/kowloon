@@ -38,6 +38,10 @@ function sanitizeUser(u) {
     username: doc.username,
     email: doc.email || null,
     profile: doc.profile || {},
+    following: doc.circles?.following || null,
+    allFollowing: doc.circles?.allFollowing || null,
+    blocked: doc.circles?.blocked || null,
+    muted: doc.circles?.muted || null,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };

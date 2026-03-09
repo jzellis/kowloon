@@ -133,47 +133,40 @@ MongoDB via Mongoose. Connection URI from env: `MONGO_URI` (or `MONGODB_URI`, `M
 - `scripts/seed.js` — Random seed with faker (configurable counts)
 - `POST /__test/wipe` — Wipes all collections except settings (non-production only)
 
-## Current State
+## Current State (as of 2026-03-09)
 
 ### Working
-- User registration + auth (JWT)
-- All CRUD via outbox + ActivityParser
-- Circle/Group management (create, join, leave, add, remove)
+- User registration + auth (JWT via `jose`, RS256)
+- All CRUD via `POST /outbox` + ActivityParser pipeline
+- Circle/Group management (create, join, leave, add, remove, block, mute)
 - Notifications (create, list, read, unread, dismiss)
 - File uploads (S3/MinIO)
-- Federation basics (inbox/outbox, HTTP signatures)
+- S2S federation (inbox/outbox, HTTP signatures, batch-pull)
 - All GET API routes (posts, users, circles, groups, bookmarks, search, notifications)
-- Convenience `/notifications` route (resolves user from JWT)
-- Reply handler fully self-contained (see below)
+- Reply handler fully self-contained (creates Reply model, bumps replyCount, notifies author)
+- Update handler: authorized profile/post editing with per-type field allowlists
+- Delete handler: authorized soft-delete; User deactivation sets `active: false`
+- Flag/report: `POST /outbox` with `{ type: "Flag", target, object: { reason } }`
+- Admin API (`/admin/*`): full CRUD for users, groups, posts, circles, flagged content, settings, pages, system stats
+- Admin invites (`/admin/invites`): create/list/revoke (individual + open link types)
+- Rate limiting: `strictRateLimiter` on `POST /auth/login` and `POST /register`
+- NodeInfo 2.0: real user/post counts from DB
+- Settings UI metadata: all settings have `ui: { type, label, group, order }` for admin UI rendering
 
-### Completed (as of 2026-03-05)
-
-- **JWT library migration**: Replaced `jsonwebtoken` (CJS, broke in Node.js ESM) with `jose` (pure ESM).
-  - `routes/utils/route.js` — JWT verification via `jwtVerify` + `importSPKI`
-  - `routes/register/index.js` — signing via `SignJWT` + `importPKCS8`
-  - `methods/generate/token.js` — signing via `SignJWT`; must call `.toObject({ depopulate: true })` before building payload (jose uses `structuredClone`, which fails on Mongoose subdocs)
-- **Bug fix**: `user.circles.*` fields (`following`, `allFollowing`, `blocked`, `muted`) are nested under `user.circles`, NOT top-level. Fixed selects and references in:
-  - `methods/generate/token.js` — select `circles`, use `u.circles?.following` etc.
-  - `methods/auth/login.js` — select `circles`, return `uo.circles?.following` etc.
-- **Seed script rewrite**: `scripts/seed-test.js` fully rewritten to use HTTP API calls (no direct Mongoose). Requires server running. Uses `POST /__test/wipe` (only works when `NODE_ENV !== "production"`).
-  - To re-seed: set `NODE_ENV=development` in `.env`, restart pm2, run `node scripts/seed-test.js --wipe`, restore `NODE_ENV=production`, restart pm2.
-
-### Completed (as of 2026-03-09)
-
-- **Reply handler rewrite**: Fully self-contained per design decisions. No longer delegates to Create.
-- **Admin API** (`/admin/*`): Activities, users, groups, posts, circles, flagged content, settings, pages, system stats
-- **Admin invites** (`/admin/invites`): Create/list/revoke server invites (individual + open link types)
-- **Batch-pull outbox federation**: S2S content pull with per-user fan-out (see section below)
-- **Settings UI metadata**: All settings have `ui: { type, label, group, order }` for admin UI rendering
-- **Update activity handler**: Authorization (owner/admin), per-type field allowlists, password change flow, sensitive field sanitization
-- **Delete activity handler**: Authorization (owner/admin), proper User deactivation (`active: false`), sensitive field sanitization
-- **Rate limiting**: `strictRateLimiter` (20 req / 5 min) applied to `POST /auth/login` and `POST /register`
-- **NodeInfo 2.0**: Real user/post counts, pulls `openRegistrations` and `siteTitle` from settings
+### Key implementation notes
+- **JWT**: `jose` (pure ESM), not `jsonwebtoken`. Always call `.toObject({ depopulate: true })` before building JWT payload (jose uses `structuredClone`, which fails on Mongoose subdocs).
+- **user.circles fields**: nested under `user.circles.following`, `user.circles.blocked`, etc. — NOT top-level.
+- **Seeding**: `scripts/seed-test.js` uses HTTP API calls only. Requires server running. `POST /__test/wipe` only works when `NODE_ENV !== "production"`.
+- **Settings cache**: `methods/settings/cache.js` in-memory Map. `getSetting(name)` from cache. `getServerSettings()` always falls back to `process.env.DOMAIN` when cache value is falsy.
+- **outbox `to/canReact/canReply` injection**: only injected into `activity.object` for non-Update, non-Delete activities (those handlers treat `object` as a patch).
+- **Update/Delete response**: User result always has `password`, `privateKey`, `publicKeyJwk`, `signature` stripped before returning.
+- **Admin auth guard**: plain Express `router.use()` middleware in `routes/admin/index.js` — verifies RS256 JWT then calls `isServerAdmin(userId)`.
+- **Settings `ui.type === "redacted"`**: write-protected at API level (in addition to `READONLY_FIELDS` set in `routes/admin/settings.js`).
 
 ### TODO
-- Event type (RSVP system)
-- Email sending (SMTP config exists, no sending code yet)
-- Full federation testing (S2S edge cases)
+- Email sending (SMTP config exists in settings, no sending code yet)
+- Event type / RSVP system (can defer post-alpha)
+- Full S2S federation edge case testing
 
 ## Batch-Pull Outbox Federation (COMPLETE as of 2026-03-09)
 
@@ -240,7 +233,7 @@ TEST_BASE_URL=http://kwln2.local:8080 node scripts/seed-test.js --wipe
 - `methods/utils/init.js` upserts null/undefined settings on startup (fix for stale DB values)
 - `methods/settings/schemaHelpers.js` always falls back to `process.env.DOMAIN` when cache value is falsy
 
-## Federation Status (as of 2026-03-05)
+## Federation Status (as of 2026-03-09)
 
 | Test | Status |
 |------|--------|
@@ -248,10 +241,11 @@ TEST_BASE_URL=http://kwln2.local:8080 node scripts/seed-test.js --wipe
 | Actor fetch | ✅ |
 | Login (`POST /auth/login`) | ✅ |
 | Create public post | ✅ |
-| Add remote user to circle | ⚠️ Stored with empty member data |
+| Add remote user to circle | ✅ Fixed — `getObjectById` unwraps Kowloon API envelope |
 | S2S delivery | ✅ Fixed — `shouldFederate.js` + `processFederation` in ActivityParser wired up |
+| Reply to remote post | ✅ Works — 202, notification created, replyCount incremented |
+| Batch-pull outbox | ✅ Complete — `pullFromRemote` + per-user FeedFanOut fan-out |
 
-### Bugs to fix for S2S federation
 All known S2S federation bugs fixed as of 2026-03-07.
 
 ## Joplin Integration

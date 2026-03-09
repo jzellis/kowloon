@@ -4,9 +4,18 @@
 import route from '../utils/route.js';
 import { getStorageAdapter } from '#methods/files/index.js';
 import File from '#schema/File.js';
+import isServerAdmin from '#methods/auth/isServerAdmin.js';
 
 export default route(
   async ({ req, body, user, setStatus, set }) => {
+    // multer LIMIT_FILE_SIZE error surfaces here as req.fileValidationError or
+    // as a MulterError thrown before reaching this handler. Handle both.
+    if (req.multerError) {
+      setStatus(413);
+      set('error', req.multerError.message || 'File too large');
+      return;
+    }
+
     if (!req.file) {
       setStatus(400);
       set('error', 'No file uploaded');
@@ -16,13 +25,16 @@ export default route(
     const { originalname: originalFileName, buffer, mimetype } = req.file;
     const { title, summary, generateThumbnail, thumbnailSizes, isPublic } = body;
 
-    // Use authenticated user's ID, or allow explicit actorId for server-to-server
-    const actorId = user?.id || body.actorId;
-
-    if (!actorId) {
-      setStatus(400);
-      set('error', 'Authentication required for file upload');
-      return;
+    // Admins may specify an explicit actorId (e.g. server-to-server); otherwise use auth user
+    let actorId = user.id;
+    if (body.actorId && body.actorId !== user.id) {
+      const admin = await isServerAdmin(user.id);
+      if (!admin) {
+        setStatus(403);
+        set('error', 'Only admins may upload on behalf of another actor');
+        return;
+      }
+      actorId = body.actorId;
     }
 
     try {
@@ -39,8 +51,7 @@ export default route(
         isPublic: isPublic !== 'false' && isPublic !== false,
       });
 
-      // Create File record in database
-      const file = new File({
+      const file = await File.create({
         actorId,
         originalFileName,
         name: title || originalFileName,
@@ -52,12 +63,9 @@ export default route(
         size: result.metadata.size,
         width: result.metadata.width,
         height: result.metadata.height,
-        // Store the storage key for later retrieval/deletion
         storageKey: result.key,
         thumbnails: result.thumbnails,
       });
-
-      await file.save();
 
       setStatus(200);
       set('file', {
@@ -75,9 +83,6 @@ export default route(
   { allowUnauth: false }
 );
 
-/**
- * Determine file type category from MIME type
- */
 function getFileType(mimeType) {
   if (!mimeType) return 'Document';
   if (mimeType.startsWith('image/')) return 'Image';

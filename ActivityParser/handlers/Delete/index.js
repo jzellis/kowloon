@@ -12,6 +12,7 @@ import {
   FeedItems,
 } from "#schema";
 import kowloonId from "#methods/parse/kowloonId.js";
+import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 
 const MODELS = {
@@ -115,24 +116,30 @@ export default async function Delete(activity) {
         ? { url: activity.target }
         : { id: activity.target };
 
-    const deleted =
-      (await Model.findOneAndUpdate(
-        query,
-        { $set: { deletedAt: new Date(), deletedBy: activity.actorId, type: "Tombstone" } },
-        { new: true }
-      ).lean?.()) ??
-      (await Model.findOneAndUpdate(
-        query,
-        { $set: { deletedAt: new Date(), deletedBy: activity.actorId, type: "Tombstone" } },
-        { new: true }
-      ));
-
-    if (!deleted) {
-      return {
-        activity,
-        error: `Delete: target not found: ${activity.target}`,
-      };
+    const current =
+      (await Model.findOne(query).lean?.()) ?? (await Model.findOne(query));
+    if (!current) {
+      return { activity, error: `Delete: target not found: ${activity.target}` };
     }
+
+    // Authorization: owner or server admin
+    const ownerActorId =
+      parsed.type === "User" ? current.id : current.actorId;
+    const isOwner = activity.actorId === ownerActorId;
+    const isAdmin = await isServerAdmin(activity.actorId);
+    if (!isOwner && !isAdmin) {
+      return { activity, error: "Delete: not authorized to delete this object" };
+    }
+
+    // Build the update: Users get active:false instead of type:Tombstone
+    const tombstoneFields =
+      parsed.type === "User"
+        ? { deletedAt: new Date(), deletedBy: activity.actorId, active: false }
+        : { deletedAt: new Date(), deletedBy: activity.actorId, type: "Tombstone" };
+
+    const deleted =
+      (await Model.findOneAndUpdate(query, { $set: tombstoneFields }, { new: true }).lean?.()) ??
+      (await Model.findOneAndUpdate(query, { $set: tombstoneFields }, { new: true }));
 
     // annotate for downstreams + Undo
     activity.objectId = deleted.id;
@@ -143,12 +150,16 @@ export default async function Delete(activity) {
     // 3. Determine federation requirements
     const federation = await getFederationTargets(activity, deleted);
 
-    return {
-      activity,
-      created: deleted,
-      result: deleted,
-      federation,
-    };
+    // Sanitize result for User objects
+    let resultObj = deleted.toObject ? deleted.toObject() : { ...deleted };
+    if (parsed.type === "User") {
+      delete resultObj.password;
+      delete resultObj.privateKey;
+      delete resultObj.publicKeyJwk;
+      delete resultObj.signature;
+    }
+
+    return { activity, created: resultObj, result: resultObj, federation };
   } catch (err) {
     return { activity, error: err?.message || String(err) };
   }

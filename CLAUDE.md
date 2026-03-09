@@ -172,6 +172,7 @@ MongoDB via Mongoose. Connection URI from env: `MONGO_URI` (or `MONGODB_URI`, `M
 - **Seeding**: `scripts/seed-test.js` uses HTTP API calls only. Requires server running. `POST /__test/wipe` only works when `NODE_ENV !== "production"`.
 - **Settings cache**: `methods/settings/cache.js` in-memory Map. `getSetting(name)` from cache. `getServerSettings()` always falls back to `process.env.DOMAIN` when cache value is falsy.
 - **outbox `to/canReact/canReply` injection**: only injected into `activity.object` for non-Update, non-Delete activities (those handlers treat `object` as a patch).
+- **FeedItems "audience" visibility**: `FeedItems.to` is a coarse enum (`public`/`server`/`audience`) — no circle IDs stored. For `"audience"` posts, `FeedFanOut` is the authoritative grant: `canView()` checks `FeedFanOut.findOne({ feedItemId, to: viewerId })`. `enrichWithCapabilities()` is async and does the same for `canReply`/`canReact` capability checks.
 - **Update/Delete response**: User result always has `password`, `privateKey`, `publicKeyJwk`, `signature` stripped before returning.
 - **Admin auth guard**: plain Express `router.use()` middleware in `routes/admin/index.js` — verifies RS256 JWT then calls `isServerAdmin(userId)`.
 - **Settings `ui.type === "redacted"`**: write-protected at API level (in addition to `READONLY_FIELDS` set in `routes/admin/settings.js`).
@@ -180,6 +181,7 @@ MongoDB via Mongoose. Connection URI from env: `MONGO_URI` (or `MONGODB_URI`, `M
 - Email sending (SMTP config exists in settings, no sending code yet)
 - Event type / RSVP system (can defer post-alpha)
 - Full S2S federation edge case testing
+- Remote grants for `canReply`/`canReact` on remote "audience" posts (deferred)
 
 ## Batch-Pull Outbox Federation (COMPLETE as of 2026-03-09)
 

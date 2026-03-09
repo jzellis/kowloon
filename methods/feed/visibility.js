@@ -2,8 +2,21 @@
 // Visibility and capability evaluators for FeedItems items
 // Used by all GET endpoints to determine what viewers can see and do
 
-import { Circle, Group } from "#schema";
+import { Circle, Group, FeedFanOut } from "#schema";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+
+/**
+ * Check if a viewer has an explicit FeedFanOut grant for an item.
+ * This is the authoritative audience check for local "audience"-visibility items.
+ * @param {string} feedItemId
+ * @param {string} viewerId
+ * @returns {Promise<boolean>}
+ */
+async function isInFanOutAudience(feedItemId, viewerId) {
+  if (!feedItemId || !viewerId) return false;
+  const entry = await FeedFanOut.findOne({ feedItemId, to: viewerId }).lean();
+  return Boolean(entry);
+}
 
 /**
  * Check if viewer can see a FeedItems item
@@ -37,17 +50,14 @@ export async function canView(feedCacheItem, viewerId, context = {}) {
 
   // "audience" → depends on origin
   if (to === "audience") {
-    if (!viewerId) return false; // Anonymous can't see audience-only
-
+    if (!viewerId) return false;
+    if (feedCacheItem.actorId === viewerId) return true; // owner always sees own posts
     if (origin === "local") {
-      // Local: check if viewer is in addressed circles/groups
-      // This requires addressedIds which aren't stored in FeedItems
-      // We need to parse from the original audience field or use Feed fan-out
-      // For now, fall back to checking membership
-      // TODO: Consider storing addressedIds in FeedItems for reads
-      return false; // Conservative: deny unless we can verify
+      // FeedFanOut is the authoritative grant: if this viewer has a fan-out record
+      // for this item, they were in the addressed audience when it was published.
+      return isInFanOutAudience(feedCacheItem.id, viewerId);
     } else {
-      // Remote: check if viewer has a grant
+      // Remote: check if viewer has a capability grant
       return Boolean(grants[viewerId]);
     }
   }
@@ -169,17 +179,19 @@ export function inLocalAudience(viewerId, addressedIds, membershipMap) {
  * @param {string} opts.authorId - The author
  * @param {string} opts.capability - Capability value ("public"|"followers"|"audience"|"none")
  * @param {string} opts.origin - Origin ("local"|"remote")
+ * @param {string} opts.feedItemId - FeedItems.id (used for local audience check via FeedFanOut)
  * @param {string[]} opts.addressedIds - LOCAL addressed IDs (for local content)
  * @param {Object} opts.grants - Remote grants object (for remote content)
  * @param {Map} opts.followerMap - Pre-built follower map
  * @param {Map} opts.membershipMap - Pre-built membership map
- * @returns {boolean}
+ * @returns {Promise<boolean>}
  */
-export function evaluateCapability({
+export async function evaluateCapability({
   viewerId,
   authorId,
   capability,
   origin,
+  feedItemId,
   addressedIds = [],
   grants = {},
   followerMap,
@@ -206,11 +218,13 @@ export function evaluateCapability({
   // "audience" → depends on origin
   if (cap === "audience") {
     if (origin === "remote") {
-      // Remote: use grants/token only (never resolve circles)
       return Boolean(grants[viewerId]);
     } else {
-      // Local: check if viewer is in addressed circles/groups
-      return inLocalAudience(viewerId, addressedIds, membershipMap);
+      // Local: membership map if addressedIds are available; fall back to FeedFanOut
+      if (addressedIds.length > 0 && inLocalAudience(viewerId, addressedIds, membershipMap)) {
+        return true;
+      }
+      return isInFanOutAudience(feedItemId, viewerId);
     }
   }
 
@@ -222,9 +236,9 @@ export function evaluateCapability({
  * @param {Object} feedCacheItem - FeedItems document
  * @param {string|null} viewerId - Viewer's ID (null = anonymous)
  * @param {Object} context - Pre-loaded context { followerMap, membershipMap, grants, addressedIds }
- * @returns {Object} - Item with canReply/canReact booleans
+ * @returns {Promise<Object>} - Item with canReply/canReact booleans
  */
-export function enrichWithCapabilities(feedCacheItem, viewerId, context = {}) {
+export async function enrichWithCapabilities(feedCacheItem, viewerId, context = {}) {
   const {
     followerMap = new Map(),
     membershipMap = new Map(),
@@ -232,29 +246,32 @@ export function enrichWithCapabilities(feedCacheItem, viewerId, context = {}) {
     addressedIds = [],
   } = context;
 
-  const { actorId, origin, canReply, canReact } = feedCacheItem;
+  const { id: feedItemId, actorId, origin, canReply, canReact } = feedCacheItem;
 
-  const canReplyBool = evaluateCapability({
-    viewerId,
-    authorId: actorId,
-    capability: canReply,
-    origin,
-    addressedIds,
-    grants,
-    followerMap,
-    membershipMap,
-  });
-
-  const canReactBool = evaluateCapability({
-    viewerId,
-    authorId: actorId,
-    capability: canReact,
-    origin,
-    addressedIds,
-    grants,
-    followerMap,
-    membershipMap,
-  });
+  const [canReplyBool, canReactBool] = await Promise.all([
+    evaluateCapability({
+      viewerId,
+      authorId: actorId,
+      capability: canReply,
+      origin,
+      feedItemId,
+      addressedIds,
+      grants,
+      followerMap,
+      membershipMap,
+    }),
+    evaluateCapability({
+      viewerId,
+      authorId: actorId,
+      capability: canReact,
+      origin,
+      feedItemId,
+      addressedIds,
+      grants,
+      followerMap,
+      membershipMap,
+    }),
+  ]);
 
   return {
     ...feedCacheItem,
@@ -278,7 +295,10 @@ export function buildVisibilityFilter(viewerId) {
     };
   }
 
-  // Authenticated: public + server (if local) + audience (TODO)
+  // Authenticated: public + server (if local).
+  // "audience" items are authorized via FeedFanOut and are NOT included in this filter —
+  // callers that need audience items should use getTimeline() (which queries FeedFanOut first)
+  // or check canView() per-item.
   const { domain } = getServerSettings();
   const isLocalViewer = viewerId
     ?.toLowerCase()

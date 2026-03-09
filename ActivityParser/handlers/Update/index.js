@@ -1,5 +1,6 @@
 // /ActivityParser/handlers/Update/index.js
 
+import bcrypt from "bcryptjs";
 import {
   Bookmark,
   Circle,
@@ -12,6 +13,7 @@ import {
   FeedItems,
 } from "#schema";
 import kowloonId from "#methods/parse/kowloonId.js";
+import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 
 const MODELS = {
@@ -25,15 +27,32 @@ const MODELS = {
   User,
 };
 
+// Fields each objectType allows to be patched.
+// Anything not in the set is silently stripped before the $set.
+const ALLOWED_FIELDS = {
+  User:     new Set(["profile", "prefs", "to", "canReply", "canReact", "email", "username"]),
+  Post:     new Set(["title", "summary", "source", "body", "type", "tags", "to", "canReply", "canReact", "image", "attachments", "href", "target", "location", "event"]),
+  Reply:    new Set(["source", "body", "tags"]),
+  Page:     new Set(["title", "summary", "source", "body", "slug", "tags", "to", "canReply", "canReact", "image", "attachments", "href", "parentFolder", "order"]),
+  Bookmark: new Set(["title", "summary", "type", "tags", "to", "canReply", "canReact", "href", "target"]),
+  Circle:   new Set(["name", "description", "to", "canReply", "canReact"]),
+  Group:    new Set(["name", "description", "icon", "to", "canReply", "canReact", "rsvpPolicy", "location"]),
+  React:    new Set(["emoji", "name"]),
+};
+
 // Object types that should be synced to FeedItems
-const FEED_CACHEABLE_TYPES = [
-  "Post",
-  "Reply",
-  "Page",
-  "Bookmark",
-  "Group",
-  "Circle",
-];
+const FEED_CACHEABLE_TYPES = ["Post", "Reply", "Page", "Bookmark", "Group", "Circle"];
+
+/**
+ * Strip disallowed fields from patch; return only the allowed subset.
+ */
+function filterPatch(objectType, patch) {
+  const allowed = ALLOWED_FIELDS[objectType];
+  if (!allowed) return { ...patch }; // unknown type: pass through (handled by validate)
+  return Object.fromEntries(
+    Object.entries(patch).filter(([k]) => allowed.has(k))
+  );
+}
 
 /**
  * Update FeedItems when source object is updated
@@ -42,8 +61,6 @@ async function updateFeedItems(updated, objectType, patchFields) {
   try {
     if (!FEED_CACHEABLE_TYPES.includes(objectType)) return;
 
-    // Sanitize object: remove visibility, deletion, source, and MongoDB internal fields
-    // These will be stored at FeedItems top-level (visibility) or not at all (internal/metadata)
     const sanitizedObject = { ...updated };
     delete sanitizedObject.to;
     delete sanitizedObject.canReply;
@@ -54,81 +71,49 @@ async function updateFeedItems(updated, objectType, patchFields) {
     delete sanitizedObject._id;
     delete sanitizedObject.__v;
 
-    // Build update for FeedItems
     const cacheUpdate = {
       updatedAt: new Date(),
-      object: sanitizedObject, // refresh the sanitized object envelope
+      object: sanitizedObject,
     };
 
-    // Update subtype if changed
     if (patchFields.type !== undefined) cacheUpdate.type = updated.type;
 
-    // Update top-level visibility fields if changed (with normalization)
     if (patchFields.to !== undefined) {
-      const val = String(updated.to || "")
-        .toLowerCase()
-        .trim();
+      const val = String(updated.to || "").toLowerCase().trim();
       cacheUpdate.to =
-        val === "@public" || val === "public"
-          ? "public"
-          : val === "server"
-          ? "server"
-          : "audience";
+        val === "@public" || val === "public" ? "public"
+        : val === "server" ? "server"
+        : "audience";
     }
     if (patchFields.canReply !== undefined) {
-      const val = String(updated.canReply || "")
-        .toLowerCase()
-        .trim();
-      cacheUpdate.canReply = [
-        "public",
-        "followers",
-        "audience",
-        "none",
-      ].includes(val)
-        ? val
-        : "public";
+      const val = String(updated.canReply || "").toLowerCase().trim();
+      cacheUpdate.canReply = ["public", "followers", "audience", "none"].includes(val) ? val : "public";
     }
     if (patchFields.canReact !== undefined) {
-      const val = String(updated.canReact || "")
-        .toLowerCase()
-        .trim();
-      cacheUpdate.canReact = [
-        "public",
-        "followers",
-        "audience",
-        "none",
-      ].includes(val)
-        ? val
-        : "public";
+      const val = String(updated.canReact || "").toLowerCase().trim();
+      cacheUpdate.canReact = ["public", "followers", "audience", "none"].includes(val) ? val : "public";
     }
 
     await FeedItems.findOneAndUpdate({ id: updated.id }, { $set: cacheUpdate });
   } catch (err) {
     console.error(`FeedItems update failed for ${updated.id}:`, err.message);
-    // Non-fatal: don't block object update if cache update fails
   }
 }
 
 /**
  * Type-specific validation for Update activities
- * Per specification: object REQUIRED, target REQUIRED (objectType optional, inferred from target)
- * @param {Object} activity
- * @returns {{ valid: boolean, errors?: string[] }}
  */
 export function validate(activity) {
   const errors = [];
 
-  // Required: object (the patch data)
   if (!activity?.object || typeof activity.object !== "object") {
     errors.push("Update: missing required field 'object' (patch data)");
   }
 
-  // Required: target (ID of object to update)
   if (!activity?.target || typeof activity.target !== "string") {
     errors.push("Update: missing required field 'target' (object ID)");
   }
 
-  // Optional: Validate objectType if provided
   if (activity?.objectType) {
     const Model = MODELS[activity.objectType];
     if (!Model) {
@@ -142,90 +127,112 @@ export function validate(activity) {
   };
 }
 
-/**
- * Determine federation targets for Update activity
- * @param {Object} activity - The activity envelope
- * @param {Object} updated - The updated object
- * @returns {Promise<FederationRequirements>}
- */
 export async function getFederationTargets(activity, updated) {
-  // Use the common helper based on the updated object's addressing
   return getFederationTargetsHelper(activity, updated);
 }
 
 export default async function Update(activity) {
   try {
-    // 1. Validate
+    // 1. Validate shape
     const validation = validate(activity);
     if (!validation.valid) {
       return { activity, error: validation.errors.join("; ") };
     }
 
-    // Determine model from the target id
-    const parsed = kowloonId(activity.target); // { type, domain, ... } or { type:"URL" }
+    // 2. Resolve model from target ID
+    const parsed = kowloonId(activity.target);
     const Model = MODELS[parsed?.type];
     if (!Model) {
-      return {
-        activity,
-        error: `Update: unsupported target type "${parsed?.type}"`,
-      };
+      return { activity, error: `Update: unsupported target type "${parsed?.type}"` };
     }
 
-    // Build query by canonical id (or url if you ever allow URL targets)
     const query =
-      parsed.type === "URL"
-        ? { url: activity.target }
-        : { id: activity.target };
+      parsed.type === "URL" ? { url: activity.target } : { id: activity.target };
 
-    // Fetch current to capture "previous" values for Undo (only keys being patched)
     const current =
       (await Model.findOne(query).lean?.()) ?? (await Model.findOne(query));
     if (!current) {
-      return {
-        activity,
-        error: `Update: target not found: ${activity.target}`,
-      };
+      return { activity, error: `Update: target not found: ${activity.target}` };
     }
 
-    // Pick previous values for fields being updated (shallow)
-    const previous = {};
-    for (const k of Object.keys(activity.object)) {
-      // only record primitive/object shallowly--this is a simple, safe snapshot
-      previous[k] = current?.[k];
+    // 3. Authorization
+    // For User objects, the "owner" is the user themselves (current.id).
+    // For everything else, the "owner" is the actorId field.
+    const ownerActorId =
+      parsed.type === "User" ? current.id : current.actorId;
+
+    const isOwner = activity.actorId === ownerActorId;
+    const isAdmin = await isServerAdmin(activity.actorId);
+
+    if (!isOwner && !isAdmin) {
+      return { activity, error: "Update: not authorized to modify this object" };
     }
 
-    // Apply patch - body regeneration for Post/Reply handled by schema hook
-    const updated =
-      (await Model.findOneAndUpdate(
-        query,
-        { $set: activity.object },
-        { new: true, runValidators: true }
-      ).lean?.()) ??
-      (await Model.findOneAndUpdate(
-        query,
-        { $set: activity.object },
-        { new: true, runValidators: true }
-      ));
+    // 4. Strip disallowed fields from the patch
+    const patch = filterPatch(parsed.type, activity.object);
 
-    if (!updated) {
-      return { activity, error: `Update: failed to update ${activity.target}` };
+    // 5. Password change — handled separately; cannot be done by admins on behalf of users
+    if (parsed.type === "User" && "password" in activity.object) {
+      const pwChange = activity.object.password;
+
+      if (!isOwner) {
+        return { activity, error: "Update: only the account owner can change their password" };
+      }
+      if (!pwChange?.current || !pwChange?.new) {
+        return { activity, error: "Update: password change requires { current, new }" };
+      }
+      if (typeof pwChange.new !== "string" || pwChange.new.length < 8) {
+        return { activity, error: "Update: new password must be at least 8 characters" };
+      }
+
+      const valid = await bcrypt.compare(pwChange.current, current.password);
+      if (!valid) {
+        return { activity, error: "Update: current password is incorrect" };
+      }
+
+      const hashed = await bcrypt.hash(pwChange.new, 12);
+      await User.updateOne({ id: current.id }, { $set: { password: hashed } });
     }
 
-    // annotate for downstreams + (optional) Undo
-    activity.objectId = updated.id;
+    // Remove password from the regular $set patch regardless
+    delete patch.password;
 
-    // Update FeedItems to reflect changes
-    await updateFeedItems(updated, parsed.type, activity.object);
+    // If nothing left to patch (e.g. only password was sent), return early
+    if (Object.keys(patch).length === 0 && !("password" in activity.object)) {
+      return { activity, error: "Update: no updatable fields provided" };
+    }
 
-    // 3. Determine federation requirements
+    // 6. Apply patch (skip if nothing left after password-only update)
+    let updated = current;
+    if (Object.keys(patch).length > 0) {
+      updated =
+        (await Model.findOneAndUpdate(query, { $set: patch }, { new: true, runValidators: true }).lean?.()) ??
+        (await Model.findOneAndUpdate(query, { $set: patch }, { new: true, runValidators: true }));
+
+      if (!updated) {
+        return { activity, error: `Update: failed to update ${activity.target}` };
+      }
+    }
+
+    activity.objectId = updated.id ?? activity.target;
+    activity.object = patch; // normalise to the filtered patch for downstream
+
+    // 7. Sync FeedItems cache
+    await updateFeedItems(updated, parsed.type, patch);
+
+    // 8. Federation
     const federation = await getFederationTargets(activity, updated);
 
-    return {
-      activity,
-      created: updated,
-      result: updated,
-      federation,
-    };
+    // 9. Sanitize result — strip sensitive fields from User objects
+    let resultObj = updated.toObject ? updated.toObject() : { ...updated };
+    if (parsed.type === "User") {
+      delete resultObj.password;
+      delete resultObj.privateKey;
+      delete resultObj.publicKeyJwk;
+      delete resultObj.signature;
+    }
+
+    return { activity, created: resultObj, result: resultObj, federation };
   } catch (err) {
     return { activity, error: err?.message || String(err) };
   }

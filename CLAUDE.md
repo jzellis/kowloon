@@ -150,6 +150,7 @@ MongoDB via Mongoose. Connection URI from env: `MONGO_URI` (or `MONGODB_URI`, `M
 - Admin API (`/admin/*`): full CRUD for users, groups, posts, circles, flagged content, settings, pages, system stats
 - Admin invites (`/admin/invites`): create/list/revoke (individual + open link types)
 - Rate limiting: `strictRateLimiter` on `POST /auth/login` and `POST /register`
+- Security: `npm audit` reports 0 vulnerabilities; critical/high fixed via direct upgrades + npm `overrides`
 - NodeInfo 2.0: real user/post counts from DB
 - Settings UI metadata: all settings have `ui: { type, label, group, order }` for admin UI rendering
 

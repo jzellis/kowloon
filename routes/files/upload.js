@@ -5,11 +5,10 @@ import route from '../utils/route.js';
 import { getStorageAdapter } from '#methods/files/index.js';
 import File from '#schema/File.js';
 import isServerAdmin from '#methods/auth/isServerAdmin.js';
+import getSettings from '#methods/settings/get.js';
 
 export default route(
   async ({ req, body, user, setStatus, set }) => {
-    // multer LIMIT_FILE_SIZE error surfaces here as req.fileValidationError or
-    // as a MulterError thrown before reaching this handler. Handle both.
     if (req.multerError) {
       setStatus(413);
       set('error', req.multerError.message || 'File too large');
@@ -23,9 +22,12 @@ export default route(
     }
 
     const { originalname: originalFileName, buffer, mimetype } = req.file;
-    const { title, summary, generateThumbnail, thumbnailSizes, isPublic } = body;
+    const { title, summary, generateThumbnail, thumbnailSizes } = body;
 
-    // Admins may specify an explicit actorId (e.g. server-to-server); otherwise use auth user
+    // Visibility: default @public; caller may restrict to a circle/domain/userId
+    const to = typeof body.to === 'string' && body.to.trim() ? body.to.trim() : '@public';
+
+    // Admins may specify an explicit actorId; otherwise use auth user
     let actorId = user.id;
     if (body.actorId && body.actorId !== user.id) {
       const admin = await isServerAdmin(user.id);
@@ -40,6 +42,7 @@ export default route(
     try {
       const storage = await getStorageAdapter();
 
+      // Always store private — the app proxies and enforces visibility
       const result = await storage.upload(buffer, {
         originalFileName,
         actorId,
@@ -48,30 +51,46 @@ export default route(
         contentType: mimetype,
         generateThumbnail: generateThumbnail === 'true' || generateThumbnail === true,
         thumbnailSizes: thumbnailSizes ? JSON.parse(thumbnailSizes) : [200, 400],
-        isPublic: isPublic !== 'false' && isPublic !== false,
+        isPublic: false,
       });
+
+      // Build the app-proxied URL — serves via /files/download/:key
+      const settings = await getSettings();
+      const domain = settings?.domain || process.env.DOMAIN || 'localhost';
+      const appUrl = `https://${domain}/files/download/${result.key}`;
+
+      // Build thumbnail app URLs too
+      let thumbnails = null;
+      if (result.thumbnails) {
+        thumbnails = {};
+        for (const [size, _] of Object.entries(result.thumbnails)) {
+          const thumbKey = `thumbnails/${result.key.replace(/\.[^.]+$/, '')}_${size}.webp`;
+          thumbnails[size] = `https://${domain}/files/download/${thumbKey}`;
+        }
+      }
 
       const file = await File.create({
         actorId,
+        to,
         originalFileName,
         name: title || originalFileName,
         summary,
         type: getFileType(mimetype),
         mediaType: result.metadata.contentType,
         extension: originalFileName.split('.').pop()?.toLowerCase(),
-        url: result.url,
+        url: appUrl,
         size: result.metadata.size,
         width: result.metadata.width,
         height: result.metadata.height,
         storageKey: result.key,
-        thumbnails: result.thumbnails,
+        thumbnails,
       });
 
       setStatus(200);
       set('file', {
         id: file.id,
-        url: result.url,
-        thumbnails: result.thumbnails,
+        url: appUrl,
+        thumbnails,
         metadata: result.metadata,
       });
     } catch (error) {

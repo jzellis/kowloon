@@ -177,6 +177,16 @@ MongoDB via Mongoose. Connection URI from env: `MONGO_URI` (or `MONGODB_URI`, `M
 - **Admin auth guard**: plain Express `router.use()` middleware in `routes/admin/index.js` — verifies RS256 JWT then calls `isServerAdmin(userId)`.
 - **Settings `ui.type === "redacted"`**: write-protected at API level (in addition to `READONLY_FIELDS` set in `routes/admin/settings.js`).
 
+### Client Test Status (as of 2026-03-09)
+All 116 tests passing (activities: 33, auth: 13, comprehensive: 38, integration: 32).
+
+Key fixes applied:
+- `ActivityParser/activity.schema.js`: `reply:` IDs added to objectId pattern + replyReactRecipient (allows threaded replies)
+- `methods/visibility/helpers.js`: owner can always see their own content; empty `to` = server-wide visibility
+- `routes/register/index.js`: registration response now includes `following`/`allFollowing`/`blocked`/`muted` circle IDs
+- `docker-compose.yml`: `RATE_LIMITING_ENABLED=false` on dev containers for test suites
+- **Client field names**: `updatePost` sends `source.content` (not `content`); `updatePost` `to`/`canReply`/`canReact` go in `object` not activity level; `react` uses `postId`/`emoji`; `reply` stores parent in `target` field (not `inReplyTo`)
+
 ### TODO
 - Email sending (SMTP config exists in settings, no sending code yet)
 - Event type / RSVP system (can defer post-alpha)

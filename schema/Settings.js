@@ -10,8 +10,13 @@ const SettingsSchema = new Schema({
   summary: String,
   public: { type: Boolean, default: true },
   ui: {
+    // Widget type: text | textarea | boolean | number | select | multiselect |
+    //              email | url | color | json | markdown | image | redacted
     type: { type: String, default: "text" },
-    options: Object,
+    label: { type: String },          // Human-readable name for the admin UI
+    group: { type: String },          // Panel/section grouping (e.g. "appearance", "registration")
+    order: { type: Number, default: 0 }, // Display order within the group
+    options: Object,                  // Widget-specific config (choices, min/max, placeholder, rows…)
   },
   deletedAt: Date,
 });

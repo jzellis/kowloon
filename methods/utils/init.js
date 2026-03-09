@@ -43,24 +43,47 @@ export default async function init(Kowloon, ctx = {}) {
 
   // 2) Seed defaults, then load settings into memory
   if (!Kowloon.settings) Kowloon.settings = {};
+
+  const isBadValue = (v) => {
+    if (v === null || v === undefined) return true;
+    if (typeof v === "string" && (v.includes("undefined") || v.includes("null"))) return true;
+    return false;
+  };
+
   const defaults = defaultSettings(ctx);
-  for (const [name, value] of Object.entries(defaults)) {
+  for (const [name, def] of Object.entries(defaults)) {
+    // Support both old flat format ({ name: value }) and new rich format ({ value, summary, ui, … })
+    const isRich = def !== null && typeof def === "object" && "value" in def;
+    const defValue = isRich ? def.value : def;
+    const defMeta = isRich
+      ? { summary: def.summary, public: def.public, ui: def.ui }
+      : {};
+
     const exists = await Settings.findOne({ name }).lean();
-    const isBadValue = (v) => {
-      if (!v) return true;
-      if (typeof v === "string" && (v.includes("undefined") || v.includes("null"))) return true;
-      return false;
-    };
+
     // For settings that must be plain strings (PEM keys), also overwrite if stored as non-string
     const mustBeString = ["publicKey", "privateKey"];
     const wrongType = mustBeString.includes(name) && typeof exists?.value !== "string";
+
     if (!exists) {
-      await Settings.create({ name, value });
+      await Settings.create({ name, value: defValue, ...defMeta });
       console.log("Created setting:", name);
-    } else if ((isBadValue(exists.value) || wrongType) && value && !isBadValue(value)) {
-      // Overwrite if previously saved as null/undefined/corrupted/wrong type
-      await Settings.updateOne({ name }, { value });
-      console.log("Updated setting:", name);
+    } else {
+      // Always update metadata (ui, summary, public) from the latest defaults
+      const metaUpdate = {};
+      if (defMeta.ui !== undefined) metaUpdate.ui = defMeta.ui;
+      if (defMeta.summary !== undefined) metaUpdate.summary = defMeta.summary;
+      if (defMeta.public !== undefined) metaUpdate.public = defMeta.public;
+
+      // Only update value if it's bad/corrupted
+      if ((isBadValue(exists.value) || wrongType) && defValue && !isBadValue(defValue)) {
+        metaUpdate.value = defValue;
+        console.log("Updated setting value:", name);
+      }
+
+      if (Object.keys(metaUpdate).length > 0) {
+        await Settings.updateOne({ name }, { $set: metaUpdate });
+      }
     }
   }
 

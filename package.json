@@ -32,7 +32,7 @@
     "@aws-sdk/s3-request-presigner": "^3.758.0",
     "@azure/storage-blob": "^12.26.0",
     "@google-cloud/storage": "^7.15.0",
-    "ajv": "^8.17.1",
+    "ajv": "^8.18.0",
     "ajv-formats": "^3.0.1",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.6",
@@ -44,12 +44,18 @@
     "marked": "^12.0.2",
     "mime-types": "^2.1.35",
     "mongoose": "^8.3.5",
-    "multer": "^2.0.2",
+    "multer": "^2.1.1",
     "nocache": "^4.0.0",
     "qrcode": "^1.5.4",
     "random-words": "^2.0.1",
     "sharp": "^0.34.5",
     "winston": "^3.14.2"
+  },
+  "overrides": {
+    "fast-xml-parser": "^5.4.2",
+    "minimatch": "^10.2.4",
+    "qs": "^6.15.0",
+    "js-yaml": "^4.1.1"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.0.0",

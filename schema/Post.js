@@ -21,7 +21,7 @@ const PostSchema = new Schema(
     summary: { type: String, default: undefined }, // An optional summary for post types other than Notes
     source: {
       content: { type: String, default: "" }, // The raw content of the post -- plain text, HTML or Markdown
-      mediaType: { type: String, default: "text/html" },
+      mediaType: { type: String, default: "text/markdown" },
       contentEncoding: { type: String, default: "utf-8" },
       language: { type: String, default: "en" },
     },
@@ -84,7 +84,7 @@ PostSchema.virtual("attachmentFiles", {
 function generateBody(source) {
   if (!source || !source.content) return "";
 
-  const mediaType = source.mediaType || "text/html";
+  const mediaType = source.mediaType || "text/markdown";
 
   switch (mediaType) {
     case "text/markdown":
@@ -103,7 +103,7 @@ PostSchema.pre("save", async function (next) {
     this.id = this.id || `post:${this._id}@${domain}`;
     this.url = this.url || `https://${domain}/posts/${this.id}`;
     this.server = this.server || actorId;
-    this.source.mediaType = this.source.mediaType || "text/html";
+    this.source.mediaType = this.source.mediaType || "text/markdown";
 
     // Generate body from source
     this.body = generateBody(this.source);
@@ -157,12 +157,12 @@ PostSchema.pre("save", async function (next) {
 });
 
 PostSchema.pre("updateOne", async function (next) {
-  this.source.mediaType = this.source.mediaType || "text/html";
+  this.source.mediaType = this.source.mediaType || "text/markdown";
   switch (this.source.mediaType) {
     case "text/markdown":
       this.body = `${marked(this.source.content)}`;
       break;
-    case "text/html":
+    case "text/markdown":
       this.body = this.source.content;
       break;
     default:

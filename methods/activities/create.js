@@ -100,10 +100,12 @@ export default async function createActivity(input) {
     const createdActivity = await Activity.create(persistable);
 
     // Return both the saved Activity and the verb's payload
+    const federation = result?.federation;
     return {
       activity: createdActivity,
       result,
-      federate: Boolean(result?.federate), // convenience flag for /outbox caller
+      federate: Boolean(federation?.shouldFederate || result?.federate),
+      federation, // pass scope/domains along so outbox can enqueue correctly
     };
   } catch (err) {
     console.error(err);

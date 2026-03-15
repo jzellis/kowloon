@@ -1,56 +1,46 @@
 import getSettings from "#methods/settings/get.js";
 import { Circle, User } from "#schema";
-import jwt from "jsonwebtoken";
+import { SignJWT, importPKCS8 } from "jose";
 import { createHash } from "crypto";
 
 export default async function (actorId) {
   const settings = await getSettings();
   const user = await User.findOne({ id: actorId }).select(
-    "id username profile following blocked muted lastLogin"
+    "id username profile circles lastLogin"
   );
 
-  const blockedCircle = await Circle.findOne({ id: user.blocked }).select("members");
+  const blockedCircle = await Circle.findOne({ id: user.circles?.blocked }).select("members");
   let blocked = blockedCircle?.members?.map((m) => m.id) || [];
 
-  const mutedCircle = await Circle.findOne({ id: user.muted }).select("members");
+  const mutedCircle = await Circle.findOne({ id: user.circles?.muted }).select("members");
   let muted = mutedCircle?.members?.map((m) => m.id) || [];
 
-  let data = {
-    user: {
-      id: user.id,
-      username: user.username,
-      profile: user.profile,
-      muted: muted,
-      blocked: blocked,
-      following: user.following,
-      lastLogin: user.lastLogin,
-      feedRefreshedAt: user.feedRefreshedAt,
-    },
-    loggedIn: user.lastLogin,
-  };
-  let token = jwt.sign(
-    {
-      user: {
-        id: user.id,
-        username: user.username,
-        profile: user.profile,
-        muted: muted,
-        blocked: blocked,
-        following: user.following,
-        lastLogin: user.lastLogin,
-        feedRefreshedAt: user.feedRefreshedAt,
-      },
-      loggedIn: user.lastLogin,
-    },
-    settings.privateKey,
-    {
-      algorithm: "RS256",
-      issuer: `https://${settings.domain}`,
-      keyid: createHash("sha256")
-        .update(settings.publicKey)
-        .digest("base64url"),
-    }
+  // Convert to plain object so jose's structuredClone doesn't choke on Mongoose subdocs
+  const u = user.toObject({ depopulate: true });
+
+  const pk = await importPKCS8(
+    settings.privateKey.replace(/\\n/g, "\n").trim(),
+    "RS256"
   );
+  const kid = createHash("sha256")
+    .update(settings.publicKey)
+    .digest("base64url");
+  let token = await new SignJWT({
+    user: {
+      id: u.id,
+      username: u.username,
+      profile: u.profile,
+      muted,
+      blocked,
+      following: u.circles?.following,
+      lastLogin: u.lastLogin,
+      feedRefreshedAt: u.feedRefreshedAt,
+    },
+    loggedIn: u.lastLogin,
+  })
+    .setProtectedHeader({ alg: "RS256", kid })
+    .setIssuer(`https://${settings.domain}`)
+    .sign(pk);
 
   return token;
 }

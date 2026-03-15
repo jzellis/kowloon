@@ -1,11 +1,10 @@
 // Schema definition for Reply activity type
-// Reply activities create reply posts to existing objects
+// Reply is its own model (NOT a Post subtype) with a `target` field.
 
 export default {
-  mirror: 'Delete', // Delete the Reply post to remove it
+  mirror: 'Delete',
 
   fields: {
-    // Required fields
     actorId: {
       required: true,
       type: 'string',
@@ -14,39 +13,21 @@ export default {
     objectType: {
       required: true,
       type: 'string',
-      description: 'Type must be "Post" for replies'
+      description: 'Must be "Reply"'
     },
     object: {
       required: true,
       type: 'object',
-      description: 'The reply post object'
+      description: 'The reply object (content in object.content or object.source.content)'
     },
     to: {
       required: true,
       type: 'string',
-      description: 'ID of the object being replied to'
-    },
-
-    // Optional fields
-    canReply: {
-      required: false,
-      type: 'string',
-      description: 'Who can reply to this reply (defaults to "to")'
-    },
-    canReact: {
-      required: false,
-      type: 'string',
-      description: 'Who can react to this reply (defaults to "to")'
-    },
-    target: {
-      required: false,
-      type: 'string',
-      description: 'Not used in Reply activities'
+      description: 'ID of the parent post being replied to'
     }
   },
 
   federation: {
-    // Federate if the object being replied to is on a remote server
     checkRemote: 'to'
   }
 };

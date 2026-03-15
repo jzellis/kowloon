@@ -32,11 +32,11 @@ export default function preprocess(activity = {}) {
 
   if (activity.type === "Reply") {
     const obj = activity.object;
-    if (!obj || obj.type !== "Reply" || !obj.inReplyTo) {
-      throw new Error("Reply: object.type must be 'Reply' and object.inReplyTo is required");
+    if (!obj || obj.type !== "Reply") {
+      throw new Error("Reply: object.type must be 'Reply'");
     }
-    if (activity.objectType !== "Post") {
-      throw new Error("Reply: objectType must be 'Post'");
+    if (activity.objectType !== "Reply") {
+      throw new Error("Reply: objectType must be 'Reply'");
     }
   }
 

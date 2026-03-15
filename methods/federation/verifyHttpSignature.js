@@ -34,13 +34,18 @@ function buildSigningString(req, headersList) {
 
 async function fetchPublicKeyFromKeyId(keyId) {
   // Commonly a URL (actor or server key). Fetch it, parse JSON, extract PEM/JWK.
-  // You can extend this to cache in Redis/Mongo.
   try {
     const res = await fetch(keyId, { method: "GET", timeout: 5000 });
     if (!res.ok) throw new Error(`key fetch ${res.status}`);
     const json = await res.json();
-    // Try common shapes: {publicKeyPem} or {publicKey: {publicKeyPem}} or JWKS
-    const pem = json?.publicKey?.publicKeyPem || json?.publicKeyPem;
+    // Unwrap Kowloon API envelope { item: { ... } }
+    const actor = json?.item || json;
+    // Try common shapes: {publicKey: {publicKeyPem}}, {publicKeyPem}, or {publicKey: "pem string"}
+    const pk = actor?.publicKey;
+    const pem =
+      (typeof pk === "object" ? pk?.publicKeyPem : null) ||
+      (typeof pk === "string" ? pk : null) ||
+      actor?.publicKeyPem;
     if (pem) return { type: "pem", key: pem };
     // JWKS (choose first RSA key)
     if (json?.keys?.length) return { type: "jwks", jwks: json };
@@ -61,8 +66,15 @@ function verifyWithPem(pem, algo, data, sigB64) {
 }
 
 function extractDomainFromUrl(url) {
+  if (!url) return null;
+  const s = String(url);
+  // Handle Kowloon handle format: @user@domain or @domain (starts with @)
+  if (s.startsWith("@")) {
+    const handleMatch = s.match(/@([^@\s]+)$/);
+    if (handleMatch) return handleMatch[1].toLowerCase();
+  }
   try {
-    const parsed = new URL(url);
+    const parsed = new URL(s);
     return parsed.hostname;
   } catch (e) {
     return null;

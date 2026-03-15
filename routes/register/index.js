@@ -4,10 +4,12 @@
 // Body: { username, password, email?, profile?, ... }
 // Response (JSON): { user, token }
 
-import jwt from "jsonwebtoken";
+import express from "express";
+import { SignJWT, importPKCS8 } from "jose";
 import route from "#routes/utils/route.js";
 import getSettings from "#methods/settings/get.js";
 import { User, Invite } from "#schema";
+import { strictRateLimiter } from "../middleware/rateLimiter.js";
 
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 const isNonEmpty = (s) => typeof s === "string" && s.trim().length > 0;
@@ -36,12 +38,16 @@ function sanitizeUser(u) {
     username: doc.username,
     email: doc.email || null,
     profile: doc.profile || {},
+    following: doc.circles?.following || null,
+    allFollowing: doc.circles?.allFollowing || null,
+    blocked: doc.circles?.blocked || null,
+    muted: doc.circles?.muted || null,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };
 }
 
-export default route(
+const registerHandler = route(
   async ({ body, set, setStatus }) => {
     if (!isObj(body)) {
       setStatus(400);
@@ -176,12 +182,12 @@ export default route(
     }
 
     const issuer = `https://${domain}`;
-    const token = jwt.sign(payload, privateKey, {
-      algorithm: "RS256",
-      issuer,
-      // You can tune this; keeping long-lived to match your one-time login preference
-      expiresIn: "365d",
-    });
+    const pk = await importPKCS8(privateKey.replace(/\\n/g, "\n").trim(), "RS256");
+    const token = await new SignJWT(payload)
+      .setProtectedHeader({ alg: "RS256" })
+      .setIssuer(issuer)
+      .setExpirationTime("365d")
+      .sign(pk);
 
     const user = sanitizeUser(created);
 
@@ -198,3 +204,8 @@ export default route(
     label: "REGISTER",
   }
 );
+
+const router = express.Router({ mergeParams: true });
+router.use(strictRateLimiter);
+router.post("/", registerHandler);
+export default router;

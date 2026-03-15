@@ -49,14 +49,20 @@ export default route(async ({ req, query, set, setStatus }) => {
       return;
     }
 
-    // Check visibility permissions
-    const ctx = await getViewerContext(viewerId);
-    const canView = await canSeeObject(result.object, ctx);
+    // Actors (User/Person/Group/etc.) are always publicly resolvable for federation
+    const objectType = result.object.type || result.object.objectType || "";
+    const isActor = /^(User|Person|Group|Service|Application|Organization)$/i.test(objectType);
 
-    if (!canView) {
-      setStatus(404); // Return 404 instead of 403 to avoid leaking existence
-      set("error", "Object not found");
-      return;
+    if (!isActor) {
+      // Check visibility permissions for non-actor objects
+      const ctx = await getViewerContext(viewerId);
+      const canView = await canSeeObject(result.object, ctx);
+
+      if (!canView) {
+        setStatus(404); // Return 404 instead of 403 to avoid leaking existence
+        set("error", "Object not found");
+        return;
+      }
     }
 
     // Sanitize the object to remove sensitive fields

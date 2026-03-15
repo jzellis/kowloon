@@ -101,14 +101,64 @@ export default async function Add(activity) {
       // String case
       if (typeof ref === "string") {
         const s = ref.trim();
+
+        // Bare server entry: "@domain" (one @ at start, no second @)
+        // Store as a lightweight member with just the server id — no inbox/outbox
+        if (/^@[^@]+$/.test(s)) {
+          const domain = s.slice(1);
+          return {
+            id: s,
+            name: domain,
+            icon: "",
+            inbox: "",
+            outbox: "",
+            url: `https://${domain}`,
+            server: s,
+          };
+        }
+
         if (/^@[^@]+@[^@]+$/.test(s)) {
-          // actorId string → try local User, else fall back to minimal actor ref
+          // Try local User first — skip stale records with no useful data
           const u = await User.findOne({ id: s }).lean();
-          return toMember(u || { actorId: s });
+          if (u && (u.inbox || u.name || u.profile?.name)) return toMember(u);
+
+          // Remote actor: fetch via getObjectById (tries /resolve then /users/:username)
+          try {
+            const result = await getObjectById(s, { hydrateRemoteIntoDB: false });
+            if (result?.object) {
+              const a = result.object;
+              const [, username, domain] = s.match(/^@([^@]+)@(.+)$/) || [];
+              return {
+                id: s,
+                name: a.name || a.profile?.name || a.preferredUsername || username || "",
+                icon: a.icon?.url || a.icon || a.profile?.icon || "",
+                inbox: a.inbox || (domain && username ? `https://${domain}/users/${username}/inbox` : ""),
+                outbox: a.outbox || (domain && username ? `https://${domain}/users/${username}/outbox` : ""),
+                url: a.url || (domain && username ? `https://${domain}/users/${username}` : ""),
+                server: `@${domain || ""}`,
+              };
+            }
+          } catch {
+            // Fall through to minimal fallback
+          }
+
+          // Minimal fallback: construct from known ID format
+          const [, username, domain] = s.match(/^@([^@]+)@(.+)$/) || [];
+          if (username && domain) {
+            return {
+              id: s,
+              name: username,
+              icon: "",
+              inbox: `https://${domain}/users/${username}/inbox`,
+              outbox: `https://${domain}/users/${username}/outbox`,
+              url: `https://${domain}/users/${username}`,
+              server: `@${domain}`,
+            };
+          }
         }
         // not an actorId string → treat as DB id / other resolvable id
         const o = await getObjectById(s);
-        return toMember(o);
+        return toMember(o?.object || o);
       }
 
       // Object case
@@ -117,9 +167,7 @@ export default async function Add(activity) {
           typeof ref.actorId === "string" &&
           /^@[^@]+@[^@]+$/.test(ref.actorId)
         ) {
-          const s = ref.actorId.trim();
-          const u = await User.findOne({ id: s }).lean();
-          return toMember(u || { actorId: s });
+          return resolveActorToMember(ref.actorId);
         }
         // If it already looks like a User/Actor object, let toMember handle it
         return toMember(ref);
@@ -140,9 +188,30 @@ export default async function Add(activity) {
       }
     );
 
-    // If adding to a Group's members circle, remove from pending circle and notify user
+    // If adding to a Group's members circle, update user's Groups circle, remove from pending, and notify
     if (ownerType === "Group" && res.modifiedCount > 0) {
-      const group = await Group.findOne({ id: ownerId }).select("circles name").lean();
+      const group = await Group.findOne({ id: ownerId }).lean();
+
+      // Add group to user's Groups circle
+      if (group?.circles?.members === activity.target) {
+        const addedUser = await User.findOne({ id: activity.object.id }).select("circles").lean();
+        if (addedUser?.circles?.groups) {
+          const groupMember = {
+            id: group.id,
+            name: group.name || "",
+            icon: group.icon || "",
+            url: group.url || "",
+            inbox: group.inbox || "",
+            outbox: group.outbox || "",
+            server: group.server || "",
+          };
+          await Circle.updateOne(
+            { id: addedUser.circles.groups, "members.id": { $ne: group.id } },
+            { $push: { members: groupMember }, $inc: { memberCount: 1 } }
+          );
+        }
+      }
+
       if (group?.circles?.members === activity.target && group?.circles?.pending) {
         // Remove from pending circle if they were there
         const pendingRemoval = await Circle.updateOne(
@@ -180,11 +249,26 @@ export default async function Add(activity) {
       }
     }
 
+    // Federate when a remote actor was added — set activity.to so resolveAudience
+    // can find their inbox via getObjectById.
+    const localDomain = settings?.domain || process.env.DOMAIN || "";
+    // Derive domain from server field, or fall back to parsing the member ID
+    const memberDomain =
+      member?.server?.replace(/^@/, "") ||
+      (member?.id?.match(/^@[^@]+@(.+)$/) || [])[1] ||
+      "";
+    const isRemoteMember =
+      member?.id && memberDomain && memberDomain !== localDomain;
+
+    if (isRemoteMember) {
+      activity.to = member.id; // @user@remotedomain — resolveAudience will fetch inbox
+    }
+
     return {
       activity,
       circleId: activity.target,
       added: (res.modifiedCount || 0) > 0,
-      federate: false,
+      federate: isRemoteMember,
     };
   } catch (err) {
     return { activity, error: err?.message || String(err) };

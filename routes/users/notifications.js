@@ -148,6 +148,31 @@ router.post(
   )
 );
 
+// POST /users/:id/notifications/:notifId/unread
+router.post(
+  "/:notifId/unread",
+  route(
+    async ({ params, user, set, setStatus }) => {
+      if (!ownerOnly(user, params, setStatus, set)) return;
+
+      const notification = await Notification.findOneAndUpdate(
+        { id: params.notifId, recipientId: user.id },
+        { $set: { read: false } },
+        { new: true }
+      ).lean();
+
+      if (!notification) {
+        setStatus(404);
+        set("error", "Notification not found");
+        return;
+      }
+
+      set("notification", notification);
+    },
+    { allowUnauth: false }
+  )
+);
+
 // POST /users/:id/notifications/:notifId/dismiss
 router.post(
   "/:notifId/dismiss",

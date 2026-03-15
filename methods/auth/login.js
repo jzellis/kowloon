@@ -21,7 +21,7 @@ export default async function login(input, maybePassword = "") {
   const query = actorId ? { id: actorId } : { username };
   const userDoc = await User.findOne(query)
     .select(
-      "id username type profile prefs publicKey password lastLogin following allFollowing blocked muted"
+      "id username type profile prefs publicKey password lastLogin circles"
     )
     .lean(false); // need a Mongoose doc to call instance methods
 
@@ -49,10 +49,10 @@ export default async function login(input, maybePassword = "") {
     profile: uo.profile,
     prefs: uo.prefs,
     publicKey: uo.publicKey,
-    following: uo.following,
-    allFollowing: uo.allFollowing,
-    blocked: uo.blocked,
-    muted: uo.muted,
+    following: uo.circles?.following,
+    allFollowing: uo.circles?.allFollowing,
+    blocked: uo.circles?.blocked,
+    muted: uo.circles?.muted,
   };
 
   return { user, token };

@@ -7,7 +7,7 @@ import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 const CircleSchema = new Schema(
   {
     id: { type: String, key: true },
-    type: { type: String, default: "Circle" },
+    type: { type: String, enum: ["Circle", "System"], default: "Circle" },
     name: { type: String, default: undefined },
     actorId: { type: String, required: true },
     actor: { type: Object, default: undefined },

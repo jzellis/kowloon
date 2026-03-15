@@ -11,22 +11,16 @@ import logger from "#methods/utils/logger.js";
  * @returns {Object} { domain, actorId, privateKey }
  */
 export function getServerSettings() {
-  // If cache is loaded, use it
-  if (isLoaded()) {
-    return {
-      domain: getSetting("domain"),
-      actorId: getSetting("actorId"),
-      privateKey: getSetting("privateKey"),
-    };
-  }
+  const domain = (isLoaded() ? getSetting("domain") : null) || process.env.DOMAIN || null;
+  const actorId =
+    (isLoaded() ? getSetting("actorId") : null) ||
+    process.env.ACTOR_ID ||
+    (domain ? `https://${domain}/server` : null);
+  const privateKey = (isLoaded() ? getSetting("privateKey") : null) || process.env.PRIVATE_KEY || null;
 
-  // Fallback to env vars (during initialization or tests)
-  logger.warn("Settings cache not loaded, using env vars as fallback");
-  return {
-    domain: process.env.DOMAIN,
-    actorId: process.env.ACTOR_ID || `@${process.env.DOMAIN}`,
-    privateKey: process.env.PRIVATE_KEY,
-  };
+  if (!isLoaded()) logger.warn("Settings cache not loaded, using env vars as fallback");
+
+  return { domain, actorId, privateKey };
 }
 
 /**
@@ -52,6 +46,33 @@ export function getActorId() {
     process.env.ACTOR_ID ||
     (process.env.DOMAIN ? `https://${process.env.DOMAIN}/server` : null)
   );
+}
+
+/**
+ * Build the server's AP actor object from current settings.
+ * Always derives from live settings cache — no DB lookup, no stored copy.
+ * Shape matches sanitizeUser output so resolve/verify work identically.
+ * @returns {Object|null}
+ */
+export function getServerActor() {
+  const domain = getDomain();
+  if (!domain) return null;
+  const profile = getSetting("profile");
+  const actorUrl = `https://${domain}/users/@${domain}`;
+  return {
+    "@context": "https://www.w3.org/ns/activitystreams",
+    id: actorUrl,
+    type: "Application",
+    objectType: "User",
+    preferredUsername: `@${domain}`,
+    name: profile?.name || domain,
+    summary: profile?.description || null,
+    icon: profile?.icon || null,
+    url: `https://${domain}`,
+    inbox: `https://${domain}/inbox`,
+    outbox: `https://${domain}/outbox`,
+    publicKey: getSetting("publicKey"),
+  };
 }
 
 /**
@@ -83,6 +104,7 @@ export { getSetting, getSettings };
 
 export default {
   getServerSettings,
+  getServerActor,
   getDomain,
   getActorId,
   getSiteTitle,

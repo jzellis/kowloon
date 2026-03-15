@@ -2,32 +2,28 @@
 // Get a FeedItem (rendered, sanitized version for end users)
 
 import { FeedItems } from "#schema";
+import { canView } from "#methods/feed/visibility.js";
 
 /**
- * Get a FeedItem by ID
- * FeedItems are the cached, rendered versions of posts with private info stripped
+ * Get a FeedItem by ID, enforcing visibility for the given viewer.
+ * Returns null if not found or if the viewer is not allowed to see it.
  * @param {string} id - FeedItem ID
- * @param {Object} opts - Options
- * @param {string} opts.viewerId - Viewing user ID (for ACL)
- * @returns {Promise<Object>} - feedItem(id, server, type, object, objectType, visibility, createdAt, updatedAt, url)
+ * @param {Object} opts
+ * @param {string|null} opts.viewerId - Viewing user ID (null = anonymous)
+ * @returns {Promise<Object|null>}
  */
-export default async function getFeedItem(id, {
-  viewerId = null,
-} = {}) {
-  if (!id) {
-    throw new Error("getFeedItem requires id");
-  }
+export default async function getFeedItem(id, { viewerId = null } = {}) {
+  if (!id) throw new Error("getFeedItem requires id");
 
-  // TODO: Implement visibility check based on viewerId
-  // For now, just fetch the item
   const item = await FeedItems.findOne({
     id,
-    tombstoned: { $ne: true }
+    tombstoned: { $ne: true },
   }).lean();
 
-  if (!item) {
-    throw new Error(`FeedItem not found: ${id}`);
-  }
+  if (!item) return null;
+
+  const allowed = await canView(item, viewerId);
+  if (!allowed) return null;
 
   return item;
 }

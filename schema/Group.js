@@ -98,6 +98,7 @@ GroupSchema.pre("save", async function (next) {
       // Helper: create a circle and return its ID
       const createCircle = async (label) => {
         const created = await Circle.create({
+          type: "System",
           name: `${this.name || "Group"} - ${label}`,
           actorId: this.id, // owner is this group
           description: `${this.name || "Group"} | ${label}`,

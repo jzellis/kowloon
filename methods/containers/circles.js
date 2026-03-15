@@ -146,6 +146,25 @@ function extractDomain(actorId) {
   }
 }
 
+/**
+ * Find all local Circles that contain any of the given user IDs as members.
+ * Used by the outbox pull endpoint to determine which local users should
+ * receive content from a set of remote authors.
+ *
+ * @param {string[]} userIds - User IDs to search for (e.g. ["@alice@kwln2.local"])
+ * @param {Object} [options]
+ * @param {boolean} [options.excludeSystem=false] - If true, exclude System circles (Following, Blocked, etc.)
+ * @returns {Promise<Array<{id: string, actorId: string, type: string, members: Array}>>}
+ */
+export async function getCirclesContaining(userIds, { excludeSystem = false } = {}) {
+  if (!userIds || userIds.length === 0) return [];
+
+  const query = { "members.id": { $in: userIds } };
+  if (excludeSystem) query.type = { $ne: "System" };
+
+  return Circle.find(query).select("id actorId type members").lean();
+}
+
 export default {
   getMembers,
   getMemberIds,
@@ -154,4 +173,5 @@ export default {
   partitionMembers,
   isMember,
   batchGetMembers,
+  getCirclesContaining,
 };

@@ -162,4 +162,4 @@ setup.tmp
 frontend.bak/
 subscriptions
 *.zip
-kowloon-tests
+kowloon-testsdocker/certs/

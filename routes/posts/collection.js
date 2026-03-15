@@ -14,6 +14,7 @@ export default makeCollection({
     };
     if (query.type) filter.type = query.type;
     if (query.since) filter.createdAt = { $gte: new Date(query.since) };
+    if (query.serverId) filter.server = query.serverId;
     return filter;
   },
   select:

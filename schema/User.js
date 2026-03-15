@@ -213,55 +213,45 @@ UserSchema.pre("save", async function (next) {
     if (!this.outbox)
       this.outbox = `https://${domain}/users/${this.username}/outbox`;
 
-    // System circles
-    const selfMember = {
-      id: this.id,
-      serverId: this.server,
-      type: "kowloon",
-      name: this.profile.name,
-      inbox: this.inbox,
-      outbox: this.outbox,
-      icon: this.profile.icon,
-      url: this.url,
-    };
-
+    // System circles — all start empty
     // Initialize circles subobject
     this.circles = this.circles || {};
 
     const followingCircle = await Circle.create({
+      type: "System",
       name: `${this.id} | Following`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Following`,
       to: this.id,
       canReply: this.id,
       canReact: this.id,
-      members: [selfMember],
     });
     this.circles.following = followingCircle.id;
 
     const groupsCircle = await Circle.create({
+      type: "System",
       name: `${this.id} | Groups`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Groups`,
       to: this.id,
       canReply: this.id,
       canReact: this.id,
-      members: [selfMember],
     });
     this.circles.groups = groupsCircle.id;
 
     const allFollowingCircle = await Circle.create({
+      type: "System",
       name: `${this.id} | All Following`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | All Following`,
       to: this.id,
       canReply: this.id,
       canReact: this.id,
-      members: [selfMember],
     });
     this.circles.allFollowing = allFollowingCircle.id;
 
     const blockedCircle = await Circle.create({
+      type: "System",
       name: `${this.id} | Blocked`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Blocked`,
@@ -272,6 +262,7 @@ UserSchema.pre("save", async function (next) {
     this.circles.blocked = blockedCircle.id;
 
     const mutedCircle = await Circle.create({
+      type: "System",
       name: `${this.id} | Muted`,
       actorId: this.id,
       description: `${this.profile.name} (@${this.username}) | Muted`,

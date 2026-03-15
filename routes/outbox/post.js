@@ -59,10 +59,12 @@ export default route(
     }
 
     // Ensure to/canReact/canReply exist on activity + object (don't override if present)
+    // For Update activities, activity.object is a patch — don't inject defaults into it.
+    const injectIntoObject = activity.type !== "Update" && activity.type !== "Delete";
     if (!("to" in activity)) activity.to = "";
     if (!("canReact" in activity)) activity.canReact = "";
     if (!("canReply" in activity)) activity.canReply = "";
-    if (isObj(activity.object)) {
+    if (injectIntoObject && isObj(activity.object)) {
       if (!("to" in activity.object)) activity.object.to = "";
       if (!("canReact" in activity.object)) activity.object.canReact = "";
       if (!("canReply" in activity.object)) activity.object.canReply = "";
@@ -124,13 +126,14 @@ export default route(
     let federationJob = null;
     if (created.federate && createdId) {
       try {
-        const { enqueueOutbox } = await import(
+        const { default: enqueueOutbox } = await import(
           "#methods/federation/enqueueOutbox.js"
         );
         federationJob = await enqueueOutbox({
           activity: created.activity,
           activityId: createdId,
           actorId: activity.actorId,
+          federation: created.federation,
           reason: "activity.federate = true",
         });
         if (DEV) {

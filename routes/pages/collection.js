@@ -12,6 +12,7 @@ export default makeCollection({
       to: "@public",
     };
     if (query.tag) filter.tags = query.tag;
+    if (query.serverId) filter.server = query.serverId;
     return filter;
   },
   select:

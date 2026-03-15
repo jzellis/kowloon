@@ -215,6 +215,23 @@ export default async function Join(activity, ctx = {}) {
     if (res.modifiedCount > 0) {
       await Group.updateOne({ id: target.id }, { $inc: { memberCount: 1 } });
 
+      // Add group to user's Groups circle
+      if (u?.circles?.groups) {
+        const groupMember = {
+          id: target.id,
+          name: target.name || "",
+          icon: target.icon || "",
+          url: target.url || "",
+          inbox: target.inbox || "",
+          outbox: target.outbox || "",
+          server: target.server || "",
+        };
+        await Circle.updateOne(
+          { id: u.circles.groups, "members.id": { $ne: target.id } },
+          { $push: { members: groupMember }, $inc: { memberCount: 1 } }
+        );
+      }
+
       const result = { type: "Group", status: "joined" };
       const federation = await getFederationTargets(activity, result);
 

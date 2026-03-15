@@ -12,8 +12,9 @@ const MemberSchema = new Schema(
     icon: { type: String },
     url: { type: String },
     server: { type: String }, // domain or server label
+    lastFetchedAt: { type: Date, default: null },
   },
-  { _id: false, timestamps: true }
+  { _id: false, timestamps: true },
 );
 
 export default MemberSchema;

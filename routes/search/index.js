@@ -47,9 +47,27 @@ router.get(
       return;
     }
 
-    const requestedTypes = query.type
-      ? [query.type]
-      : Object.keys(SEARCHABLE);
+    // searchIn maps client-friendly names to SEARCHABLE keys
+    const SEARCH_IN_MAP = {
+      posts: "Post",
+      pages: "Page",
+      users: "User",
+      groups: "Group",
+      bookmarks: "Bookmark",
+    };
+
+    let requestedTypes;
+    if (query.searchIn) {
+      requestedTypes = query.searchIn
+        .split(",")
+        .map((s) => SEARCH_IN_MAP[s.trim()])
+        .filter(Boolean);
+      if (requestedTypes.length === 0) requestedTypes = Object.keys(SEARCHABLE);
+    } else if (query.type) {
+      requestedTypes = [query.type];
+    } else {
+      requestedTypes = Object.keys(SEARCHABLE);
+    }
     const page = Math.max(1, parseInt(query.page, 10) || 1);
     const limit = Math.min(Math.max(1, parseInt(query.limit, 10) || 20), 50);
     const skip = (page - 1) * limit;

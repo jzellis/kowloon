@@ -14,9 +14,10 @@ const FileSchema = new Schema(
     type: { type: String }, // Image, Video, Audio, Document
     mediaType: { type: String }, // MIME type (e.g., image/jpeg)
     extension: { type: String },
-    url: { type: String, required: true }, // Public URL to the file
+    to: { type: String, default: "@public" }, // Visibility — same addressing as Post.to
+    url: { type: String, required: true }, // App-proxied URL to the file
     storageKey: { type: String }, // Storage adapter key for retrieval/deletion
-    thumbnails: { type: Schema.Types.Mixed }, // { '200': url, '400': url }
+    thumbnails: { type: Schema.Types.Mixed }, // { '200': storageKey, '400': storageKey }
     server: { type: String }, // domain or server label
     size: { type: Number }, // File size in bytes
     width: { type: Number }, // Image/video width in pixels

@@ -42,6 +42,7 @@ export default async function enqueueOutbox({
   activity,
   activityId,
   actorId,
+  federation,
   reason = "activity.federate = true",
 }) {
   if (!activity || !activityId || !actorId) {
@@ -52,8 +53,18 @@ export default async function enqueueOutbox({
 
   const t0 = Date.now();
 
-  // Resolve audience to concrete inbox URLs
-  const resolved = await resolveAudience(activity);
+  // If federation specifies explicit domains, target their shared inboxes directly
+  // (avoids resolving non-actor IDs like post:xxx@domain as actor inboxes)
+  let resolved;
+  if (federation?.scope === "domain" && Array.isArray(federation.domains) && federation.domains.length > 0) {
+    resolved = federation.domains.map((domain) => ({
+      target: `@${domain}`,
+      inboxUrl: `https://${domain}/inbox`,
+      host: domain,
+    }));
+  } else {
+    resolved = await resolveAudience(activity);
+  }
 
   if (resolved.length === 0) {
     log.info("No remote recipients to federate to", {

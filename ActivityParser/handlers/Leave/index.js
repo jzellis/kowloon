@@ -2,7 +2,7 @@
 // Group: remove from Members (and Invited, if present).
 // Idempotent; records which circles were touched in sideEffects.
 
-import { Group, Circle } from "#schema";
+import { Group, Circle, User } from "#schema";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 
 /**
@@ -97,6 +97,20 @@ export default async function Leave(activity) {
 
     if ((ops[0].modifiedCount || 0) > 0) removedFrom.push("members");
     if ((ops[1].modifiedCount || 0) > 0) removedFrom.push("pending");
+
+    // Remove group from user's Groups circle
+    if (removedFrom.length > 0) {
+      const u = await User.findOne({ id: activity.actorId }).select("circles").lean();
+      if (u?.circles?.groups) {
+        await Circle.updateOne(
+          { id: u.circles.groups, "members.id": activity.target },
+          {
+            $pull: { members: { id: activity.target } },
+            $inc: { memberCount: -1 },
+          }
+        );
+      }
+    }
 
     activity.objectId = activity.actorId;
 

@@ -1,13 +1,11 @@
 // /routes/posts/id-feedcache.js
-// Example: GET /posts/:id using FeedItems as the read layer
-// This is the NEW pattern - single object fetch via FeedItems
+// GET /posts/:id using FeedItems as the read layer
 
 import route from "../utils/route.js";
 import { FeedItems } from "#schema";
 import {
   canView,
   buildFollowerMap,
-  buildMembershipMap,
   enrichWithCapabilities,
 } from "#methods/feed/visibility.js";
 
@@ -15,7 +13,6 @@ export default route(async ({ req, params, set, setStatus }) => {
   const { id } = params; // e.g. "post:123@domain.com"
   const viewerId = req.user?.id || null;
 
-  // Lookup in FeedItems by canonical ID
   const feedCacheItem = await FeedItems.findOne({
     id,
     deletedAt: null,
@@ -28,41 +25,22 @@ export default route(async ({ req, params, set, setStatus }) => {
     return;
   }
 
-  // Check visibility for this viewer
   const followerMap = await buildFollowerMap([feedCacheItem.actorId]);
-  const membershipMap = await buildMembershipMap([]); // TODO: addressedIds
-
-  const allowed = await canView(feedCacheItem, viewerId, {
-    followerMap,
-    membershipMap,
-    grants: {}, // TODO: Remote grants
-  });
+  const allowed = await canView(feedCacheItem, viewerId, { followerMap });
 
   if (!allowed) {
-    setStatus(403);
-    set("error", "Access denied");
+    setStatus(viewerId ? 403 : 401);
+    set("error", viewerId ? "Access denied" : "Authentication required");
     return;
   }
 
-  // Enrich with per-viewer capabilities
-  const enriched = enrichWithCapabilities(feedCacheItem, viewerId, {
-    followerMap,
-    membershipMap,
-    grants: {},
-    addressedIds: [],
-  });
+  const enriched = await enrichWithCapabilities(feedCacheItem, viewerId, { followerMap });
 
-  // Return the normalized object envelope with capabilities
   setStatus(200);
-  set("object", enriched.object); // The full object data
-  set("canReply", enriched.canReply); // Boolean for this viewer
-  set("canReact", enriched.canReact); // Boolean for this viewer
+  set("object", enriched.object);
+  set("canReply", enriched.canReply);
+  set("canReact", enriched.canReact);
   set("publishedAt", enriched.publishedAt);
   set("updatedAt", enriched.updatedAt);
   set("actorId", enriched.actorId);
-
-  // TODO: If canReply/canReact requires audience grant, include capability token
-  // if (enriched.canReply && enriched.origin === "remote" && enriched.canReply === "audience") {
-  //   set("replyToken", generateGrantToken(viewerId, id, "reply"));
-  // }
 });

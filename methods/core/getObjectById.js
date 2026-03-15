@@ -2,6 +2,7 @@
 // Robust, parser-driven ID handling for local/remote lookup.
 import parseKowloonId from "#methods/parse/kowloonId.js";
 import getSettings from "#methods/settings/get.js";
+import { getServerActor } from "#methods/settings/schemaHelpers.js";
 
 // ---------- Errors ----------
 export class NotFound extends Error {
@@ -165,6 +166,16 @@ export default async function getObjectById(
     ""
   ).toLowerCase();
 
+  // ---- A0) Server actor (@domain — single @ with no user part) ----
+  // e.g. "@kwln1.local" — the server itself, derived from settings (no DB lookup needed)
+  if (idStr.startsWith("@") && !idStr.slice(1).includes("@")) {
+    const actor = getServerActor();
+    if (actor) {
+      return { object: actor, source: "local", visibility: "public", cached: false };
+    }
+    throw new NotFound(`Server actor not available: ${idStr}`);
+  }
+
   // ---- A) User handle (@name@domain) ----
   const handle = idStr.startsWith("@") ? parseHandle(idStr) : null;
   if (handle) {
@@ -281,8 +292,10 @@ export default async function getObjectById(
           res.status
         );
 
-      const payload = await res.json();
+      const raw = await res.json();
       const etag = res.headers.get("etag") || undefined;
+      // Unwrap Kowloon API envelope { ok, item } if present (non-Kowloon servers return actor directly)
+      const payload = raw?.item || raw;
 
       let hydrated = payload;
       if (hydrateRemoteIntoDB) {
@@ -414,8 +427,10 @@ export default async function getObjectById(
         res.status
       );
 
-    const payload = await res.json();
+    const raw = await res.json();
     const etag = res.headers.get("etag") || undefined;
+    // Unwrap Kowloon API envelope { ok, item } if present
+    const payload = raw?.item || raw;
 
     let hydrated = payload;
     if (hydrateRemoteIntoDB) {

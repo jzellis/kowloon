@@ -49,8 +49,11 @@ async function resolveInbox(actorId) {
 
   try {
     // Try to fetch the actor object
-    const actor = await getObjectById(actorId);
-    if (!actor) return null;
+    const result = await getObjectById(actorId);
+    if (!result) return null;
+
+    // getObjectById returns { object, source, ... }
+    const actor = result.object || result;
 
     // Check for inbox field
     if (actor.inbox && typeof actor.inbox === "string") {
@@ -78,6 +81,13 @@ async function resolveInbox(actorId) {
       }
     } catch {
       // Not a URL
+    }
+
+    // Handle @user@domain format as last resort
+    const handleMatch = actorId.match(/^@([^@]+)@(.+)$/);
+    if (handleMatch) {
+      const [, username, domain] = handleMatch;
+      return `https://${domain}/users/${username}/inbox`;
     }
 
     return null;

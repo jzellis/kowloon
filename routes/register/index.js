@@ -14,6 +14,28 @@ import { strictRateLimiter } from "../middleware/rateLimiter.js";
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 const isNonEmpty = (s) => typeof s === "string" && s.trim().length > 0;
 
+const PETTY_LIMITS = [
+  { normalized: "ghostmountain", max: 43 },
+];
+
+function normalizeUsername(username) {
+  return username.toLowerCase().replace(/[^a-z]/g, "");
+}
+
+async function checkUsernameLimit(username) {
+  const normalized = normalizeUsername(username);
+  for (const rule of PETTY_LIMITS) {
+    if (normalized.includes(rule.normalized) || rule.normalized.includes(normalized)) {
+      const regex = new RegExp(rule.normalized.split("").join("[^a-z]*"), "i");
+      const count = await User.countDocuments({ username: { $regex: regex } });
+      if (count >= rule.max) {
+        return { allowed: false, reason: "Username unavailable" };
+      }
+    }
+  }
+  return { allowed: true };
+}
+
 function pickUserInput(body = {}) {
   // Only pick fields your schema expects to ingest directly.
   // Pre-save hook in User.js will fill id, actorId, keys, circles, etc.
@@ -137,6 +159,12 @@ const registerHandler = route(
     if (existing) {
       setStatus(409);
       return { error: "User already exists" };
+    }
+
+    const limitCheck = await checkUsernameLimit(input.username);
+    if (!limitCheck.allowed) {
+      setStatus(409);
+      return { error: limitCheck.reason };
     }
 
     // Create; your User pre-save hook will:

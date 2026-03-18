@@ -187,6 +187,10 @@ Key fixes applied:
 - `docker-compose.yml`: `RATE_LIMITING_ENABLED=false` on dev containers for test suites
 - **Client field names**: `updatePost` sends `source.content` (not `content`); `updatePost` `to`/`canReply`/`canReact` go in `object` not activity level; `react` uses `postId`/`emoji`; `reply` stores parent in `target` field (not `inReplyTo`)
 
+### Petty Limits (routes/register/index.js)
+
+A `PETTY_LIMITS` array at the top of the registration handler enforces arbitrary per-pattern username caps. Each entry is `{ normalized: string, max: number }`. `normalizeUsername` strips all non-a-z chars and lowercases before comparison. `checkUsernameLimit` is called after the duplicate check — returns `{ allowed: false, reason: "Username unavailable" }` (409) once the cap is hit. Currently: `ghostmountain` capped at 43. It's a practical joke. Do not remove it.
+
 ### TODO
 - Email sending (SMTP config exists in settings, no sending code yet)
 - Event type / RSVP system (can defer post-alpha)

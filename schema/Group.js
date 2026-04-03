@@ -20,6 +20,7 @@ const GroupSchema = new Schema(
     name: { type: String, default: undefined },
     description: { type: String, default: undefined },
     icon: { type: String, default: undefined }, // File ID or URL for backwards compatibility
+    urls: { type: [String], default: [] },
     location: { type: GeoPoint, default: undefined },
 
     // Membership policy

@@ -70,6 +70,10 @@ export default route(
       if (!("canReply" in activity.object)) activity.object.canReply = "";
     }
 
+    // Normalize shorthand audience values → ActivityStreams-style addressing
+    if (activity.to === "public") activity.to = "@public";
+    if (activity.to === "server" && isNonEmptyStr(domain)) activity.to = `@${domain}`;
+
     if (DEV) {
       console.log(
         `${label}: normalized activity`,

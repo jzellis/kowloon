@@ -412,7 +412,7 @@ export default async function Create(activity) {
         activity.object.source = {};
       }
       if (!activity.object.source.mediaType) {
-        activity.object.source.mediaType = "text/html";
+        activity.object.source.mediaType = "text/markdown";
       }
       if (!activity.object.source.contentEncoding) {
         activity.object.source.contentEncoding = "utf-8";
@@ -432,6 +432,19 @@ export default async function Create(activity) {
     }
     if (activity.canReact !== undefined && (!activity.object.canReact || activity.object.canReact === "")) {
       activity.object.canReact = activity.canReact;
+    }
+
+    // Map Event startTime/endTime → event.startDate/event.endDate for Post schema
+    if (type === "Post" && activity.object.type === "Event") {
+      if (!activity.object.event) activity.object.event = {};
+      if (activity.object.startTime && !activity.object.event.startDate) {
+        activity.object.event.startDate = activity.object.startTime;
+      }
+      if (activity.object.endTime && !activity.object.event.endDate) {
+        activity.object.event.endDate = activity.object.endTime;
+      }
+      delete activity.object.startTime;
+      delete activity.object.endTime;
     }
 
     // If object.actorId is missing, many models will tolerate it, but your

@@ -5,8 +5,8 @@
 // Response (JSON): { user, token }
 
 import express from "express";
-import { SignJWT, importPKCS8 } from "jose";
 import route from "#routes/utils/route.js";
+import generateToken from "#methods/generate/token.js";
 import getSettings from "#methods/settings/get.js";
 import { User, Invite } from "#schema";
 import { strictRateLimiter } from "../middleware/rateLimiter.js";
@@ -192,30 +192,16 @@ const registerHandler = route(
       }
     }
 
-    // Sign RS256 JWT shaped for routes/middleware/attachUser.js
-    // attachUser expects payload.user.id to look up the user.
-    const payload = {
-      user: {
-        id: created.id,
-        username: created.username,
-        actorId: created.actorId,
-      },
-    };
-
-    // Prefer settings.privateKey (your project convention)
-    const privateKey = settings.privateKey;
-    if (!isNonEmpty(privateKey)) {
+    // Generate a full token (same shape as login) so the client gets profile,
+    // following circle ID, muted/blocked lists, etc. immediately after registration.
+    let token;
+    try {
+      token = await generateToken(created.id);
+    } catch (err) {
       setStatus(500);
-      return { error: "Missing settings.privateKey" };
+      set("error", `Token generation failed: ${err.message}`);
+      return;
     }
-
-    const issuer = `https://${domain}`;
-    const pk = await importPKCS8(privateKey.replace(/\\n/g, "\n").trim(), "RS256");
-    const token = await new SignJWT(payload)
-      .setProtectedHeader({ alg: "RS256" })
-      .setIssuer(issuer)
-      .setExpirationTime("365d")
-      .sign(pk);
 
     const user = sanitizeUser(created);
 

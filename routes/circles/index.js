@@ -4,6 +4,7 @@
 import express from "express";
 import id from "./id.js";
 import posts from "./posts.js";
+import browse from "./browse.js";
 import route from "../utils/route.js";
 import { Circle } from "#schema";
 import { activityStreamsCollection } from "../utils/oc.js";
@@ -56,6 +57,7 @@ router.get(
   })
 );
 
+router.get("/browse", browse);
 router.get("/:id", id);
 router.get("/:id/posts", posts);
 

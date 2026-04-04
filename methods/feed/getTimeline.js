@@ -115,12 +115,15 @@ export default async function getTimeline({
 
   // 1. Get circle (with members including lastFetchedAt)
   const circle = await Circle.findOne({ id: circleId }).lean();
-  if (!circle?.members?.length) {
-    logger.warn("getTimeline: Circle not found or empty", { circleId });
+  if (!circle) {
+    logger.warn("getTimeline: Circle not found", { circleId });
     return { items: [], nextCursor: null };
   }
 
-  const allMembers = circle.members.map((m) => m.id).filter(Boolean);
+  // Always include the viewer so their own posts appear even when the circle is empty
+  const memberSet = new Set(circle.members?.map((m) => m.id).filter(Boolean) ?? []);
+  memberSet.add(viewerId);
+  const allMembers = Array.from(memberSet);
 
   // 2. Separate local vs remote members
   const localMembers = [];

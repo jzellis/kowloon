@@ -3,6 +3,7 @@ import { marked } from "marked";
 import crypto from "crypto";
 import { Settings, User, React, Reply, Circle } from "./index.js";
 import GeoPoint from "./subschema/GeoPoint.js";
+import ActorSchema from "./subschema/Actor.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
@@ -15,7 +16,7 @@ const PostSchema = new Schema(
     url: { type: String }, // The URL of the post
     href: { type: String, default: undefined }, // If the post is a link, this is what it links to
     actorId: { type: String }, // The ID of the post's author
-    actor: { type: Object, default: undefined },
+    actor: { type: ActorSchema, default: undefined },
     server: { type: String, default: undefined }, // The server of the post's author
     title: { type: String, default: undefined }, // An optional title for post types other than Notes
     summary: { type: String, default: undefined }, // An optional summary for post types other than Notes

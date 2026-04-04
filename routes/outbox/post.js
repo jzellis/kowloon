@@ -56,6 +56,21 @@ export default route(
       }
     } else {
       activity.actorId = user.id;
+      // Only set actor from JWT if client didn't already supply one
+      if (!activity.actor?.id) {
+        const baseUrl = domain ? `https://${domain}` : '';
+        const userPath = `${baseUrl}/users/${encodeURIComponent(user.id)}`;
+        activity.actor = {
+          id: user.id,
+          type: user.type ?? 'Person',
+          name: user.profile?.name ?? user.username,
+          icon: user.profile?.icon ?? null,
+          url: `${baseUrl}/users/${encodeURIComponent(user.id)}`,
+          inbox: `${userPath}/inbox`,
+          outbox: `${userPath}/outbox`,
+          server: `@${domain}`,
+        };
+      }
     }
 
     // Ensure to/canReact/canReply exist on activity + object (don't override if present)

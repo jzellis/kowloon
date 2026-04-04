@@ -1,20 +1,16 @@
-// schema/_subdocs/Member.js
+// schema/subschema/Member.js
+// Circle/Group member — Actor fields plus federation freshness tracking.
+
 import mongoose from "mongoose";
+import ActorSchema from "./Actor.js";
 const { Schema } = mongoose;
 
-// Base member fields used across Circle and Group.
 const MemberSchema = new Schema(
   {
-    id: { type: String, required: true }, // @user@domain
-    name: { type: String },
-    inbox: { type: String },
-    outbox: { type: String },
-    icon: { type: String },
-    url: { type: String },
-    server: { type: String }, // domain or server label
+    ...ActorSchema.obj,
     lastFetchedAt: { type: Date, default: null },
   },
-  { _id: false, timestamps: true },
+  { _id: false, timestamps: true }
 );
 
 export default MemberSchema;

@@ -386,9 +386,29 @@ export default async function Create(activity) {
         activity.object.actorId = activity.actorId;
       }
 
-      // Ensure object.actor is present
-      if (activity.object.actorId && !activity.object.actor) {
-        activity.object.actor = activity.actor || {};
+      // Resolve actor profile: use what the client sent, fall back to DB lookup
+      const clientActor = activity.actor && activity.actor.id ? activity.actor : null;
+      if (clientActor) {
+        activity.object.actor = clientActor;
+      } else if (activity.actorId) {
+        const actorDoc = await User.findOne({ id: activity.actorId })
+          .select("id username profile url inbox outbox server actorId")
+          .lean();
+        if (actorDoc) {
+          const { domain } = getServerSettings();
+          activity.object.actor = {
+            id: actorDoc.id,
+            type: actorDoc.type ?? 'Person',
+            name: actorDoc.profile?.name ?? actorDoc.username,
+            icon: actorDoc.profile?.icon ?? null,
+            url: actorDoc.url ?? `https://${domain}/users/${actorDoc.id}`,
+            inbox: actorDoc.inbox,
+            outbox: actorDoc.outbox,
+            server: actorDoc.server ?? `@${domain}`,
+          };
+        } else {
+          activity.object.actor = {};
+        }
       }
     }
 

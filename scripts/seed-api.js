@@ -298,7 +298,13 @@ async function main() {
       label: 'jzellis note (public)',
       post: {
         type: 'Note',
-        content: 'Just finished reading *The Stars My Destination* for the third time. Still the best science fiction novel ever written, no notes.',
+        content: `Just finished reading *The Stars My Destination* for the third time. Still the best science fiction novel ever written, no notes.
+
+Bester understood something most SF writers don't: **plot is character**. Gully Foyle doesn't have an arc — he *is* the arc. Every explosion, every betrayal, every transformation is just him becoming more fully himself.
+
+> "He was one hundred and seventy days dying and not yet dead."
+
+First sentence. Instant hook. That's how you do it.`,
         to: 'public',
       },
     },
@@ -308,7 +314,25 @@ async function main() {
       post: {
         type: 'Article',
         title: 'On the Aesthetics of Midcentury Design',
-        content: 'Reid Miles understood that negative space *is* content. Every Blue Note cover from 1956 to 1967 is a masterclass in what to leave out.\n\nThe thing people miss about that era of graphic design is how constrained it was — two or three colours, hand-set type, physical paste-up. The constraints weren\'t obstacles. They were the whole point.',
+        content: `Reid Miles understood that negative space *is* content. Every Blue Note cover from 1956 to 1967 is a masterclass in what to leave out.
+
+## The Constraint is the Point
+
+The thing people miss about that era of graphic design is how constrained it was — two or three colours, hand-set type, physical paste-up. The constraints weren't obstacles. They were the whole point.
+
+When you can only use **two colours**, every colour decision is load-bearing. When type has to be set by hand, you stop throwing words at the page. You choose. You cut. You leave silence.
+
+## What We Lost
+
+Modern design tools have made everything possible, which means nothing is *necessary*. You can use 47 fonts. You can have 12 colours. You can animate everything.
+
+> The enemy of design is infinite choice without a forcing function.
+
+Miles didn't have infinite choice. He had a brief, a budget, a deadline, and a genius for reduction. We have Figma and a blank canvas. That's a harder problem, not an easier one.
+
+---
+
+The irony is that the designers who best understand this — who impose their own constraints deliberately — produce work that looks most like that era. Not because they're copying it, but because they've understood *why* it worked.`,
         to: 'public',
       },
     },
@@ -318,7 +342,73 @@ async function main() {
       post: {
         type: 'Article',
         title: 'Grid Systems and the Myth of Neutrality',
-        content: 'Müller-Brockmann\'s grid is not neutral. It encodes a worldview: rationalist, orderly, European. That\'s not a criticism — it\'s an observation. Every design system encodes values. The question is whether you\'re conscious of which ones.',
+        content: `Müller-Brockmann's grid is not neutral. It encodes a worldview: rationalist, orderly, European. That's not a criticism — it's an observation. Every design system encodes values. The question is whether you're conscious of which ones.
+
+## The Grid as Ideology
+
+The International Typographic Style emerged from a specific moment: postwar Europe, the Frankfurt School, a particular faith in rationalism as an antidote to the chaos of fascism. The grid was *political* before it was aesthetic.
+
+When we reach for a 12-column grid today, we're not choosing a neutral tool. We're inheriting an argument about what design is *for*.
+
+### Three things the grid assumes:
+
+1. Information has a natural hierarchy
+2. Readers scan before they read
+3. Consistency is a form of respect
+
+These aren't wrong. But they're not universal truths either.
+
+## What a Non-Neutral Grid Looks Like
+
+> "The grid system is an aid, not a guarantee. It permits a number of possible uses and each designer can look for a solution appropriate to his personal style." — Müller-Brockmann himself
+
+Even he knew it was a tool, not a doctrine. The designers who use it best are the ones who know when to break it — and *why* they're breaking it, not just for effect, but because the content demands it.
+
+---
+
+A grid that serves the content is invisible. A grid that serves the system is a cage.`,
+        to: 'public',
+      },
+    },
+    {
+      session: hacker,
+      label: 'cityhacker article (public)',
+      post: {
+        type: 'Article',
+        title: 'ActivityPub Is Not Enough (But It\'s a Start)',
+        content: `ActivityPub is the closest thing we have to a universal protocol for federated social networks. It's imperfect, underspecified in places, and the reference implementations vary wildly. It's also the best shot we've had in twenty years at actually building the open social web.
+
+## What It Gets Right
+
+The core model is sound: **actors** send **activities** to **inboxes**. A Follow is an activity. A Create is an activity. Everything is an activity, and activities flow between servers via HTTP. Simple, auditable, extensible.
+
+The use of JSON-LD for the vocabulary is smart even if it's annoying. It means the protocol is self-describing, and you can extend it without breaking existing implementations.
+
+## What It Gets Wrong
+
+### Discovery is a mess
+
+There's no standard way to find people across servers. Webfinger works, sort of, most of the time. But searching for \`@user@instance.social\` from a different server is still a manual, unreliable process.
+
+### The security model is bolted on
+
+HTTP Signatures are the de facto auth mechanism, but they're not in the spec. Every implementation rolls its own, and interop is fragile. We need something better — IETF's HTTP Message Signatures (\`draft-ietf-httpbis-message-signatures\`) is the right direction.
+
+### No standard for client-to-server
+
+ActivityPub defines server-to-server federation well. Client-to-server is underspecified and mostly ignored. Every Mastodon client uses Mastodon's proprietary API. This is a problem.
+
+## Where We Go From Here
+
+\`\`\`
+Client → (ActivityPub C2S) → Your Server → (ActivityPub S2S) → Their Server
+\`\`\`
+
+This should be the stack. It isn't yet, but it could be. The pieces exist. What's missing is the will to implement them consistently.
+
+---
+
+I'm not optimistic on a five-year horizon. I'm very optimistic on a twenty-year horizon. The open web is slow. It always has been. That's fine.`,
         to: 'public',
       },
     },
@@ -329,7 +419,11 @@ async function main() {
         type: 'Link',
         title: 'Blue Note Records: The Complete Discography',
         href: 'https://www.discogs.com/label/3073-Blue-Note-Records',
-        content: 'An absolutely essential resource. Every cover, every session date, every pressing.',
+        content: `An absolutely essential resource. Every cover, every session date, every pressing.
+
+What gets me every time is how *consistent* the quality is. Not just the music — the documentation. Every session listed, every personnel change, every reissue. Someone cared deeply about this.
+
+The **1500 series** alone — Monk, Rollins, Silver, Blakey — is one of the great artistic runs in recorded music. If you've never gone through it chronologically, start with *A Night at Birdland* (1954) and just keep going.`,
         to: 'public',
       },
     },
@@ -338,7 +432,11 @@ async function main() {
       label: 'recordhead note to jazz circle',
       post: {
         type: 'Note',
-        content: 'Anyone catch Empirical at Ronnie\'s last night? That set in the second half was something else entirely.',
+        content: `Anyone catch **Empirical** at Ronnie's last night? That set in the second half was something else entirely.
+
+Shabaka was doing things with the tenor in the upper register I genuinely didn't think were possible live. The drummer (can't remember his name, sorry) was holding the whole thing together with this incredibly light touch — never overplaying, always *listening*.
+
+This is why I keep coming back. You can't get this from a recording.`,
         to: jazzCircleId ?? 'public',
       },
     },
@@ -348,17 +446,27 @@ async function main() {
       post: {
         type: 'Event',
         title: 'Ronnie Scott\'s Anniversary Night',
-        content: 'Tickets are up — grab them before they go. Empirical are headlining the late set.',
+        content: `Tickets are up — grab them before they go. **Empirical** are headlining the late set.
+
+This is the club's anniversary, so they're pulling out all the stops. Two sets, late bar, and apparently there's a surprise guest for the midnight slot that I've been sworn to secrecy about.
+
+> "Ronnie Scott's is not just a club. It's an argument that jazz is still alive." — someone wise
+
+Dress code is smart casual. Doors at 7, first set at 8:30.`,
         startTime: new Date(Date.now() + 1000 * 60 * 60 * 24 * 14).toISOString(),
         to: jazzGroupId ?? 'public',
       },
     },
     {
       session: design,
-      label: 'designthink note (public)',
+      label: 'designthink note (design group)',
       post: {
         type: 'Note',
-        content: 'Just found a near-mint copy of Müller-Brockmann\'s *Grid Systems* at a market stall. Genuinely shaking.',
+        content: `Just found a near-mint copy of Müller-Brockmann's *Grid Systems in Graphic Design* at a market stall. **Genuinely shaking.**
+
+£4. *Four pounds.* The man behind me had no idea what he was looking at. I wasn't going to tell him.
+
+For the uninitiated: this book is basically the Torah of Swiss graphic design. First published 1961, still in print, still the clearest articulation of why grids work that anyone has ever written. The diagrams alone are worth more than most design degrees.`,
         to: designGroupId ?? 'public',
       },
     },
@@ -367,7 +475,14 @@ async function main() {
       label: 'cityhacker note (indieweb group)',
       post: {
         type: 'Note',
-        content: 'Anyone working on ActivityPub implementations? Would love to compare notes at the next meetup.',
+        content: `Anyone working on **ActivityPub** implementations? Would love to compare notes at the next meetup.
+
+Specifically struggling with:
+- HTTP Signatures verification across different server implementations
+- Handling \`Delete\` activities for objects you've already cached
+- The \`attributedTo\` vs \`actor\` inconsistency in the wild
+
+Happy to share what we've figured out on the Kowloon side if others are running into the same walls.`,
         to: indiewebGroupId ?? 'public',
       },
     },
@@ -376,7 +491,17 @@ async function main() {
       label: 'jzellis note (scifi group)',
       post: {
         type: 'Note',
-        content: 'Next month we\'re doing *A Fire Upon the Deep*. Full novel, so start early.',
+        content: `Next month we're doing *A Fire Upon the Deep* by Vernor Vinge. Full novel, so **start early**.
+
+A few things to keep in mind as you read:
+
+1. The "Zones of Thought" concept pays off slowly — trust it
+2. The Tines chapters are uncomfortable at first and then *brilliant*
+3. The Usenet-style messages in the book were written in 1992 and are eerily prescient about online culture
+
+> "The Net of a Million Lies" — Vinge's name for the galactic internet. He wasn't wrong.
+
+See you in four weeks. Bring opinions.`,
         to: scifiGroupId ?? 'public',
       },
     },
@@ -385,10 +510,56 @@ async function main() {
       label: 'jzellis link (public)',
       post: {
         type: 'Link',
-        title: 'The IndieWeb\'s Longest-Running Experiment',
-        href: 'https://indieweb.org',
-        content: 'Still the best argument for owning your own content on the web.',
+        title: 'The IndieWeb Principles',
+        href: 'https://indieweb.org/principles',
+        content: `Still the clearest articulation of what the open web should be. Worth re-reading every year.
+
+The principle I keep coming back to: **"Make what you need"**. Not what you think other people need. Not what will scale to a million users. What *you* need, right now, for yourself. The rest follows — or it doesn't, and that's also fine.
+
+This is the direct opposite of how most software gets built. That's why IndieWeb projects feel different to use.`,
         to: 'public',
+      },
+    },
+    {
+      session: josh,
+      label: 'jzellis article (server-only)',
+      post: {
+        type: 'Article',
+        title: 'Notes on Running a Small Server',
+        content: `A few things I've learned after six months of running Kowloon for a small group of people.
+
+## Scale Changes Everything (Even at Small Scale)
+
+Going from 1 user (me, testing) to 10 users (real people with real expectations) is a bigger jump than going from 10 to 1000. At 10, every rough edge is someone's *actual* problem. At 1000, rough edges get averaged out.
+
+This is good. It forces you to fix things you'd otherwise defer.
+
+## Moderation Is a Product Feature
+
+I didn't think much about moderation when I started. It seemed like a future problem. It wasn't.
+
+Even in a small, trusted group:
+- People post things they later want deleted
+- Spam accounts will find you
+- Someone will test the edges of what's acceptable
+
+**You need a moderation policy before you need a moderation incident.** Write it down. Make it public. Refer to it.
+
+## The Boring Infrastructure Is the Important Infrastructure
+
+Backups. Monitoring. Alerting. Not glamorous. Absolutely critical.
+
+\`\`\`bash
+# The command I run every morning
+restic -r s3:backup-bucket/kowloon snapshots | tail -5
+\`\`\`
+
+If that command ever returns nothing, something is very wrong.
+
+---
+
+More notes as I accumulate them. Running infrastructure is humbling in the best way.`,
+        to: 'server',
       },
     },
   ];

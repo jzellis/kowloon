@@ -454,6 +454,12 @@ export default async function Create(activity) {
       activity.object.canReact = activity.canReact;
     }
 
+    // Map featuredImage → image for Post/Reply/Page schemas (schema field is 'image')
+    if (activity.object.featuredImage && !activity.object.image) {
+      activity.object.image = activity.object.featuredImage;
+    }
+    delete activity.object.featuredImage;
+
     // Map Event startTime/endTime → event.startDate/event.endDate for Post schema
     if (type === "Post" && activity.object.type === "Event") {
       if (!activity.object.event) activity.object.event = {};

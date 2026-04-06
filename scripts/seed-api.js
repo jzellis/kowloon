@@ -28,6 +28,14 @@ function client() {
   return new KowloonClient({ baseUrl: SERVER });
 }
 
+async function downloadFile(url, filename) {
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Failed to fetch ${url}: ${res.status}`);
+  const buffer = Buffer.from(await res.arrayBuffer());
+  const contentType = res.headers.get('content-type')?.split(';')[0] ?? 'application/octet-stream';
+  return { buffer, contentType, filename };
+}
+
 // ── Cast of characters ────────────────────────────────────────────────────────
 
 const USERS = [
@@ -419,6 +427,7 @@ I'm not optimistic on a five-year horizon. I'm very optimistic on a twenty-year 
         type: 'Link',
         title: 'Blue Note Records: The Complete Discography',
         href: 'https://www.discogs.com/label/3073-Blue-Note-Records',
+        featuredImage: 'https://picsum.photos/seed/bluenote/800/500',
         content: `An absolutely essential resource. Every cover, every session date, every pressing.
 
 What gets me every time is how *consistent* the quality is. Not just the music — the documentation. Every session listed, every personnel change, every reissue. Someone cared deeply about this.
@@ -512,6 +521,7 @@ See you in four weeks. Bring opinions.`,
         type: 'Link',
         title: 'The IndieWeb Principles',
         href: 'https://indieweb.org/principles',
+        featuredImage: 'https://picsum.photos/seed/indieweb/800/500',
         content: `Still the clearest articulation of what the open web should be. Worth re-reading every year.
 
 The principle I keep coming back to: **"Make what you need"**. Not what you think other people need. Not what will scale to a million users. What *you* need, right now, for yourself. The rest follows — or it doesn't, and that's also fine.
@@ -568,6 +578,91 @@ More notes as I accumulate them. Running infrastructure is humbling in the best 
     if (!spec.session) { fail(spec.label, new Error('session missing')); continue; }
     try {
       await spec.session.client.activities.createPost(spec.post);
+      ok(spec.label);
+    } catch (err) {
+      fail(spec.label, err);
+    }
+  }
+
+  // ── 9. Upload files and create Media posts ────────────────────────────────
+  console.log('\n9. Creating Media posts…');
+
+  // Use picsum.photos (CC0) for seed images — stable, deterministic, fast CDN
+  const mediaSpecs = [
+    {
+      session: josh,
+      label: 'jzellis media (midcentury)',
+      images: [
+        { url: 'https://picsum.photos/seed/midcentury1/1200/800', filename: 'midcentury-1.jpg', title: 'Midcentury interior', alt: 'A midcentury modern interior with geometric furniture' },
+        { url: 'https://picsum.photos/seed/midcentury2/1200/800', filename: 'midcentury-2.jpg', title: 'Bauhaus geometry', alt: 'Geometric Bauhaus-inspired composition' },
+      ],
+      post: {
+        type: 'Media',
+        title: 'Midcentury Reference Shots',
+        content: `Some reference images from a recent architecture walk. The integration of geometric form and natural materials in these buildings is something I keep coming back to.
+
+What strikes me most is the **consistency of scale** — everything is proportioned for human beings, not for photographs. These spaces *feel* right before they look right.`,
+        to: 'public',
+      },
+    },
+    {
+      session: design,
+      label: 'designthink media (typography)',
+      images: [
+        { url: 'https://picsum.photos/seed/typo1/1200/900', filename: 'typography-study.jpg', title: 'Typography study', alt: 'Close-up of letterpress type' },
+      ],
+      post: {
+        type: 'Media',
+        title: 'Letterpress Study',
+        content: `Spent the afternoon at a letterpress studio. There is no substitute for understanding type through your hands.
+
+The physicality of it changes how you think about spacing. *Leading* is a literal thing — strips of lead. *Kerning* is a physical act. Every decision has weight.`,
+        to: 'public',
+      },
+    },
+    {
+      session: records,
+      label: 'recordhead media (vinyl)',
+      images: [
+        { url: 'https://picsum.photos/seed/vinyl1/1200/1200', filename: 'vinyl-haul.jpg', title: 'Record haul', alt: 'Stack of vinyl records' },
+      ],
+      post: {
+        type: 'Media',
+        title: 'Saturday Market Haul',
+        content: `Portobello this morning. Four hours, aching feet, and this lot to show for it.
+
+Highlights: an original Blue Note pressing of *Song for My Father* (minor sleeve wear, vinyl is perfect), a Dutch pressing of *Kind of Blue* I didn't know existed, and a 1971 ECM release I've never seen before.
+
+The ECM alone was worth the trip.`,
+        to: 'public',
+      },
+    },
+  ];
+
+  for (const spec of mediaSpecs) {
+    if (!spec.session) { fail(spec.label, new Error('session missing')); continue; }
+    try {
+      // Download and upload each image
+      const uploaded = [];
+      for (const img of spec.images) {
+        const { buffer, contentType } = await downloadFile(img.url, img.filename);
+        const uploadRes = await spec.session.client.files.upload({
+          file: new Blob([buffer], { type: contentType }),
+          filename: img.filename,
+          contentType,
+          title: img.title,
+          summary: img.alt,
+          to: spec.post.to,
+        });
+        uploaded.push({ fileId: uploadRes?.file?.id, title: img.title, alt: img.alt });
+        ok(`  upload ${img.filename}`, uploadRes?.file?.id);
+      }
+
+      await spec.session.client.activities.createPost({
+        ...spec.post,
+        attachments: uploaded,
+        featuredImage: uploaded[0]?.fileId,
+      });
       ok(spec.label);
     } catch (err) {
       fail(spec.label, err);

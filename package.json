@@ -52,11 +52,14 @@
     "winston": "^3.14.2"
   },
   "overrides": {
-    "fast-xml-parser": "^5.4.2",
+    "fast-xml-parser": "^5.5.7",
     "http-proxy-agent": "^7.0.2",
     "minimatch": "^10.2.4",
     "qs": "^6.15.0",
-    "js-yaml": "^4.1.1"
+    "js-yaml": "^4.1.1",
+    "path-to-regexp": "^0.1.13",
+    "picomatch": "^2.3.2",
+    "yauzl": "^3.2.1"
   },
   "devDependencies": {
     "@faker-js/faker": "^10.0.0",

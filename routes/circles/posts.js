@@ -2,7 +2,7 @@
 // GET /circles/:id/posts — Primary timeline view (circle-based feed)
 
 import route from "../utils/route.js";
-import { Circle } from "#schema";
+import { Circle, File } from "#schema";
 import getTimeline from "#methods/feed/getTimeline.js";
 
 const VISIBILITY_MAP = { public: 'Public', server: 'Server', audience: 'Audience' };
@@ -54,28 +54,18 @@ function normalizeFeedItem(item) {
 }
 
 export default route(async ({ req, params, query, user, set, setStatus }) => {
-  if (!user?.id) {
-    setStatus(401);
-    set("error", "Authentication required");
-    return;
-  }
-
   const circleId = decodeURIComponent(params.id);
 
-  // Verify ownership
-  const circle = await Circle.findOne({ id: circleId, deletedAt: null })
-    .select("actorId")
-    .lean();
+  // Always 404 — never reveal whether a circle exists but is private
+  const circle = user?.id
+    ? await Circle.findOne({ id: circleId, actorId: user.id, deletedAt: null })
+        .select("actorId")
+        .lean()
+    : null;
 
   if (!circle) {
     setStatus(404);
-    set("error", "Circle not found");
-    return;
-  }
-
-  if (circle.actorId !== user.id) {
-    setStatus(403);
-    set("error", "Access denied");
+    set("error", "Not found");
     return;
   }
 
@@ -93,7 +83,46 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
     limit,
   });
 
-  const orderedItems = result.items.map(normalizeFeedItem);
+  const normalized = result.items.map(normalizeFeedItem);
+
+  // Resolve File IDs in image and attachments fields to {url, mediaType, name} objects
+  const fileIds = new Set();
+  for (const item of normalized) {
+    if (item.image && item.image.startsWith("file:")) fileIds.add(item.image);
+    for (const id of item.attachments ?? []) {
+      if (id && typeof id === "string" && id.startsWith("file:")) fileIds.add(id);
+    }
+  }
+
+  const fileMap = new Map();
+  if (fileIds.size > 0) {
+    const files = await File.find({ id: { $in: [...fileIds] } })
+      .select("id url mediaType name summary")
+      .lean();
+    for (const f of files) fileMap.set(f.id, f);
+  }
+
+  const orderedItems = normalized.map((item) => {
+    if (item.image) {
+      if (item.image.startsWith("file:") && fileMap.has(item.image)) {
+        item.featuredImage = fileMap.get(item.image).url;
+      } else if (item.image.startsWith("http")) {
+        item.featuredImage = item.image;
+      }
+    }
+    if (item.attachments?.length) {
+      item.attachments = item.attachments
+        .map((id) => {
+          if (!id || typeof id !== "string") return null;
+          const f = fileMap.get(id);
+          if (f) return { url: f.url, mediaType: f.mediaType ?? "", name: f.name ?? f.summary ?? "" };
+          if (id.startsWith("http")) return { url: id, mediaType: "", name: "" };
+          return null;
+        })
+        .filter(Boolean);
+    }
+    return item;
+  });
 
   set("@context", "https://www.w3.org/ns/activitystreams");
   set("type", "OrderedCollection");

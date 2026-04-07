@@ -3,8 +3,10 @@
 // Resolves File IDs in `image` and `attachments` to full file objects for display.
 
 import route from "../utils/route.js";
+import { activityStreamsCollection } from "../utils/oc.js";
 import { Post, File } from "#schema";
 import sanitizeObject from "#methods/sanitize/object.js";
+import { getSetting } from "#methods/settings/cache.js";
 
 const SELECT =
   "id type objectType title summary body url href actorId actor tags image attachments to createdAt updatedAt replyCount reactCount shareCount";
@@ -73,10 +75,20 @@ export default route(async ({ req, query, set }) => {
     return item;
   });
 
-  set("@context", "https://www.w3.org/ns/activitystreams");
-  set("type", "OrderedCollection");
-  set("totalItems", total);
-  set("orderedItems", items);
-  set("page", page);
-  set("itemsPerPage", limit);
+  const domain = getSetting("domain");
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const base = `${protocol}://${domain}${req.baseUrl}`;
+
+  const collection = activityStreamsCollection({
+    id: `${base}?page=${page}`,
+    orderedItems: items,
+    totalItems: total,
+    page,
+    itemsPerPage: limit,
+    baseUrl: base,
+  });
+
+  for (const [key, value] of Object.entries(collection)) {
+    set(key, value);
+  }
 });

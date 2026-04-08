@@ -125,6 +125,15 @@ export default async function React(activity, ctx = {}) {
       return { activity, result, federation };
     }
 
+    // updateOne/upsert bypasses the pre-save hook, so set id + server manually
+    if (up.upsertedCount > 0 && up.upsertedId) {
+      const { domain, actorId: serverActorId } = getServerSettings();
+      await ReactModel.updateOne(
+        { _id: up.upsertedId },
+        { $set: { id: `react:${up.upsertedId}@${domain}`, server: serverActorId } }
+      );
+    }
+
     // Try to bump reactCount on a known target collection
     // Use findOneAndUpdate (not updateOne) to avoid the broken pre("updateOne") hook on Post
     let bumped = false;

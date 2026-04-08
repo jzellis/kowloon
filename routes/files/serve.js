@@ -71,8 +71,15 @@ async function resolveViewer(token) {
 
 // ── visibility check ──────────────────────────────────────────────────────────
 
+function normalizeVisibility(to) {
+  if (!to) return '@public';
+  const v = String(to).trim().toLowerCase();
+  if (v === 'public' || v === '@public') return '@public';
+  return to; // circle ID, group ID, @domain, etc.
+}
+
 async function canAccess(to, file, viewerId) {
-  const visibility = to || '@public';
+  const visibility = normalizeVisibility(to);
 
   if (visibility === '@public') return true;
   if (!viewerId) return false;

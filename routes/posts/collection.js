@@ -11,6 +11,13 @@ import { getSetting } from "#methods/settings/cache.js";
 const SELECT =
   "id type objectType title summary body url href actorId actor tags image attachments to createdAt updatedAt replyCount reactCount shareCount";
 
+// Build a proxied serve URL from the current request host (dev-safe)
+function serveUrl(req, fileId) {
+  const proto = req.headers["x-forwarded-proto"] || req.protocol || "http";
+  const host = req.headers["x-forwarded-host"] || req.headers.host;
+  return `${proto}://${host}/files/${encodeURIComponent(fileId)}`;
+}
+
 export default route(async ({ req, query, set }) => {
   const filter = {
     to: "@public",
@@ -50,10 +57,10 @@ export default route(async ({ req, query, set }) => {
   const items = docs.map((doc) => {
     const item = sanitizeObject(doc, { objectType: "Post" });
 
-    // Resolve featured image: keep raw ID but add resolved URL as featuredImage
+    // Resolve featured image
     if (item.image) {
       if (item.image.startsWith("file:") && fileMap.has(item.image)) {
-        item.featuredImage = fileMap.get(item.image).url;
+        item.featuredImage = serveUrl(req, item.image);
       } else if (item.image.startsWith("http")) {
         item.featuredImage = item.image;
       }
@@ -65,7 +72,7 @@ export default route(async ({ req, query, set }) => {
         .map((id) => {
           if (!id) return null;
           const f = fileMap.get(id);
-          if (f) return { url: f.url, mediaType: f.mediaType ?? "", name: f.name ?? f.summary ?? "" };
+          if (f) return { url: serveUrl(req, id), mediaType: f.mediaType ?? "", name: f.name ?? f.summary ?? "" };
           if (id.startsWith("http")) return { url: id, mediaType: "", name: "" };
           return null;
         })

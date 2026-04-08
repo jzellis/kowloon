@@ -18,8 +18,20 @@ export default makeCollection({
       filter.to = "@public";
     }
 
+    // Optional type filter (Bookmark or Folder)
+    if (req.query.type) {
+      filter.type = req.query.type;
+    }
+
+    // Optional parent folder filter ('root' = top-level items only)
+    if (req.query.parentFolder === 'root') {
+      filter.parentFolder = { $exists: false };
+    } else if (req.query.parentFolder) {
+      filter.parentFolder = req.query.parentFolder;
+    }
+
     return filter;
   },
   select:
-    "id type title summary href target image tags to actorId url createdAt updatedAt",
+    "id type title summary href target image tags to parentFolder actorId url body createdAt updatedAt",
 });

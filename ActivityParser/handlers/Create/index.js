@@ -460,6 +460,27 @@ export default async function Create(activity) {
     }
     delete activity.object.featuredImage;
 
+    // Bookmark-specific normalization
+    if (type === 'Bookmark') {
+      // Map parentId → parentFolder (client compat)
+      if (activity.object.parentId && !activity.object.parentFolder) {
+        activity.object.parentFolder = activity.object.parentId;
+      }
+      delete activity.object.parentId;
+
+      // Enforce max folder depth of 2 (folders and subfolders only)
+      if (activity.object.type === 'Folder' && activity.object.parentFolder) {
+        const parent = await Bookmark.findOne({ id: activity.object.parentFolder })
+          .select('parentFolder type').lean();
+        if (!parent) {
+          return { activity, error: 'Bookmark: parent folder not found' };
+        }
+        if (parent.parentFolder) {
+          return { activity, error: 'Bookmark: maximum folder depth (2 levels) exceeded' };
+        }
+      }
+    }
+
     // Normalize attachments: client sends [{fileId, title, alt}]; schema stores [String] (File IDs only)
     if (Array.isArray(activity.object.attachments) && activity.object.attachments.length > 0) {
       activity.object.attachments = activity.object.attachments.map((a) =>

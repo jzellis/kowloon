@@ -460,6 +460,13 @@ export default async function Create(activity) {
     }
     delete activity.object.featuredImage;
 
+    // Normalize attachments: client sends [{fileId, title, alt}]; schema stores [String] (File IDs only)
+    if (Array.isArray(activity.object.attachments) && activity.object.attachments.length > 0) {
+      activity.object.attachments = activity.object.attachments.map((a) =>
+        typeof a === 'string' ? a : a?.fileId ?? a?.id ?? String(a)
+      ).filter(Boolean);
+    }
+
     // Map Event startTime/endTime → event.startDate/event.endDate for Post schema
     if (type === "Post" && activity.object.type === "Event") {
       if (!activity.object.event) activity.object.event = {};

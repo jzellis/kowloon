@@ -107,7 +107,6 @@ router.get(
     const members = (circle.members || []).slice(skip, skip + limit);
     const total = circle.memberCount || (circle.members || []).length;
 
-    const domain = getSetting("domain");
     const protocol = req.headers["x-forwarded-proto"] || "https";
     const base = `${protocol}://${domain}/circles/${encodeURIComponent(circleId)}/members`;
 

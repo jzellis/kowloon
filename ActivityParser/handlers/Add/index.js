@@ -176,99 +176,110 @@ export default async function Add(activity) {
       return null;
     }
 
-    const member = await resolveActorToMember(activity.object);
+    // Support array or single object — resolve all in parallel
+    const objects = Array.isArray(activity.object) ? activity.object : [activity.object];
+    const resolved = (await Promise.all(objects.map(resolveActorToMember))).filter(Boolean);
 
-    activity.object = member; // normalize the activity payload to the cached actor shape
+    if (resolved.length === 0) return { activity, error: "Add: no valid members resolved" };
 
-    let res = await Circle.updateOne(
-      { id: activity.target, "members.id": { $ne: activity.object.id } },
-      {
-        $push: { members: activity.object },
-        $inc: { memberCount: 1 },
-      }
-    );
+    // Deduplicate against members already in the circle
+    const existing = await Circle.findOne({ id: activity.target }).select("members.id").lean();
+    const existingIds = new Set((existing?.members || []).map((m) => m.id));
+    const toAdd = resolved.filter((m) => !existingIds.has(m.id));
 
-    // If adding to a Group's members circle, update user's Groups circle, remove from pending, and notify
+    // Normalize activity.object for downstream code
+    activity.object = resolved.length === 1 ? resolved[0] : resolved;
+
+    let res = { modifiedCount: 0 };
+    if (toAdd.length > 0) {
+      res = await Circle.updateOne(
+        { id: activity.target },
+        {
+          $push: { members: { $each: toAdd } },
+          $inc: { memberCount: toAdd.length },
+        }
+      );
+    }
+
+    // If adding to a Group's members circle, update each user's Groups circle,
+    // remove from pending, and notify — one member at a time.
     if (ownerType === "Group" && res.modifiedCount > 0) {
       const group = await Group.findOne({ id: ownerId }).lean();
 
-      // Add group to user's Groups circle
-      if (group?.circles?.members === activity.target) {
-        const addedUser = await User.findOne({ id: activity.object.id }).select("circles").lean();
-        if (addedUser?.circles?.groups) {
-          const groupMember = {
-            id: group.id,
-            name: group.name || "",
-            icon: group.icon || "",
-            url: group.url || "",
-            inbox: group.inbox || "",
-            outbox: group.outbox || "",
-            server: group.server || "",
-          };
-          await Circle.updateOne(
-            { id: addedUser.circles.groups, "members.id": { $ne: group.id } },
-            { $push: { members: groupMember }, $inc: { memberCount: 1 } }
-          );
-        }
-      }
-
-      if (group?.circles?.members === activity.target && group?.circles?.pending) {
-        // Remove from pending circle if they were there
-        const pendingRemoval = await Circle.updateOne(
-          { id: group.circles.pending, "members.id": activity.object.id },
-          {
-            $pull: { members: { id: activity.object.id } },
-            $inc: { memberCount: -1 },
+      for (const member of toAdd) {
+        // Add group to user's Groups circle
+        if (group?.circles?.members === activity.target) {
+          const addedUser = await User.findOne({ id: member.id }).select("circles").lean();
+          if (addedUser?.circles?.groups) {
+            const groupMember = {
+              id: group.id,
+              name: group.name || "",
+              icon: group.icon || "",
+              url: group.url || "",
+              inbox: group.inbox || "",
+              outbox: group.outbox || "",
+              server: group.server || "",
+            };
+            await Circle.updateOne(
+              { id: addedUser.circles.groups, "members.id": { $ne: group.id } },
+              { $push: { members: groupMember }, $inc: { memberCount: 1 } }
+            );
           }
-        );
+        }
 
-        // If user was in pending (i.e., this was an approval), notify them
-        if (pendingRemoval.modifiedCount > 0) {
-          try {
-            // Check if user wants join_approved notifications (default true)
-            const recipient = await User.findOne({ id: activity.object.id }).select("prefs").lean();
-            const wantsNotification = recipient?.prefs?.notifications?.join_approved !== false;
+        if (group?.circles?.members === activity.target && group?.circles?.pending) {
+          const pendingRemoval = await Circle.updateOne(
+            { id: group.circles.pending, "members.id": member.id },
+            { $pull: { members: { id: member.id } }, $inc: { memberCount: -1 } }
+          );
 
-            if (wantsNotification) {
-              await createNotification({
-                type: "join_approved",
-                recipientId: activity.object.id,
-                actorId: activity.actorId, // The admin who approved
-                objectId: ownerId,
-                objectType: "Group",
-                activityId: activity.id,
-                activityType: "Add",
-                groupKey: `join_approved:${ownerId}:${activity.object.id}`,
-              });
+          if (pendingRemoval.modifiedCount > 0) {
+            try {
+              const recipient = await User.findOne({ id: member.id }).select("prefs").lean();
+              const wantsNotification = recipient?.prefs?.notifications?.join_approved !== false;
+              if (wantsNotification) {
+                await createNotification({
+                  type: "join_approved",
+                  recipientId: member.id,
+                  actorId: activity.actorId,
+                  objectId: ownerId,
+                  objectType: "Group",
+                  activityId: activity.id,
+                  activityType: "Add",
+                  groupKey: `join_approved:${ownerId}:${member.id}`,
+                });
+              }
+            } catch (err) {
+              console.error("Failed to create join_approved notification:", err.message);
             }
-          } catch (err) {
-            console.error("Failed to create join_approved notification:", err.message);
-            // Non-fatal
           }
         }
       }
     }
 
-    // Federate when a remote actor was added — set activity.to so resolveAudience
-    // can find their inbox via getObjectById.
+    // Federate to any remote members that were actually added
     const localDomain = settings?.domain || process.env.DOMAIN || "";
-    // Derive domain from server field, or fall back to parsing the member ID
-    const memberDomain =
-      member?.server?.replace(/^@/, "") ||
-      (member?.id?.match(/^@[^@]+@(.+)$/) || [])[1] ||
-      "";
-    const isRemoteMember =
-      member?.id && memberDomain && memberDomain !== localDomain;
+    const remoteMembers = toAdd.filter((m) => {
+      const domain =
+        m?.server?.replace(/^@/, "") ||
+        (m?.id?.match(/^@[^@]+@(.+)$/) || [])[1] ||
+        "";
+      return m?.id && domain && domain !== localDomain;
+    });
 
-    if (isRemoteMember) {
-      activity.to = member.id; // @user@remotedomain — resolveAudience will fetch inbox
+    if (remoteMembers.length > 0) {
+      activity.to =
+        remoteMembers.length === 1
+          ? remoteMembers[0].id
+          : remoteMembers.map((m) => m.id);
     }
 
     return {
       activity,
       circleId: activity.target,
       added: (res.modifiedCount || 0) > 0,
-      federate: isRemoteMember,
+      addedCount: toAdd.length,
+      federate: remoteMembers.length > 0,
     };
   } catch (err) {
     return { activity, error: err?.message || String(err) };

@@ -61,23 +61,17 @@ router.get("/browse", browse);
 router.get("/:id", id);
 router.get("/:id/posts", posts);
 
-// GET /circles/:id/members — list members of a circle (owner-only)
+// GET /circles/:id/members — list members of a circle (authorized users)
 router.get(
   "/:id/members",
   route(async ({ req, params, query, user, set, setStatus }) => {
-    if (!user?.id) {
-      setStatus(401);
-      set("error", "Authentication required");
-      return;
-    }
-
     const circleId = decodeURIComponent(params.id);
 
     const circle = await Circle.findOne({
       id: circleId,
       deletedAt: null,
     })
-      .select("id actorId members memberCount")
+      .select("id actorId members memberCount to")
       .lean();
 
     if (!circle) {
@@ -86,10 +80,24 @@ router.get(
       return;
     }
 
-    if (circle.actorId !== user.id) {
-      setStatus(403);
-      set("error", "Access denied");
-      return;
+    const domain = getSetting("domain") || "";
+    const to = circle.to || "";
+    const isPublic = to === "@public" || to === "public";
+    const isServerVisible = to === `@${domain}` || to === "@server" || to === "server";
+    const isOwner = user?.id && circle.actorId === user?.id;
+    const isMember = user?.id && circle.members?.some((m) => m.id === user?.id);
+
+    if (!isPublic) {
+      if (!user?.id) {
+        setStatus(401);
+        set("error", "Authentication required");
+        return;
+      }
+      if (!isOwner && !isMember && !isServerVisible) {
+        setStatus(403);
+        set("error", "Access denied");
+        return;
+      }
     }
 
     const page = Math.max(1, parseInt(query.page, 10) || 1);

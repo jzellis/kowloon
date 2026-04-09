@@ -9,7 +9,7 @@ const router = express.Router({ mergeParams: true });
 
 // Settings that are safe to expose publicly
 const PUBLIC_SETTINGS = [
-  "likeEmojis",
+  "reactEmojis",
   "registrationIsOpen",
   "maxUploadSize",
   "defaultPronouns",

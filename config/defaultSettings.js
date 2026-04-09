@@ -72,7 +72,7 @@ const defaultSettings = (ctx) => {
       ui: { type: "json", label: "Server Profile", group: "appearance", order: 1 },
     },
 
-    likeEmojis: {
+    reactEmojis: {
       value: [
         { name: "Like",    emoji: "👍" },
         { name: "Laugh",   emoji: "😂" },

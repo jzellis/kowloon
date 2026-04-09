@@ -136,7 +136,7 @@ async function main() {
     ]);
   }
 
-  // Pull settings we need (domain, likeEmojis, etc.)
+  // Pull settings we need (domain, reactEmojis, etc.)
   const settingsDocs = await Settings.find().lean();
   const settings = Object.fromEntries(
     settingsDocs.map((s) => [s.name, s.value])
@@ -147,10 +147,10 @@ async function main() {
     "example.org"
   ).toLowerCase();
 
-  // Ensure likeEmojis exists
-  let likeEmojis = settings.likeEmojis;
-  if (!Array.isArray(likeEmojis) || likeEmojis.length === 0) {
-    likeEmojis = [
+  // Ensure reactEmojis exists
+  let reactEmojis = settings.reactEmojis;
+  if (!Array.isArray(reactEmojis) || reactEmojis.length === 0) {
+    reactEmojis = [
       { name: "like", emoji: "👍" },
       { name: "love", emoji: "❤️" },
       { name: "laugh", emoji: "😂" },
@@ -158,11 +158,11 @@ async function main() {
       { name: "sad", emoji: "😢" },
     ];
     await Settings.findOneAndUpdate(
-      { name: "likeEmojis" },
-      { value: likeEmojis },
+      { name: "reactEmojis" },
+      { value: reactEmojis },
       { upsert: true }
     );
-    console.log("→ Seeded default likeEmojis in Settings");
+    console.log("→ Seeded default reactEmojis in Settings");
   }
 
   // Declare containers up-front (avoid TDZ)
@@ -409,7 +409,7 @@ async function main() {
 
   // ========== 10) REACTS ==========
   console.log(
-    `→ Creating ${COUNTS.reacts} Reacts (using Settings.likeEmojis)...`
+    `→ Creating ${COUNTS.reacts} Reacts (using Settings.reactEmojis)...`
   );
   const reactables = [...posts, ...replies, ...pages];
   for (let i = 0; i < COUNTS.reacts; i++) {
@@ -417,7 +417,7 @@ async function main() {
 
     const reactor = randEl(users);
     const target = randEl(reactables);
-    const choice = randEl(likeEmojis); // { name, emoji }
+    const choice = randEl(reactEmojis); // { name, emoji }
 
     const rx = await React.create({
       actorId: reactor.id,

@@ -1,5 +1,7 @@
 // /config/defaultSettings.js
-// Each entry: { value, summary, public, ui: { type, label, group, order, options? } }
+// Each entry: { value, summary, to, canEdit, ui: { type, label, group, order, options? } }
+// to: @public | @server | @admin | @private  (read visibility)
+// canEdit: @public | @server | @admin | @private  (write permission)
 //
 // ui.type values:
 //   text | textarea | boolean | number | select | multiselect |
@@ -19,35 +21,40 @@ const defaultSettings = (ctx) => {
     actorId: {
       value: ctx.domain ? `@${ctx.domain}` : null,
       summary: "Canonical server actor ID. Set automatically — do not edit.",
-      public: true,
+      to: "@public",
+      canEdit: "@private",
       ui: { type: "redacted", label: "Server Actor ID", group: "server", order: 10 },
     },
 
     domain: {
       value: ctx.domain,
       summary: "The fully-qualified domain name this server is reachable at.",
-      public: true,
+      to: "@public",
+      canEdit: "@admin",
       ui: { type: "text", label: "Domain", group: "server", order: 1 },
     },
 
     adminEmail: {
       value: ctx.adminEmail,
       summary: "Contact email address for server administration.",
-      public: false,
+      to: "@admin",
+      canEdit: "@admin",
       ui: { type: "email", label: "Admin Email", group: "server", order: 2 },
     },
 
     adminCircle: {
       value: "",
       summary: "ID of the circle whose members have server admin privileges. Managed automatically.",
-      public: false,
+      to: "@admin",
+      canEdit: "@private",
       ui: { type: "redacted", label: "Admin Circle ID", group: "server", order: 11 },
     },
 
     modCircle: {
       value: "",
       summary: "ID of the circle whose members have server moderator privileges. Managed automatically.",
-      public: false,
+      to: "@admin",
+      canEdit: "@private",
       ui: { type: "redacted", label: "Moderator Circle ID", group: "server", order: 12 },
     },
 
@@ -68,7 +75,8 @@ const defaultSettings = (ctx) => {
         urls: [`https://${ctx.domain}`],
       },
       summary: "Public-facing server profile (name, description, icon, etc.).",
-      public: true,
+      to: "@public",
+      canEdit: "@admin",
       ui: { type: "json", label: "Server Profile", group: "appearance", order: 1 },
     },
 
@@ -83,7 +91,8 @@ const defaultSettings = (ctx) => {
         { name: "Puke",    emoji: "🤮" },
       ],
       summary: "Emoji reactions available to users. Each entry: { name, emoji }.",
-      public: true,
+      to: "@public",
+      canEdit: "@admin",
       ui: { type: "json", label: "React Emojis", group: "appearance", order: 2 },
     },
 
@@ -91,7 +100,8 @@ const defaultSettings = (ctx) => {
     registrationIsOpen: {
       value: true,
       summary: "When enabled, anyone can register without an invite code.",
-      public: true,
+      to: "@public",
+      canEdit: "@admin",
       ui: { type: "boolean", label: "Open Registration", group: "registration", order: 1 },
     },
 
@@ -105,21 +115,24 @@ const defaultSettings = (ctx) => {
         reflexive: "themselves",
       },
       summary: "Default pronouns pre-filled when a new user registers.",
-      public: true,
+      to: "@public",
+      canEdit: "@admin",
       ui: { type: "json", label: "Default Pronouns", group: "users", order: 1 },
     },
 
     adminUsers: {
       value: [],
       summary: "Legacy list of admin user IDs. Prefer using the Admin Circle instead.",
-      public: false,
+      to: "@admin",
+      canEdit: "@admin",
       ui: { type: "json", label: "Admin User IDs", group: "server", order: 5 },
     },
 
     editorUsers: {
       value: [],
       summary: "User IDs with permission to create and edit server Pages.",
-      public: false,
+      to: "@admin",
+      canEdit: "@admin",
       ui: { type: "json", label: "Editor User IDs", group: "server", order: 6 },
     },
 
@@ -127,7 +140,8 @@ const defaultSettings = (ctx) => {
     maxUploadSize: {
       value: 100,
       summary: "Maximum allowed file upload size in megabytes.",
-      public: true,
+      to: "@public",
+      canEdit: "@admin",
       ui: {
         type: "number",
         label: "Max Upload Size (MB)",
@@ -141,7 +155,8 @@ const defaultSettings = (ctx) => {
     blocked: {
       value: {},
       summary: "Blocked domains/servers. Keys are domains, values are block reasons.",
-      public: false,
+      to: "@admin",
+      canEdit: "@admin",
       ui: { type: "json", label: "Blocked Domains", group: "moderation", order: 1 },
     },
 
@@ -201,7 +216,8 @@ const defaultSettings = (ctx) => {
         },
       },
       summary: "Available reasons users can select when flagging content for moderation.",
-      public: true,
+      to: "@public",
+      canEdit: "@admin",
       ui: { type: "json", label: "Flag/Report Options", group: "moderation", order: 2 },
     },
 
@@ -214,7 +230,8 @@ const defaultSettings = (ctx) => {
         password: ctx.smtpPass || "",
       },
       summary: "Outbound SMTP email server configuration.",
-      public: false,
+      to: "@admin",
+      canEdit: "@admin",
       ui: { type: "json", label: "Email Server", group: "email", order: 1 },
     },
 
@@ -222,14 +239,16 @@ const defaultSettings = (ctx) => {
     publicKey: {
       value: publicKey,
       summary: "Server RSA public key (PEM). Generated automatically — do not edit.",
-      public: true,
+      to: "@public",
+      canEdit: "@private",
       ui: { type: "redacted", label: "Server Public Key", group: "security", order: 1 },
     },
 
     privateKey: {
       value: privateKey,
       summary: "Server RSA private key (PEM). Never exposed via API.",
-      public: false,
+      to: "@private",
+      canEdit: "@private",
       ui: { type: "redacted", label: "Server Private Key", group: "security", order: 2 },
     },
   };

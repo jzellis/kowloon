@@ -56,7 +56,7 @@ export default async function init(Kowloon, ctx = {}) {
     const isRich = def !== null && typeof def === "object" && "value" in def;
     const defValue = isRich ? def.value : def;
     const defMeta = isRich
-      ? { summary: def.summary, public: def.public, ui: def.ui }
+      ? { summary: def.summary, to: def.to, canEdit: def.canEdit, ui: def.ui }
       : {};
 
     const exists = await Settings.findOne({ name }).lean();
@@ -69,11 +69,12 @@ export default async function init(Kowloon, ctx = {}) {
       await Settings.create({ name, value: defValue, ...defMeta });
       console.log("Created setting:", name);
     } else {
-      // Always update metadata (ui, summary, public) from the latest defaults
+      // Always update metadata (ui, summary, to, canEdit) from the latest defaults
       const metaUpdate = {};
       if (defMeta.ui !== undefined) metaUpdate.ui = defMeta.ui;
       if (defMeta.summary !== undefined) metaUpdate.summary = defMeta.summary;
-      if (defMeta.public !== undefined) metaUpdate.public = defMeta.public;
+      if (defMeta.to !== undefined) metaUpdate.to = defMeta.to;
+      if (defMeta.canEdit !== undefined) metaUpdate.canEdit = defMeta.canEdit;
 
       // Only update value if it's bad/corrupted
       if ((isBadValue(exists.value) || wrongType) && defValue && !isBadValue(defValue)) {

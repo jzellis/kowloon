@@ -4,17 +4,9 @@
 import express from "express";
 import route from "../utils/route.js";
 import getSettings from "#methods/settings/get.js";
+import { Settings } from "#schema";
 
 const router = express.Router({ mergeParams: true });
-
-// Settings that are safe to expose publicly
-const PUBLIC_SETTINGS = [
-  "reactEmojis",
-  "registrationIsOpen",
-  "maxUploadSize",
-  "defaultPronouns",
-  "flagOptions",
-];
 
 router.get(
   "/",
@@ -37,10 +29,15 @@ router.get(
       inbox: `/inbox`,
     });
 
-    // Public server settings — clients use these for UI configuration
+    // Public server settings — any setting with to: "@public" (excluding redacted UI types)
+    const publicDocs = await Settings.find({
+      to: "@public",
+      "ui.type": { $ne: "redacted" },
+      deletedAt: null,
+    }).lean();
     const publicSettings = {};
-    for (const key of PUBLIC_SETTINGS) {
-      if (settings?.[key] !== undefined) publicSettings[key] = settings[key];
+    for (const doc of publicDocs) {
+      publicSettings[doc.name] = doc.value;
     }
     set("settings", publicSettings);
   })

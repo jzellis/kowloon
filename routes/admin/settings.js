@@ -6,17 +6,15 @@ import { setSetting, getAllSettings } from "#methods/settings/cache.js";
 
 const router = express.Router({ mergeParams: true });
 
-// Fields that cannot be updated via the API (managed by the server itself).
-// Any setting with ui.type === "redacted" is also treated as read-only at runtime.
-const READONLY_FIELDS = new Set(["privateKey", "publicKey", "publicKeyJwk"]);
-
+// canEdit: "@private" means the server manages this field — no API writes allowed.
+// ui.type === "redacted" also blocks writes (belt and suspenders).
 function isReadonly(doc) {
-  return READONLY_FIELDS.has(doc?.name) || doc?.ui?.type === "redacted";
+  return doc?.canEdit === "@private" || doc?.ui?.type === "redacted";
 }
 
 function sanitizeSetting(doc) {
-  // Never expose the private key value
-  if (doc.name === "privateKey") {
+  // Never expose @private settings' values
+  if (doc?.to === "@private" || doc?.name === "privateKey") {
     return { ...doc, value: "[redacted]" };
   }
   return doc;
@@ -50,7 +48,7 @@ router.patch(
       // Load current docs to check ui.type === "redacted" as well
       const existingDocs = await Settings.find({ name: { $in: Object.keys(body) } }).lean();
       const existingMap = Object.fromEntries(existingDocs.map((d) => [d.name, d]));
-      const blocked = Object.keys(body).filter((k) => READONLY_FIELDS.has(k) || isReadonly(existingMap[k]));
+      const blocked = Object.keys(body).filter((k) => isReadonly(existingMap[k]));
       if (blocked.length > 0) {
         setStatus(403);
         set("error", `Cannot update read-only settings: ${blocked.join(", ")}`);
@@ -83,7 +81,7 @@ router.patch(
       const { name } = params;
 
       const existing = await Settings.findOne({ name }).lean();
-      if (READONLY_FIELDS.has(name) || isReadonly(existing)) {
+      if (isReadonly(existing)) {
         setStatus(403);
         set("error", `Cannot update read-only setting: ${name}`);
         return;

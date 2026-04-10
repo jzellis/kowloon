@@ -4,6 +4,58 @@ import { faker } from "@faker-js/faker";
 import Kowloon, { attachMethodDomains } from "#kowloon";
 import initKowloon from "#methods/utils/init.js";
 import * as Models from "#schema/index.js";
+import { getSetting } from "#methods/settings/cache.js";
+
+// ── Server pages seeded on every run (upsert by slug) ──────────────────────
+const SERVER_PAGE_DEFS = [
+  {
+    slug: "about",
+    title: "About This Server",
+    summary: "Who we are, what we do, and why we do it.",
+    order: 1,
+    source: {
+      mediaType: "text/markdown",
+      content: `# About This Server\n\nKowloon is a small, intentional community for people who care about design, music, writing, and the pleasures of a well-made thing. We run on open-source federated software.\n\n## What We Are\n\nA place to think out loud, share work, and find people who are interested in the same things you are. We are not trying to be large. We are trying to be good.\n\n## What We Believe\n\nThat the internet was better when it was made of individual, idiosyncratic places. That you should own your words. That slow is fine.`,
+    },
+  },
+  {
+    slug: "projects",
+    type: "Folder",
+    title: "Projects",
+    summary: "Ongoing and completed projects by server members.",
+    order: 2,
+    source: { mediaType: "text/markdown", content: "# Projects\n\nA collection of things we are building, writing, and making." },
+  },
+  {
+    slug: "contact",
+    title: "Contact",
+    summary: "How to reach the server administrators.",
+    order: 3,
+    source: { mediaType: "text/markdown", content: "# Contact\n\nSend a message to **@admin** on this server, or use the email address in our federation profile." },
+  },
+  {
+    slug: "rules",
+    title: "Rules & Guidelines",
+    summary: "A short list of expectations for members of this community.",
+    parentSlug: "about",
+    order: 1,
+    source: {
+      mediaType: "text/markdown",
+      content: `# Rules & Guidelines\n\n## Be decent\n\nTreat people the way you would want to be treated in a small community.\n\n## No harassment\n\nDo not target, threaten, or repeatedly contact someone who does not want to hear from you.\n\n## No spam\n\nPost because you have something to say, not to fill a feed.\n\n## Follow the law\n\nDo not post content that is illegal in your jurisdiction or ours.`,
+    },
+  },
+  {
+    slug: "privacy",
+    title: "Privacy Policy",
+    summary: "How we handle your data and what we share with others.",
+    parentSlug: "about",
+    order: 2,
+    source: {
+      mediaType: "text/markdown",
+      content: `# Privacy Policy\n\n## What we collect\n\nYour username, email (hashed password), posts, and profile information you provide voluntarily.\n\n## What we share\n\nContent marked **public** is federated and accessible to anyone. Content marked **server-only** stays here.\n\nWe do not sell your data or run advertising.\n\n## Data retention\n\nYour data is retained as long as your account exists. Contact an admin to request deletion.`,
+    },
+  },
+];
 
 // -------- CLI args (no extra deps) --------
 const args = Object.fromEntries(
@@ -255,7 +307,37 @@ async function main() {
     circles.push(c);
   }
 
-  // ========== 4) PAGE FOLDERS ==========
+  // ========== 4) SERVER PAGES (upsert) ==========
+  console.log("→ Upserting server pages...");
+  {
+    const serverActorId =
+      getSetting("actorId") || `https://${domain}/server`;
+    const slugToId = {};
+    const topFirst = [
+      ...SERVER_PAGE_DEFS.filter((p) => !p.parentSlug),
+      ...SERVER_PAGE_DEFS.filter((p) => p.parentSlug),
+    ];
+    for (const def of topFirst) {
+      const { parentSlug, type, slug, title, summary, order, source } = def;
+      const parentFolder = parentSlug ? slugToId[parentSlug] : undefined;
+      const existing = await Page.findOne({ slug, deletedAt: null }).lean();
+      if (existing) {
+        slugToId[slug] = existing.id;
+        continue;
+      }
+      const p = await Page.create({
+        type: type ?? "Page",
+        actorId: serverActorId,
+        title, slug, summary, order, source,
+        parentFolder,
+        to: "@public", canReply: "@public", canReact: "@public",
+      });
+      slugToId[slug] = p.id;
+      pages.push(p);
+    }
+  }
+
+  // ========== 5) PAGE FOLDERS (random) ==========
   console.log(`→ Creating ${COUNTS.pageFolders} Page folders...`);
   for (let i = 0; i < COUNTS.pageFolders; i++) {
     const owner = randEl(users);
@@ -269,7 +351,7 @@ async function main() {
     pageFolders.push(folder);
   }
 
-  // ========== 5) PAGES ==========
+  // ========== 6) PAGES (random) ==========
   console.log(`→ Creating ${COUNTS.pages} Pages...`);
   for (let i = 0; i < COUNTS.pages; i++) {
     const owner = randEl(users);

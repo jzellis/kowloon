@@ -8,7 +8,12 @@ const SettingsSchema = new Schema({
   name: String,
   value: Schema.Types.Mixed,
   summary: String,
-  public: { type: Boolean, default: true },
+  // Visibility: who can read this setting.
+  // Symbolic strings: @public | @server | @admin | @private
+  to: { type: String, default: "@public" },
+  // Edit permission: who can modify this setting via the API.
+  // Symbolic strings: @public | @server | @admin | @private
+  canEdit: { type: String, default: "@admin" },
   ui: {
     // Widget type: text | textarea | boolean | number | select | multiselect |
     //              email | url | color | json | markdown | image | redacted

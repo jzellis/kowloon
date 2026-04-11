@@ -219,9 +219,9 @@ UserSchema.pre("save", async function (next) {
 
     const followingCircle = await Circle.create({
       type: "System",
-      name: `${this.id} | Following`,
+      name: "Following",
       actorId: this.id,
-      description: `${this.profile.name} (@${this.username}) | Following`,
+      description: "Following",
       to: this.id,
       canReply: this.id,
       canReact: this.id,
@@ -230,9 +230,9 @@ UserSchema.pre("save", async function (next) {
 
     const groupsCircle = await Circle.create({
       type: "System",
-      name: `${this.id} | Groups`,
+      name: "Groups",
       actorId: this.id,
-      description: `${this.profile.name} (@${this.username}) | Groups`,
+      description: "Groups",
       to: this.id,
       canReply: this.id,
       canReact: this.id,
@@ -241,9 +241,9 @@ UserSchema.pre("save", async function (next) {
 
     const allFollowingCircle = await Circle.create({
       type: "System",
-      name: `${this.id} | All Following`,
+      name: "All Following",
       actorId: this.id,
-      description: `${this.profile.name} (@${this.username}) | All Following`,
+      description: "All Following",
       to: this.id,
       canReply: this.id,
       canReact: this.id,
@@ -252,9 +252,9 @@ UserSchema.pre("save", async function (next) {
 
     const blockedCircle = await Circle.create({
       type: "System",
-      name: `${this.id} | Blocked`,
+      name: "Blocked",
       actorId: this.id,
-      description: `${this.profile.name} (@${this.username}) | Blocked`,
+      description: "Blocked",
       to: this.id,
       canReply: this.id,
       canReact: this.id,
@@ -263,9 +263,9 @@ UserSchema.pre("save", async function (next) {
 
     const mutedCircle = await Circle.create({
       type: "System",
-      name: `${this.id} | Muted`,
+      name: "Muted",
       actorId: this.id,
-      description: `${this.profile.name} (@${this.username}) | Muted`,
+      description: "Muted",
       to: this.id,
       canReply: this.id,
       canReact: this.id,

@@ -218,7 +218,7 @@ UserSchema.pre("save", async function (next) {
     this.circles = this.circles || {};
 
     const followingCircle = await Circle.create({
-      type: "System",
+      type: "Circle",
       name: "Following",
       actorId: this.id,
       description: "Following",

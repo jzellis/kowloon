@@ -26,7 +26,10 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
   const limit = Math.min(Math.max(1, parseInt(query.limit, 10) || 20), 100);
   const skip = (page - 1) * limit;
 
-  const filter = { actorId: userId, deletedAt: null };
+  // Return user-created circles only (type: "Circle").
+  // Following is also type "Circle" so it appears here naturally.
+  // System-only circles (Blocked, Muted, Groups, All Following) are excluded.
+  const filter = { actorId: userId, type: "Circle", deletedAt: null };
 
   const [docs, total] = await Promise.all([
     Circle.find(filter)

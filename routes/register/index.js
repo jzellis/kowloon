@@ -73,14 +73,16 @@ const registerHandler = route(
   async ({ body, set, setStatus }) => {
     if (!isObj(body)) {
       setStatus(400);
-      return { error: "Invalid JSON body" };
+      set("error", "Invalid JSON body");
+      return;
     }
 
     const settings = await getSettings();
     const domain = settings?.domain;
     if (!isNonEmpty(domain)) {
       setStatus(500);
-      return { error: "Missing settings.domain" };
+      set("error", "Missing settings.domain");
+      return;
     }
 
     // Optional: toggleable self-registration (defaults to enabled)
@@ -92,7 +94,8 @@ const registerHandler = route(
     if (!registrationIsOpen) {
       if (!inviteCode) {
         setStatus(403);
-        return { error: "Registration is invite-only. Please provide an invite code." };
+        set("error", "Registration is invite-only. Please provide an invite code.");
+        return;
       }
 
       // Find and validate the invite
@@ -104,7 +107,8 @@ const registerHandler = route(
 
       if (!invite) {
         setStatus(404);
-        return { error: "Invalid invite code" };
+        set("error", "Invalid invite code");
+        return;
       }
 
       if (!invite.isValid) {
@@ -122,7 +126,8 @@ const registerHandler = route(
           reason = "Invite has reached its redemption limit";
         }
         setStatus(410);
-        return { error: reason };
+        set("error", reason);
+        return;
       }
     }
 
@@ -132,21 +137,25 @@ const registerHandler = route(
     if (invite && invite.type === "individual") {
       if (!isNonEmpty(input.email)) {
         setStatus(400);
-        return { error: "Email is required for this invite" };
+        set("error", "Email is required for this invite");
+        return;
       }
       if (input.email.toLowerCase() !== invite.email.toLowerCase()) {
         setStatus(403);
-        return { error: "This invite is for a different email address" };
+        set("error", "This invite is for a different email address");
+        return;
       }
     }
 
     if (!isNonEmpty(input.username)) {
       setStatus(400);
-      return { error: "username is required" };
+      set("error", "username is required");
+      return;
     }
     if (!isNonEmpty(input.password)) {
       setStatus(400);
-      return { error: "password is required" };
+      set("error", "password is required");
+      return;
     }
 
     // Compute the canonical id that your pre-save hook will set, so we can dupe-check.
@@ -158,13 +167,15 @@ const registerHandler = route(
     }).lean();
     if (existing) {
       setStatus(409);
-      return { error: "User already exists" };
+      set("error", "User already exists");
+      return;
     }
 
     const limitCheck = await checkUsernameLimit(input.username);
     if (!limitCheck.allowed) {
       setStatus(409);
-      return { error: limitCheck.reason };
+      set("error", limitCheck.reason);
+      return;
     }
 
     // Create; your User pre-save hook will:
@@ -205,12 +216,9 @@ const registerHandler = route(
 
     const user = sanitizeUser(created);
 
-    // Useful headers for tests/clients
     setStatus(201);
     set("user", user);
     set("token", token);
-
-    return { user, token };
   },
   {
     // Allow unauthenticated POST for registration

@@ -97,7 +97,7 @@ export default async function Reply(activity, ctx = {}) {
     }
 
     if (!replyData.source.mediaType) {
-      replyData.source.mediaType = "text/html";
+      replyData.source.mediaType = "text/markdown";
     }
 
     if (activity.object.attachments) {

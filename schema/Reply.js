@@ -21,7 +21,7 @@ const ReplySchema = new Schema(
     href: { type: String },
     source: {
       content: { type: String, default: "" },
-      mediaType: { type: String, default: "text/html" },
+      mediaType: { type: String, default: "text/markdown" },
     },
     body: { type: String, default: "" },
     image: { type: String, default: undefined },
@@ -46,11 +46,11 @@ ReplySchema.pre("save", async function (next) {
   this.id = this.id || `reply:${this._id}@${domain}`;
   this.url = this.url || `https://${domain}/posts/${this.id}`;
   this.server = this.server || actorId;
-  this.source.mediaType = this.source.mediaType || "text/html";
+  this.source.mediaType = this.source.mediaType || "text/markdown";
 
   switch (this.source.mediaType) {
     case "text/markdown":
-      this.body = `<p>${marked(this.source.content)}</p>`;
+      this.body = marked(this.source.content);
       break;
     case "text/html":
       this.body = this.source.content;

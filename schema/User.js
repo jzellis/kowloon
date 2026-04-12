@@ -43,7 +43,7 @@ const UserSchemaDef = {
     defaultCircleView: { type: String, default: "" },
     defaultEditorType: { type: String, default: "html" },
     lang: { type: String, default: "en" },
-    theme: { type: String, default: "light" },
+    theme: { type: String, default: "system" },
     notifications: {
       reply: { type: Boolean, default: true },
       react: { type: Boolean, default: true },

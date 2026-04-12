@@ -20,6 +20,7 @@ import SignatureNonce from "./SignatureNonce.js";
 import Server from "./Server.js";
 import FederatedServer from "./FederatedServer.js";
 import Notification from "./Notification.js";
+import Theme from "./Theme.js";
 export {
   Activity,
   Bookmark,
@@ -43,4 +44,5 @@ export {
   Server,
   FederatedServer,
   Notification,
+  Theme,
 };

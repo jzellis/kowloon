@@ -177,10 +177,13 @@ export default async function React(activity, ctx = {}) {
             if (r?.matchedCount > 0) break;
           } catch (e) { /* ignore */ }
         }
-        // Keep FeedItems cache in sync
+        // Keep FeedItems cache in sync (reactCount + reactPreview)
         await FeedItems.updateOne(
           { "object.id": targetId },
-          { $set: { "object.reactPreview": preview } }
+          {
+            $inc: { "object.reactCount": 1 },
+            $set: { "object.reactPreview": preview },
+          }
         );
       }
     } catch (e) {

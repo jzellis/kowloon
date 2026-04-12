@@ -49,6 +49,7 @@ const GroupSchema = new Schema(
     // Denormalized counts (optional)
     replyCount: { type: Number, default: 0 },
     reactCount: { type: Number, default: 0 },
+    reactPreview: { type: String, default: null }, // Most-used emoji react
     shareCount: { type: Number, default: 0 },
 
     // Soft delete

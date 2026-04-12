@@ -10,7 +10,19 @@ import {
   Bookmark,
   Group,
   User,
+  FeedItems,
 } from "#schema";
+
+/** Return the emoji with the highest count for a given target, or null. */
+async function topEmoji(targetId) {
+  const [top] = await ReactModel.aggregate([
+    { $match: { target: targetId } },
+    { $group: { _id: "$emoji", count: { $sum: 1 } } },
+    { $sort: { count: -1 } },
+    { $limit: 1 },
+  ]);
+  return top?._id ?? null;
+}
 import createNotification from "#methods/notifications/create.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
@@ -152,6 +164,27 @@ export default async function React(activity, ctx = {}) {
       } catch (e) {
         // ignore model mismatches
       }
+    }
+
+    // Compute and write reactPreview (most-used emoji) to source model + FeedItems cache
+    try {
+      const preview = await topEmoji(targetId);
+      if (preview !== null) {
+        for (const Model of models) {
+          try {
+            if (!Model) continue;
+            const r = await Model.updateOne({ id: targetId }, { $set: { reactPreview: preview } });
+            if (r?.matchedCount > 0) break;
+          } catch (e) { /* ignore */ }
+        }
+        // Keep FeedItems cache in sync
+        await FeedItems.updateOne(
+          { "object.id": targetId },
+          { $set: { "object.reactPreview": preview } }
+        );
+      }
+    } catch (e) {
+      // Non-fatal — reactPreview is display-only
     }
 
     const result = { status: "reacted", react: reactKind, bumped };

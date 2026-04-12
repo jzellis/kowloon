@@ -21,6 +21,7 @@ const CircleSchema = new Schema(
     canReact: { type: String, default: "" },
     replyCount: { type: Number, default: 0 }, // The number of replies to this post
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
+  reactPreview: { type: String, default: null }, // Most-used emoji react
     shareCount: { type: Number, default: 0 }, // The number of shares of this post
     deletedAt: { type: Date, default: null },
     deletedBy: { type: String, default: null },

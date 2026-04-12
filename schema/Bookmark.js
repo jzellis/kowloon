@@ -55,6 +55,7 @@ const BookmarkSchema = new Schema(
     url: { type: String, default: undefined },
     replyCount: { type: Number, default: 0 }, // The number of replies to this bookmark
     reactCount: { type: Number, default: 0 }, // The number of likes to this bookmark
+    reactPreview: { type: String, default: null }, // Most-used emoji react
     shareCount: { type: Number, default: 0 }, // The number of shares of this bookmark
 
     // 🧯 Back-compat (deprecated): map to ownerId/ownerType if present

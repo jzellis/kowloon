@@ -51,6 +51,7 @@ const PageSchema = new Schema(
     charCount: { type: Number, default: 0 },
     replyCount: { type: Number, default: 0 }, // The number of replies to this page
     reactCount: { type: Number, default: 0 }, // The number of likes to this page
+    reactPreview: { type: String, default: null }, // Most-used emoji react
     shareCount: { type: Number, default: 0 }, // The number of shares of this page
     image: { type: String, default: undefined }, // The page's featured/preview image (File ID or URL for backwards compatibility)
     attachments: { type: [String], default: [] }, // Array of File IDs

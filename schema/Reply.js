@@ -27,6 +27,7 @@ const ReplySchema = new Schema(
     image: { type: String, default: undefined },
 
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
+    reactPreview: { type: String, default: null }, // Most-used emoji react
     shareCount: { type: Number, default: 0 }, // The number of shares of this post
     deletedAt: { type: Date, default: null },
     deletedBy: { type: String, default: null },

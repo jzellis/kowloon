@@ -43,6 +43,6 @@ export default makeCollection({
     return filter;
   },
   select:
-    "id type objectType title summary body url actorId tags image attachments to createdAt updatedAt replyCount reactCount",
+    "id type objectType title summary body url actorId tags image attachments to createdAt updatedAt replyCount reactCount reactPreview",
   sanitize: (doc) => sanitizeObject(doc, { objectType: "Post" }),
 });

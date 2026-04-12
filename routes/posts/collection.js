@@ -9,7 +9,7 @@ import sanitizeObject from "#methods/sanitize/object.js";
 import { getSetting } from "#methods/settings/cache.js";
 
 const SELECT =
-  "id type objectType title summary body url href actorId actor tags image attachments to createdAt updatedAt replyCount reactCount shareCount";
+  "id type objectType title summary body url href actorId actor tags image attachments to createdAt updatedAt replyCount reactCount reactPreview shareCount";
 
 // Build a proxied serve URL from the current request host (dev-safe)
 function serveUrl(req, fileId) {

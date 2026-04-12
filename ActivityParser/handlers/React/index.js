@@ -167,8 +167,10 @@ export default async function React(activity, ctx = {}) {
     }
 
     // Compute and write reactPreview (most-used emoji) to source model + FeedItems cache
+    // Always bump FeedItems.reactCount; set reactPreview only when topEmoji returns a value
     try {
       const preview = await topEmoji(targetId);
+
       if (preview !== null) {
         for (const Model of models) {
           try {
@@ -177,15 +179,12 @@ export default async function React(activity, ctx = {}) {
             if (r?.matchedCount > 0) break;
           } catch (e) { /* ignore */ }
         }
-        // Keep FeedItems cache in sync (reactCount + reactPreview)
-        await FeedItems.updateOne(
-          { "object.id": targetId },
-          {
-            $inc: { "object.reactCount": 1 },
-            $set: { "object.reactPreview": preview },
-          }
-        );
       }
+
+      // Always keep FeedItems reactCount in sync; only set reactPreview when we have one
+      const feedUpdate = { $inc: { "object.reactCount": 1 } };
+      if (preview !== null) feedUpdate.$set = { "object.reactPreview": preview };
+      await FeedItems.updateOne({ "object.id": targetId }, feedUpdate);
     } catch (e) {
       // Non-fatal — reactPreview is display-only
     }

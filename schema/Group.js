@@ -172,4 +172,6 @@ GroupSchema.pre("save", async function (next) {
   }
 });
 
+GroupSchema.index({ name: 'text', description: 'text' });
+
 export default mongoose.model("Group", GroupSchema);

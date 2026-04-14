@@ -5,6 +5,7 @@ import Inbox from "#schema/Inbox.js";
 import log from "#methods/utils/logger.js";
 import checkBlocked from "#methods/inbox/checkBlocked.js";
 import { inboxRateLimiter } from "../middleware/rateLimiter.js";
+import normalizeInboundActivity from "#methods/federation/normalizeInboundActivity.js";
 
 function safeHeaders(h = {}) {
   // Store only a safe/diagnostic subset
@@ -81,14 +82,15 @@ export default route(
       remoteUser = vr.user; // { id, issuer, scope }
     }
 
-    // 4) Normalize inbound activity (what we will pass to create())
-    const activity = {
+    // 4) Normalize inbound activity (translate AP format → internal format)
+    const rawActivity = {
       ...body,
       federated: true,
       remoteId: body.id || body.remoteId,
       actorId,
       _federation: { domain: sig.domain, keyId: sig.keyId, remoteUser },
     };
+    const activity = normalizeInboundActivity(rawActivity);
 
     // 5) Upsert Inbox envelope (idempotent on remoteId if present)
     const remoteId = activity.remoteId;

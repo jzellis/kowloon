@@ -11,6 +11,8 @@ import {
   startOutboxWorker,
 } from "./outboxWorker.js";
 import pullFromRemote from "./pullFromRemote.js";
+import normalizeInboundActivity from "./normalizeInboundActivity.js";
+import sendAccept from "./sendAccept.js";
 
 // Default export used by Kowloon.federation
 const federation = {
@@ -22,6 +24,8 @@ const federation = {
   signHttpRequest,
   processOutboxBatch,
   startOutboxWorker,
+  normalizeInboundActivity,
+  sendAccept,
   auth: {
     startChallenge,
     finishChallenge,
@@ -30,7 +34,6 @@ const federation = {
 
 export default federation;
 
-// (Optional) named exports if you ever want them
 export {
   shouldFederate,
   verifyHttpSignature,
@@ -42,4 +45,6 @@ export {
   signHttpRequest,
   processOutboxBatch,
   startOutboxWorker,
+  normalizeInboundActivity,
+  sendAccept,
 };

@@ -16,10 +16,12 @@ const toRecipient = {
   anyOf: [
     { type: "string", pattern: "^$" },
     { type: "string", pattern: patterns.publicToken },
+    { type: "string", enum: ["audience", "public", "server", "followers"] }, // coarse values
     { type: "string", pattern: patterns.serverHandle },
     { type: "string", pattern: patterns.circleId },
     { type: "string", pattern: patterns.groupId },
-    { type: "string", pattern: patterns.actorId }, // Allow user IDs (validated by handler to be self-addressed)
+    { type: "string", pattern: patterns.actorId },  // Allow user IDs
+    { type: "string", pattern: "^https?://" },       // AP URL format (federated)
   ],
 };
 
@@ -27,14 +29,16 @@ const replyReactRecipient = {
   anyOf: [
     { type: "string", pattern: "^$" },
     { type: "string", pattern: patterns.publicToken },
+    { type: "string", enum: ["audience", "public", "server", "followers", "none"] },
     { type: "string", pattern: patterns.serverHandle },
     { type: "string", pattern: patterns.circleId },
     { type: "string", pattern: patterns.groupId },
-    { type: "string", pattern: patterns.actorId }, // Allow user IDs (validated by handler to be self-addressed)
-    { type: "string", pattern: patterns.postId }, // Allow post IDs for Reply/React targets
-    { type: "string", pattern: patterns.pageId }, // Allow page IDs for Reply/React targets
-    { type: "string", pattern: patterns.bookmarkId }, // Allow bookmark IDs for Reply/React targets
-    { type: "string", pattern: `^reply:${idPart}@[a-z0-9.-]+$` }, // Allow reply IDs for threaded replies
+    { type: "string", pattern: patterns.actorId },
+    { type: "string", pattern: patterns.postId },
+    { type: "string", pattern: patterns.pageId },
+    { type: "string", pattern: patterns.bookmarkId },
+    { type: "string", pattern: `^reply:${idPart}@[a-z0-9.-]+$` },
+    { type: "string", pattern: "^https?://" },       // AP URL format (federated)
   ],
 };
 
@@ -47,7 +51,9 @@ const schema = {
     id: { type: "string" },
     type: {
       enum: [
+        "Accept",    // AP: Accept{Follow}
         "Add",
+        "Announce",  // AP: Boost/share
         "Block",
         "Create",
         "Delete",
@@ -60,18 +66,28 @@ const schema = {
         "Remove",
         "Reply",
         "Unblock",
-        "Undo",
+        "Undo",      // AP: Undo{Follow}, Undo{Like}, etc.
         "Unfollow",
         "Unmute",
         "Update",
       ],
     },
-    actorId: { type: "string", pattern: patterns.actorId },
+    // actorId can be our @user@domain format OR a URL for remote AP actors
+    actorId: {
+      type: "string",
+      anyOf: [
+        { pattern: patterns.actorId },         // @user@domain
+        { pattern: patterns.serverHandle },    // @domain
+        { pattern: "^https?://" },             // URL (remote AP actors)
+      ],
+    },
     objectType: {
       type: "string",
       enum: [
+        "Announce",
         "Bookmark",
         "Circle",
+        "Delete",
         "Group",
         "Page",
         "Post",
@@ -97,7 +113,8 @@ const schema = {
           object: {
             type: "object",
             required: ["type"],
-            not: { required: ["id"] },
+            // Note: federated (AP) Create activities include object.id — we allow it
+            // and strip it during normalization for locally-created objects only.
           },
         },
       },

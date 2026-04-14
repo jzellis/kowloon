@@ -2,33 +2,68 @@
 // Sanitize objects for public/authenticated/owner access
 
 /**
- * Sanitize a User object - always return public fields only
+ * Sanitize a User object - always return public fields only.
+ * Returns a full ActivityPub actor document.
  */
 function sanitizeUser(user) {
   if (!user) return null;
 
-  // Build ActivityPub-compatible publicKey object
+  const actorId = user.actorId || user.id;
+
+  // Full AP publicKey object (required for HTTP signature verification)
   const publicKeyObj = user.publicKey
     ? {
-        id: `${user.actorId || user.id}#main-key`,
-        owner: user.actorId || user.id,
+        id: `${actorId}#main-key`,
+        owner: actorId,
         publicKeyPem: user.publicKey,
       }
     : undefined;
 
-  // Always return only public fields
+  // Derive followers/following collection URLs from inbox/outbox pattern
+  let followersUrl, followingUrl;
+  if (user.inbox) {
+    const base = user.inbox.replace(/\/inbox$/, "");
+    followersUrl = `${base}/followers`;
+    followingUrl = `${base}/following`;
+  }
+
+  // Shared inbox (server-level inbox for efficient delivery)
+  let sharedInbox;
+  if (user.inbox) {
+    try {
+      const url = new URL(user.inbox);
+      sharedInbox = `${url.protocol}//${url.host}/inbox`;
+    } catch {
+      sharedInbox = undefined;
+    }
+  }
+
+  // Normalize icon to AP Image object
+  let iconObj;
+  if (user.profile?.icon) {
+    iconObj = typeof user.profile.icon === "string"
+      ? { type: "Image", url: user.profile.icon }
+      : user.profile.icon;
+  }
+
   return {
-    "@context": "https://www.w3.org/ns/activitystreams",
-    id: user.actorId || user.id,
+    "@context": [
+      "https://www.w3.org/ns/activitystreams",
+      "https://w3id.org/security/v1",
+    ],
+    id: actorId,
     type: user.type || "Person",
     objectType: user.objectType || "User",
     preferredUsername: user.username,
     name: user.profile?.name || user.username,
-    summary: user.profile?.description,
-    icon: user.profile?.icon,
-    url: user.url || user.actorId || user.id,
+    summary: user.profile?.description ?? null,
+    icon: iconObj ?? null,
+    url: user.url || actorId,
     inbox: user.inbox,
     outbox: user.outbox,
+    followers: followersUrl,
+    following: followingUrl,
+    ...(sharedInbox ? { endpoints: { sharedInbox } } : {}),
     publicKey: publicKeyObj,
   };
 }

@@ -75,6 +75,7 @@ export default async function Leave(activity) {
             { id: circleId, "members.id": userId },
             {
               $pull: { members: { id: userId } },
+              $inc: { memberCount: -1 },
               $set: { updatedAt: new Date() },
             }
           )
@@ -97,6 +98,11 @@ export default async function Leave(activity) {
 
     if ((ops[0].modifiedCount || 0) > 0) removedFrom.push("members");
     if ((ops[1].modifiedCount || 0) > 0) removedFrom.push("pending");
+
+    // Decrement Group.memberCount if they were actually removed from members
+    if (ops[0].modifiedCount > 0) {
+      await Group.updateOne({ id: groupDoc.id }, { $inc: { memberCount: -1 } });
+    }
 
     // Remove group from user's Groups circle
     if (removedFrom.length > 0) {

@@ -525,6 +525,16 @@ export default async function Create(activity) {
     // Create notifications for relevant activities
     await createNotifications(activity, created, type);
 
+    // Fire-and-forget: proxy any external og:image URL on Posts into local file storage.
+    // This prevents broken images if the source site removes or moves the image.
+    if (type === 'Post' && created.image?.startsWith('http')) {
+      import('#methods/files/proxyExternalImage.js')
+        .then(({ default: proxyExternalImage }) =>
+          proxyExternalImage({ url: created.image, actorId: created.actorId, postId: created.id })
+        )
+        .catch(() => {}); // truly non-fatal
+    }
+
     // 3. Determine federation requirements
     const federation = await getFederationTargets(activity, created);
 

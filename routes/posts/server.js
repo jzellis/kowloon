@@ -1,11 +1,14 @@
 // routes/posts/server.js
-// GET /posts/server — Server-only posts (to: "@<domain>"), requires local auth
+// GET /posts/server — Server-only posts, local auth required.
+//
+// Now that GET /posts merges public + server for authenticated local users,
+// this endpoint still exists for clients that want server-only posts explicitly.
 
 import route from "../utils/route.js";
-import { Post } from "#schema";
+import { FeedItems } from "#schema";
 import { activityStreamsCollection } from "../utils/oc.js";
+import feedItemToPost from "#methods/feed/feedItemToPost.js";
 import { getSetting } from "#methods/settings/cache.js";
-import sanitizeObject from "#methods/sanitize/object.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 
@@ -16,7 +19,6 @@ export default route(async ({ req, query, user, set, setStatus }) => {
     return;
   }
 
-  // Only local users can view server posts
   const parsed = kowloonId(user.id);
   if (!parsed.domain || !isLocalDomain(parsed.domain)) {
     setStatus(403);
@@ -25,30 +27,27 @@ export default route(async ({ req, query, user, set, setStatus }) => {
   }
 
   const domain = getSetting("domain");
-  const page = Math.max(1, parseInt(query.page, 10) || 1);
-  const limit = Math.min(Math.max(1, parseInt(query.limit, 10) || 20), 100);
-  const skip = (page - 1) * limit;
+  const page   = Math.max(1, parseInt(query.page,  10) || 1);
+  const limit  = Math.min(Math.max(1, parseInt(query.limit, 10) || 20), 100);
+  const skip   = (page - 1) * limit;
 
   const filter = {
-    to: `@${domain}`,
-    deletedAt: null,
+    to: "server",
+    tombstoned: { $ne: true },
+    objectType: "Post",
   };
-  if (query.type) filter.type = query.type;
-  if (query.since) filter.createdAt = { $gte: new Date(query.since) };
+  if (query.type)  filter.type        = query.type;
+  if (query.since) filter.publishedAt = { $gte: new Date(query.since) };
 
   const [docs, total] = await Promise.all([
-    Post.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    Post.countDocuments(filter),
+    FeedItems.find(filter).sort({ publishedAt: -1 }).skip(skip).limit(limit).lean(),
+    FeedItems.countDocuments(filter),
   ]);
 
-  const items = docs.map((doc) => sanitizeObject(doc, { objectType: "Post" }));
+  const items = docs.map(feedItemToPost);
 
   const protocol = req.headers["x-forwarded-proto"] || "https";
-  const base = `${protocol}://${domain}/posts/server`;
+  const base     = `${protocol}://${domain}/posts/server`;
 
   const collection = activityStreamsCollection({
     id: `${base}?page=${page}`,

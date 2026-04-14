@@ -1,48 +1,79 @@
 // routes/users/posts.js
-// GET /users/:id/posts — Posts by a user, visibility-filtered
+// GET /users/:id/posts — Posts by a user, visibility-filtered by viewer relationship.
+//
+// Queries FeedItems (not Post) for consistent visibility handling.
+// Circle-addressed posts (to:"audience") are only returned when the viewer IS the author.
 
-import makeCollection from "../utils/makeCollection.js";
-import { Post } from "#schema";
-import sanitizeObject from "#methods/sanitize/object.js";
+import route from "../utils/route.js";
+import { FeedItems } from "#schema";
+import { activityStreamsCollection } from "../utils/oc.js";
+import feedItemToPost from "#methods/feed/feedItemToPost.js";
 import { getSetting } from "#methods/settings/cache.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 
-export default makeCollection({
-  model: Post,
-  buildQuery: (req, { user }) => {
-    const userId = decodeURIComponent(req.params.id);
-    const domain = getSetting("domain");
-    const filter = {
-      actorId: userId,
-      deletedAt: null,
-    };
+export default route(async ({ req, params, query, user, set }) => {
+  const userId = decodeURIComponent(params.id);
+  const domain = getSetting("domain");
 
-    // Determine what posts the viewer can see
-    let isLocal = false;
-    if (user?.id) {
-      const parsed = kowloonId(user.id);
-      isLocal = parsed.domain && isLocalDomain(parsed.domain);
-    }
+  // Determine viewer relationship
+  let isLocal = false;
+  const isOwn = user?.id === userId;
+  if (user?.id) {
+    const parsed = kowloonId(user.id);
+    isLocal = parsed.domain && isLocalDomain(parsed.domain);
+  }
 
-    if (!user?.id) {
-      // Unauthenticated: public only
-      filter.to = "@public";
-    } else if (user.id === userId) {
-      // Own posts: no filter on visibility
-    } else if (isLocal) {
-      // Local user: public + server posts
-      filter.to = { $in: ["@public", `@${domain}`] };
-    } else {
-      // Remote user: public only
-      filter.to = "@public";
-    }
+  // Build visibility filter
+  let toFilter;
+  if (isOwn) {
+    // Author sees all their own posts (public, server, audience/circle)
+    toFilter = { $in: ["public", "server", "audience"] };
+  } else if (!user?.id) {
+    // Unauthenticated: public only
+    toFilter = "public";
+  } else if (isLocal) {
+    // Local auth'd user: public + server
+    toFilter = { $in: ["public", "server"] };
+  } else {
+    // Remote user: public only
+    toFilter = "public";
+  }
 
-    if (req.query.type) filter.type = req.query.type;
+  const filter = {
+    actorId: userId,
+    to: toFilter,
+    tombstoned: { $ne: true },
+    objectType: "Post",
+  };
 
-    return filter;
-  },
-  select:
-    "id type objectType title summary body url actorId tags image attachments to createdAt updatedAt replyCount reactCount reactPreview",
-  sanitize: (doc) => sanitizeObject(doc, { objectType: "Post" }),
+  if (query.type)  filter.type        = query.type;
+  if (query.since) filter.publishedAt = { $gte: new Date(query.since) };
+
+  const page  = Math.max(1, parseInt(query.page,  10) || 1);
+  const limit = Math.min(Math.max(1, parseInt(query.limit, 10) || 20), 100);
+  const skip  = (page - 1) * limit;
+
+  const [docs, total] = await Promise.all([
+    FeedItems.find(filter).sort({ publishedAt: -1 }).skip(skip).limit(limit).lean(),
+    FeedItems.countDocuments(filter),
+  ]);
+
+  const items = docs.map(feedItemToPost);
+
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const base     = `${protocol}://${domain}/users/${encodeURIComponent(userId)}/posts`;
+
+  const collection = activityStreamsCollection({
+    id: `${base}?page=${page}`,
+    orderedItems: items,
+    totalItems: total,
+    page,
+    itemsPerPage: limit,
+    baseUrl: base,
+  });
+
+  for (const [key, value] of Object.entries(collection)) {
+    set(key, value);
+  }
 });

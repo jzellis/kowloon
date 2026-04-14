@@ -1,17 +1,20 @@
 // routes/groups/posts.js
-// GET /groups/:id/posts — Posts addressed to a group
+// GET /groups/:id/posts — Posts addressed to a group.
+//
+// Access control is enforced on the Group record; the FeedItems query
+// uses the `group` field which is always populated for group-addressed posts.
 
 import route from "../utils/route.js";
-import { Group, Post, Circle } from "#schema";
+import { Group, FeedItems, Circle } from "#schema";
 import { activityStreamsCollection } from "../utils/oc.js";
+import feedItemToPost from "#methods/feed/feedItemToPost.js";
 import { getSetting } from "#methods/settings/cache.js";
-import sanitizeObject from "#methods/sanitize/object.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 
 export default route(async ({ req, params, query, user, set, setStatus }) => {
   const groupId = decodeURIComponent(params.id);
-  const group = await Group.findOne({ id: groupId, deletedAt: null }).lean();
+  const group   = await Group.findOne({ id: groupId, deletedAt: null }).lean();
 
   if (!group) {
     setStatus(404);
@@ -19,7 +22,7 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
     return;
   }
 
-  const domain = getSetting("domain");
+  const domain  = getSetting("domain");
   const toValue = (group.to || "").toLowerCase().trim();
 
   // Determine viewer locality
@@ -29,7 +32,7 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
     isLocal = parsed.domain && isLocalDomain(parsed.domain);
   }
 
-  // For non-public groups, check if viewer can access
+  // Access control
   if (toValue !== "@public") {
     if (!user?.id) {
       setStatus(401);
@@ -41,7 +44,7 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
       set("error", "Access denied");
       return;
     }
-    // For private groups, verify membership
+    // Private group: verify membership
     if (toValue !== `@${domain}` && group.circles?.members) {
       const membersCircle = await Circle.findOne({
         id: group.circles.members,
@@ -55,30 +58,27 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
     }
   }
 
-  const page = Math.max(1, parseInt(query.page, 10) || 1);
+  const page  = Math.max(1, parseInt(query.page,  10) || 1);
   const limit = Math.min(Math.max(1, parseInt(query.limit, 10) || 20), 100);
-  const skip = (page - 1) * limit;
+  const skip  = (page - 1) * limit;
 
   const filter = {
-    to: groupId,
-    deletedAt: null,
+    group: groupId,
+    tombstoned: { $ne: true },
+    objectType: "Post",
   };
-  if (query.type) filter.type = query.type;
-  if (query.since) filter.createdAt = { $gte: new Date(query.since) };
+  if (query.type)  filter.type        = query.type;
+  if (query.since) filter.publishedAt = { $gte: new Date(query.since) };
 
   const [docs, total] = await Promise.all([
-    Post.find(filter)
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean(),
-    Post.countDocuments(filter),
+    FeedItems.find(filter).sort({ publishedAt: -1 }).skip(skip).limit(limit).lean(),
+    FeedItems.countDocuments(filter),
   ]);
 
-  const items = docs.map((doc) => sanitizeObject(doc, { objectType: "Post" }));
+  const items = docs.map(feedItemToPost);
 
   const protocol = req.headers["x-forwarded-proto"] || "https";
-  const base = `${protocol}://${domain}/groups/${encodeURIComponent(groupId)}/posts`;
+  const base     = `${protocol}://${domain}/groups/${encodeURIComponent(groupId)}/posts`;
 
   const collection = activityStreamsCollection({
     id: `${base}?page=${page}`,

@@ -13,6 +13,7 @@ import {
 import pullFromRemote from "./pullFromRemote.js";
 import normalizeInboundActivity from "./normalizeInboundActivity.js";
 import sendAccept from "./sendAccept.js";
+import { processPollBatch, startPollWorker } from "./pollWorker.js";
 
 // Default export used by Kowloon.federation
 const federation = {
@@ -26,6 +27,8 @@ const federation = {
   startOutboxWorker,
   normalizeInboundActivity,
   sendAccept,
+  processPollBatch,
+  startPollWorker,
   auth: {
     startChallenge,
     finishChallenge,
@@ -47,4 +50,6 @@ export {
   startOutboxWorker,
   normalizeInboundActivity,
   sendAccept,
+  processPollBatch,
+  startPollWorker,
 };

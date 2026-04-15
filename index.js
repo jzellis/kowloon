@@ -58,7 +58,7 @@ http.createServer(app).listen(port, "0.0.0.0", () => {
   console.log(`HTTP listening on :${port}`);
 });
 
-// Start outbox worker for federation
+// Start outbox worker for federation (outbound delivery)
 try {
   const { startOutboxWorker } = await import(
     "#methods/federation/outboxWorker.js"
@@ -67,6 +67,17 @@ try {
   startOutboxWorker(workerInterval);
 } catch (err) {
   console.error("Failed to start outbox worker:", err.message);
+}
+
+// Start poll worker for federation (inbound pull from remote servers)
+try {
+  const { startPollWorker } = await import(
+    "#methods/federation/pollWorker.js"
+  );
+  const pollInterval = Number(process.env.POLL_WORKER_INTERVAL || 30_000);
+  startPollWorker(pollInterval);
+} catch (err) {
+  console.error("Failed to start poll worker:", err.message);
 }
 
 export default Kowloon;

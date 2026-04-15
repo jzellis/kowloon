@@ -1,0 +1,14 @@
+kwln1.local {
+  tls /home/jzellis/Projects/kowloon/certs/kwln1.local.pem /home/jzellis/Projects/kowloon/certs/kwln1.local-key.pem
+  reverse_proxy localhost:3001
+}
+
+kwln2.local {
+  tls /home/jzellis/Projects/kowloon/certs/kwln2.local.pem /home/jzellis/Projects/kowloon/certs/kwln2.local-key.pem
+  reverse_proxy localhost:3002
+}
+
+kwln3.local {
+  tls /home/jzellis/Projects/kowloon/certs/kwln3.local.pem /home/jzellis/Projects/kowloon/certs/kwln3.local-key.pem
+  reverse_proxy localhost:3003
+}

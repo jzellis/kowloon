@@ -10,7 +10,12 @@
     "worker:feed": "node workers/feedFanOut.js",
     "test": "NODE_OPTIONS=--experimental-vm-modules jest --runInBand",
     "test:unit": "NODE_OPTIONS=--experimental-vm-modules jest tests/unit --runInBand",
-    "test:int": "NODE_OPTIONS=--experimental-vm-modules jest tests/integration --runInBand"
+    "test:int": "NODE_OPTIONS=--experimental-vm-modules jest tests/integration --runInBand",
+    "dev:local": "pm2 start ecosystem.local.config.cjs",
+    "dev:local:stop": "pm2 stop ecosystem.local.config.cjs",
+    "dev:local:delete": "pm2 delete ecosystem.local.config.cjs",
+    "dev:local:logs": "pm2 logs kwln1 kwln2 kwln3",
+    "dev:caddy": "sudo caddy run --config Caddyfile.local"
   },
   "imports": {
     "#kowloon": "./Kowloon.js",

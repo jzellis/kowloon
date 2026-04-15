@@ -1,0 +1,13 @@
+{
+  "name": "kowloon-setup",
+  "version": "1.0.0",
+  "description": "Kowloon installation wizard",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2"
+  }
+}

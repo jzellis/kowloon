@@ -130,9 +130,22 @@ async function handleInboundFollow(activity) {
     return { activity, error: `Follow: local user not found for ${localUserTarget}` };
   }
 
+  // Resolve the remote actor's HTTP URL if we only have internal @user@domain format
+  let remoteActorUrl = remoteActorId;
+  if (!remoteActorUrl.startsWith("http") && typeof activity.actor === "object" && activity.actor?.id?.startsWith("http")) {
+    remoteActorUrl = activity.actor.id;
+  } else if (!remoteActorUrl.startsWith("http")) {
+    // Derive from @user@domain → https://domain/users/user
+    const m = remoteActorUrl.match(/^@([^@]+)@(.+)$/);
+    if (m) remoteActorUrl = `https://${m[2]}/users/${m[1]}`;
+  }
+
   // Fetch the remote actor's profile to get name/icon/inbox
-  const remoteDoc = await fetchRemoteActor(remoteActorId);
-  const remoteMember = remoteActorToMember(remoteActorId, remoteDoc);
+  const remoteDoc = await fetchRemoteActor(remoteActorUrl);
+  const remoteMember = remoteActorToMember(remoteActorUrl, remoteDoc);
+
+  // Ensure internal-format actorId is kept for DB storage (not the derived URL)
+  remoteMember.id = remoteActorId;
 
   // Find or create the local user's "Followers" circle
   let followersCircle = await Circle.findOne({
@@ -182,14 +195,17 @@ async function handleInboundFollow(activity) {
   // Send Accept{Follow} back — fire and forget
   const domain = getSetting("domain");
   const localActorUrl = localUser.actorId ?? `https://${domain}/users/${localUser.username}`;
-  const remoteInbox = remoteMember.inbox || remoteDoc?.inbox;
+  // Try to get inbox from: fetched doc > actor object in activity > derive from URL
+  const remoteInbox = remoteMember.inbox
+    || remoteDoc?.inbox
+    || (typeof activity.actor === "object" ? activity.actor?.inbox : null);
 
   queueMicrotask(async () => {
     try {
       const { default: sendAccept } = await import("#methods/federation/sendAccept.js");
       await sendAccept({
         localActorUrl,
-        remoteActorId,
+        remoteActorId: remoteActorUrl, // use URL for HTTP lookup
         remoteInbox,
         followActivityId: activity.remoteId ?? activity.id,
       });
@@ -285,20 +301,39 @@ async function handleOutboundFollow(activity) {
         { upsert: true }
       );
     } else {
-      const currentServer = await Server.findOne({ domain: serverDomain });
-      const currentCount = currentServer?.actorsRefCount?.get(followedUserId) || 0;
-      await Server.updateOne(
-        { domain: serverDomain },
-        {
-          $set: {
-            [`actorsRefCount.${followedUserId}`]: currentCount + 1,
-            "scheduler.nextPollAt": new Date(),
-            "scheduler.backoffMs": 0,
-          },
-          $setOnInsert: { id: `@${serverDomain}`, domain: serverDomain, createdBy: "follow-handler" },
-        },
-        { upsert: true }
-      );
+      // actorsRefCount is an array of { id, count } — Mongoose Map was
+      // unusable because actor IDs contain dots (e.g. @user@domain.tld)
+      // which Mongoose/MongoDB treat as nested-path separators.
+      const existing = await Server.findOne({ domain: serverDomain });
+      if (existing) {
+        const entry = existing.actorsRefCount?.find(e => e.id === followedUserId);
+        if (entry) {
+          await Server.updateOne(
+            { domain: serverDomain, "actorsRefCount.id": followedUserId },
+            {
+              $inc: { "actorsRefCount.$.count": 1 },
+              $set: { "scheduler.nextPollAt": new Date(), "scheduler.backoffMs": 0 },
+            }
+          );
+        } else {
+          await Server.updateOne(
+            { domain: serverDomain },
+            {
+              $push: { actorsRefCount: { id: followedUserId, count: 1 } },
+              $set: { "scheduler.nextPollAt": new Date(), "scheduler.backoffMs": 0 },
+            }
+          );
+        }
+      } else {
+        await Server.create({
+          id: `@${serverDomain}`,
+          domain: serverDomain,
+          createdBy: "follow-handler",
+          actorsRefCount: [{ id: followedUserId, count: 1 }],
+          "scheduler.nextPollAt": new Date(),
+          "scheduler.backoffMs": 0,
+        });
+      }
     }
   }
 

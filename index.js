@@ -10,20 +10,31 @@ import Kowloon, { attachMethodDomains } from "#kowloon";
 // Connect DB & load settings BEFORE loading method domains, to avoid buffering timeouts.
 import initKowloon from "#methods/utils/init.js";
 
-// 1) Connect DB + load settings/admin
+// 1) Validate required config in production
+if (process.env.NODE_ENV === "production" && !process.env.DOMAIN) {
+  console.error(
+    "ERROR: DOMAIN is not set. Run the Kowloon installer first, or set DOMAIN in your .env file."
+  );
+  process.exit(1);
+}
+
+// 2) Connect DB + load settings/admin
 await initKowloon(Kowloon, {
   domain: process.env.DOMAIN || undefined,
   siteTitle: process.env.SITE_TITLE || "Kowloon",
   adminEmail: process.env.ADMIN_EMAIL || undefined,
+  adminUsername: process.env.ADMIN_USERNAME || undefined,
+  adminDisplayName: process.env.ADMIN_DISPLAY_NAME || undefined,
+  adminPassword: process.env.ADMIN_PASSWORD || undefined,
   smtpHost: process.env.SMTP_HOST || undefined,
   smtpUser: process.env.SMTP_USER || undefined,
   smtpPass: process.env.SMTP_PASS || undefined,
 });
 
-// 2) Now load methods (safe: DB is up)
+// 3) Now load methods (safe: DB is up)
 // await attachMethodDomains(Kowloon);
 
-// 3) Build Express
+// 4) Build Express
 const app = express();
 app.use(cors());
 app.use(express.json({ limit: "100mb" }));
@@ -38,7 +49,7 @@ app.use((req, _res, next) => {
   next();
 });
 
-// 4) Import and mount your existing aggregate router AFTER DB + methods are ready
+// 5) Import and mount your existing aggregate router AFTER DB + methods are ready
 const routes = (await import("#routes/index.js")).default;
 app.use("/", routes);
 

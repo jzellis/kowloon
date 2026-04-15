@@ -2,12 +2,11 @@ import generatePassword from "#methods/generate/password.js";
 
 export default (ctx) => {
   return {
-    username: "admin",
-    // password: ctx.adminPassword || generatePassword(),
-    password: "12345",
+    username: ctx.adminUsername || "admin",
+    password: ctx.adminPassword || generatePassword(),
     email: ctx.adminEmail,
     profile: {
-      name: "Admin",
+      name: ctx.adminDisplayName || ctx.adminUsername || "Admin",
       subtitle: "The human, the myth, the legend",
       description: "I am the admin of this server.",
       urls: [`https://${ctx.domain}`],

@@ -34,8 +34,13 @@ const ServerSchema = new Schema(
     pullEndpoint: { type: String, default: undefined }, // Custom pull endpoint URL (defaults to https://{domain}/federation/pull)
 
     // Audience tracking - reference counts instead of storing user IDs
-    // Maps remote actor ID -> count of local users following that actor
-    actorsRefCount: { type: Map, of: Number, default: undefined }, // e.g., {"@alice@remote.com": 3}
+    // Array of { id, count } — stored as array to avoid Mongoose Map's dot-in-key restriction
+    // (actor IDs like @alice@remote.com contain dots which are forbidden in Mongoose Map keys).
+    actorsRefCount: {
+      type: [{ id: { type: String }, count: { type: Number, default: 0 } }],
+      default: undefined,
+      _id: false,
+    },
     serverFollowersCount: { type: Number, default: 0 }, // count of locals following @server
 
     // Endpoints (auto-filled)
@@ -216,7 +221,7 @@ ServerSchema.pre("save", function (next) {
   }
 
   // Auto-update include flags based on reference counts
-  const hasActorFollows = this.actorsRefCount && this.actorsRefCount.size > 0;
+  const hasActorFollows = Array.isArray(this.actorsRefCount) && this.actorsRefCount.length > 0;
   const hasServerFollows = this.serverFollowersCount > 0;
 
   this.include = this.include || {};

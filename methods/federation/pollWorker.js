@@ -83,9 +83,10 @@ async function processServer(server) {
 
   logger.info("pollWorker: polling", { domain });
 
-  // Build from/to arrays from actorsRefCount
-  const remoteActorIds = server.actorsRefCount
-    ? [...server.actorsRefCount.keys()]
+  // Build from/to arrays from actorsRefCount.
+  // actorsRefCount is an array of { id, count } objects (not a Map).
+  const remoteActorIds = Array.isArray(server.actorsRefCount)
+    ? server.actorsRefCount.map(e => e.id).filter(Boolean)
     : [];
 
   if (remoteActorIds.length === 0 && server.serverFollowersCount === 0) {

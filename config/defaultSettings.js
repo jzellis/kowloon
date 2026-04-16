@@ -72,7 +72,7 @@ const defaultSettings = (ctx) => {
           longitude: "114.190278",
         },
         icon: "/images/icons/server.png",
-        urls: [`https://${ctx.domain}`],
+        urls: ctx.domain ? [`https://${ctx.domain}`] : [],
       },
       summary: "Public-facing server profile (name, description, icon, etc.).",
       to: "@public",

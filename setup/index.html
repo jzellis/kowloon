@@ -595,7 +595,10 @@
     while (Date.now() < deadline) {
       try {
         const r = await fetch(url, { signal: AbortSignal.timeout(3000) });
-        if (r.ok) { setStep("app", "done"); return; }
+        if (r.ok) {
+          const d = await r.json().catch(() => ({}));
+          if (d.ok || d.status === "ok") { setStep("app", "done"); return; }
+        }
       } catch { /* not ready yet */ }
       await wait(3000);
     }

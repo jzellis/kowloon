@@ -4,7 +4,10 @@
 			"path": "."
 		},
 		{
-			"path": "../kowloon-client"
+			"path": "../client"
+		},
+		{
+			"path": "../frontend"
 		}
 	],
 	"settings": {

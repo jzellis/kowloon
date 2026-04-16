@@ -1,0 +1,26 @@
+name: Deploy install script
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - install.sh
+
+jobs:
+  deploy:
+    name: Copy install.sh to install.kwln.social
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Deploy install.sh via SSH
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.INSTALL_HOST }}
+          username: ${{ secrets.INSTALL_USER }}
+          key: ${{ secrets.INSTALL_SSH_KEY }}
+          source: install.sh
+          target: ~/install-site/

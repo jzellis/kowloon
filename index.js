@@ -53,15 +53,17 @@ app.use((req, _res, next) => {
 const routes = (await import("#routes/index.js")).default;
 app.use("/", routes);
 
-// Health
-app.get("/__health", (_req, res) => {
+// Health (both paths — /health is conventional, /__health kept for compat)
+function healthHandler(_req, res) {
   const ready =
     !!Kowloon?.mongoose && Kowloon.mongoose.connection?.readyState === 1;
   res.json({
     ok: ready,
     readyState: Kowloon.mongoose?.connection?.readyState ?? -1,
   });
-});
+}
+app.get("/health",   healthHandler);
+app.get("/__health", healthHandler);
 
 // Start HTTP
 const port = Number(process.env.PORT || 3000);

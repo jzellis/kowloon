@@ -139,7 +139,7 @@ services:
 
   # ── Application ─────────────────────────────────────────────────────────────
   app:
-    image: ghcr.io/kowloon/kowloon:latest
+    image: ghcr.io/jzellis/kowloon:latest
     restart: unless-stopped
     env_file: .env
     depends_on:
@@ -152,7 +152,7 @@ services:
 
   # ── Background workers ───────────────────────────────────────────────────────
   worker-feed:
-    image: ghcr.io/kowloon/kowloon:latest
+    image: ghcr.io/jzellis/kowloon:latest
     restart: unless-stopped
     command: node workers/feedFanOut.js
     env_file: .env
@@ -163,7 +163,7 @@ services:
       - internal
 
   worker-outbox:
-    image: ghcr.io/kowloon/kowloon:latest
+    image: ghcr.io/jzellis/kowloon:latest
     restart: unless-stopped
     command: node workers/outboxPush.js
     env_file: .env
@@ -174,7 +174,7 @@ services:
       - internal
 
   worker-pull:
-    image: ghcr.io/kowloon/kowloon:latest
+    image: ghcr.io/jzellis/kowloon:latest
     restart: unless-stopped
     command: node workers/federationPull.js
     env_file: .env

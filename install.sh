@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
 # Kowloon installer
-# Usage: curl -fsSL https://get.kowloon.social | bash
+# Usage: curl -fsSL https://install.kwln.social | bash
 # Or run directly: bash install.sh
 
 set -euo pipefail
 
-SETUP_IMAGE="ghcr.io/kowloon/setup:latest"
-APP_IMAGE="ghcr.io/kowloon/kowloon:latest"
+SETUP_IMAGE="ghcr.io/jzellis/kowloon-setup:latest"
+APP_IMAGE="ghcr.io/jzellis/kowloon:latest"
 INSTALL_DIR="${KOWLOON_DIR:-$HOME/kowloon}"
 SETUP_PORT=2999
 

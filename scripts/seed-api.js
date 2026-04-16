@@ -5,7 +5,7 @@
 //
 // Usage: node scripts/seed-api.js [--server=https://kwln.org]
 
-import { KowloonClient } from '../../kowloon-client/src/index.js';
+import { KowloonClient } from '../../client/src/index.js';
 
 const SERVER = process.argv.find((a) => a.startsWith('--server='))?.split('=')[1]
   ?? `http://localhost:${process.env.PORT ?? 3000}`;

@@ -35,6 +35,11 @@ if ! command -v docker &>/dev/null; then
 fi
 
 if ! docker info &>/dev/null; then
+  if sudo docker info &>/dev/null; then
+    warn "Docker requires sudo on this system. Re-run the installer with: sudo -E bash install.sh"
+    warn "Or add your user to the docker group: sudo usermod -aG docker \$USER && newgrp docker"
+    exit 1
+  fi
   error "Docker is installed but not running. Start Docker and try again."
 fi
 

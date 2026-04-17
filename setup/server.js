@@ -136,23 +136,15 @@ ${smtpLines}
 # Caddy will automatically obtain a TLS certificate via Let's Encrypt.
 
 ${cleanDomain} {
-    # Pure API paths always go to Express
+    # API paths always go to Express
     @api path ${apiPaths}
     handle @api {
         reverse_proxy app:3000
     }
 
-    # Browser requests for non-API paths go to the frontend
-    @browser {
-        header Accept *text/html*
-    }
-    handle @browser {
-        reverse_proxy frontend:80
-    }
-
-    # Everything else (JSON API clients hitting non-API paths) → Express
+    # Everything else goes to the frontend container
     handle {
-        reverse_proxy app:3000
+        reverse_proxy frontend:80
     }
 }
 `

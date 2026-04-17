@@ -1,9 +1,7 @@
-import generatePassword from "#methods/generate/password.js";
-
 export default (ctx) => {
   return {
-    username: ctx.adminUsername || "admin",
-    password: ctx.adminPassword || generatePassword(),
+    username: ctx.adminUsername,
+    password: ctx.adminPassword,
     email: ctx.adminEmail,
     profile: {
       name: ctx.adminDisplayName || ctx.adminUsername || "Admin",

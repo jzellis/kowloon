@@ -134,27 +134,23 @@ export default async function init(Kowloon, ctx = {}) {
   }
   console.log("Kowloon settings loaded and cached");
 
-  // 3) Ensure default admin user exists
-  let firstUser = await User.findOne().lean();
-  if (!firstUser) {
-    const adminUser = defaultUser(ctx);
-    const adminPassword = adminUser.password; // only log in non-prod
-    const created = await User.create(adminUser);
+  // 3) Create admin user from installer credentials (only if provided and no users exist)
+  if (ctx.adminUsername && ctx.adminPassword) {
+    const firstUser = await User.findOne({ username: ctx.adminUsername }).lean();
+    if (!firstUser) {
+      const adminUser = defaultUser(ctx);
+      const created = await User.create(adminUser);
 
-    const member = toMember(created);
-    await Circle.findOneAndUpdate(
-      { id: Kowloon.settings.adminCircle },
-      { memberCount: 1, $addToSet: { members: toMember(created) } }
-    );
-    await Circle.findOneAndUpdate(
-      { id: Kowloon.settings.modCircle },
-      { memberCount: 1, $addToSet: { members: toMember(created) } }
-    );
+      await Circle.findOneAndUpdate(
+        { id: Kowloon.settings.adminCircle },
+        { memberCount: 1, $addToSet: { members: toMember(created) } }
+      );
+      await Circle.findOneAndUpdate(
+        { id: Kowloon.settings.modCircle },
+        { memberCount: 1, $addToSet: { members: toMember(created) } }
+      );
 
-    if (process.env.NODE_ENV !== "production") {
-      console.log("Created default admin user with password:", adminPassword);
-    } else {
-      console.log("Created default admin user");
+      console.log(`Created admin user: ${ctx.adminUsername}`);
     }
   }
 

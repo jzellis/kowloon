@@ -125,7 +125,7 @@ WAITED=0
 HEALTH_URL="https://${DOMAIN}/health"
 
 while true; do
-  STATUS=$(curl -sf --max-time 5 "$HEALTH_URL" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print('ok' if d.get('ok') or d.get('status')=='ok' else 'wait')" 2>/dev/null || echo "wait")
+  STATUS=$(curl -sfk --max-time 5 "$HEALTH_URL" 2>/dev/null | python3 -c "import sys,json; d=json.load(sys.stdin); print('ok' if d.get('ok') or d.get('status')=='ok' else 'wait')" 2>/dev/null || echo "wait")
   if [[ "$STATUS" == "ok" ]]; then
     break
   fi

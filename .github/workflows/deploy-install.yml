@@ -24,3 +24,4 @@ jobs:
           key: ${{ secrets.INSTALL_SSH_KEY }}
           source: install.sh
           target: /srv/caddy/
+          overwrite: true

@@ -82,6 +82,8 @@ for (const dirent of entries) {
     mountPath = "/";
   } else if (name === "well-known") {
     mountPath = "/.well-known";
+  } else if (name === "config") {
+    mountPath = "/config.json";
   } else {
     mountPath = `/${name}`;
   }

@@ -7,6 +7,11 @@ import nocache from "nocache";
 import http from "http";
 
 import Kowloon, { attachMethodDomains } from "#kowloon";
+import { existsSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 // Connect DB & load settings BEFORE loading method domains, to avoid buffering timeouts.
 import initKowloon from "#methods/utils/init.js";
 
@@ -52,6 +57,15 @@ app.use((req, _res, next) => {
 // 5) Import and mount your existing aggregate router AFTER DB + methods are ready
 const routes = (await import("#routes/index.js")).default;
 app.use("/", routes);
+
+// 6) Serve built frontend (if present) — after API routes so they take priority
+const publicDir = join(__dirname, "public");
+if (existsSync(publicDir) && process.env.SERVE_FRONTEND !== "false") {
+  const { default: serveStatic } = await import("serve-static");
+  app.use(serveStatic(publicDir, { maxAge: "1y", immutable: true, index: false }));
+  // SPA fallback — any unmatched route serves index.html
+  app.get("*", (_req, res) => res.sendFile(join(publicDir, "index.html")));
+}
 
 // Health (both paths — /health is conventional, /__health kept for compat)
 function healthHandler(_req, res) {

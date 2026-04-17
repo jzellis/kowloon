@@ -16,8 +16,22 @@ jobs:
       packages: write
 
     steps:
-      - name: Check out code
+      - name: Check out server
         uses: actions/checkout@v4
+        with:
+          path: kowloon-server
+
+      - name: Check out frontend
+        uses: actions/checkout@v4
+        with:
+          repository: jzellis/kowloon-frontend
+          path: kowloon-frontend
+
+      - name: Check out client library
+        uses: actions/checkout@v4
+        with:
+          repository: jzellis/kowloon-client
+          path: kowloon-client
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -40,7 +54,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: Dockerfile.prod
+          file: kowloon-server/Dockerfile.prod
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}

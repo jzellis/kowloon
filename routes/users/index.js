@@ -1,6 +1,7 @@
 import express from "express";
 import collection from "./collection.js";
 import id from "./id.js";
+import lookup from "./lookup.js";
 import actor from "./actor.js";
 import posts from "./posts.js";
 import circles from "./circles.js";
@@ -30,6 +31,7 @@ function isApRequest(req) {
 }
 
 router.get("/", collection);
+router.get("/lookup", lookup);
 router.get("/:id", (req, res, next) => {
   if (isApRequest(req)) return actor(req, res, next);
   next();

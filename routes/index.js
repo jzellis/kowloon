@@ -77,7 +77,6 @@ for (const dirent of entries) {
     continue;
   }
   // Special mount paths
-  if (name === "feed-xsl") continue; // mounted manually at root below
   let mountPath;
   if (name === "home") {
     mountPath = "/";
@@ -173,12 +172,6 @@ router.get("/__routes", (_req, res) => {
   const routes = listAllRoutes().filter((r) => r.path !== "/__routes");
   res.json({ total: routes.length, routes });
 });
-
-// RSS XSLT stylesheet — served at /feed.xsl for browser rendering of RSS feeds
-{
-  const { default: feedXsl } = await import("./feed-xsl/index.js");
-  router.use("/", feedXsl);
-}
 
 // **TESTING ONLY** - Database wipe endpoint (remove in production)
 if (process.env.NODE_ENV !== "production") {

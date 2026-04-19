@@ -55,16 +55,23 @@ router.get(
   )
 );
 
-// DELETE /admin/users/:id — soft-delete
+// DELETE /admin/users/:id — soft-delete (default) or hard-delete (?fullDelete=true)
 router.delete(
   "/:id",
   route(
-    async ({ params, user: adminUser, set, setStatus }) => {
+    async ({ params, query, user: adminUser, set, setStatus }) => {
       const target = await User.findOne({ id: decodeURIComponent(params.id) });
 
       if (!target) {
         setStatus(404);
         set("error", "User not found");
+        return;
+      }
+
+      if (query.fullDelete === "true") {
+        await User.deleteOne({ id: target.id });
+        set("ok", true);
+        set("hardDeleted", true);
         return;
       }
 

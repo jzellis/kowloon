@@ -51,16 +51,23 @@ router.get(
   )
 );
 
-// DELETE /admin/groups/:id — soft-delete
+// DELETE /admin/groups/:id — soft-delete (default) or hard-delete (?fullDelete=true)
 router.delete(
   "/:id",
   route(
-    async ({ params, user: adminUser, set, setStatus }) => {
+    async ({ params, query, user: adminUser, set, setStatus }) => {
       const group = await Group.findOne({ id: decodeURIComponent(params.id) });
 
       if (!group) {
         setStatus(404);
         set("error", "Group not found");
+        return;
+      }
+
+      if (query.fullDelete === "true") {
+        await Group.deleteOne({ id: group.id });
+        set("ok", true);
+        set("hardDeleted", true);
         return;
       }
 

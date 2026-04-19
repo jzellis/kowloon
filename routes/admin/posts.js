@@ -2,7 +2,7 @@
 import express from "express";
 import route from "../utils/route.js";
 import makeCollection from "../utils/makeCollection.js";
-import { Post } from "#schema";
+import { Post, FeedItems } from "#schema";
 
 const router = express.Router({ mergeParams: true });
 
@@ -59,16 +59,24 @@ router.get(
   )
 );
 
-// DELETE /admin/posts/:id — soft-delete
+// DELETE /admin/posts/:id — soft-delete (default) or hard-delete (?fullDelete=true)
 router.delete(
   "/:id",
   route(
-    async ({ params, user: adminUser, set, setStatus }) => {
+    async ({ params, query, user: adminUser, set, setStatus }) => {
       const post = await Post.findOne({ id: decodeURIComponent(params.id) });
 
       if (!post) {
         setStatus(404);
         set("error", "Post not found");
+        return;
+      }
+
+      if (query.fullDelete === "true") {
+        await FeedItems.deleteMany({ id: post.id });
+        await Post.deleteOne({ id: post.id });
+        set("ok", true);
+        set("hardDeleted", true);
         return;
       }
 

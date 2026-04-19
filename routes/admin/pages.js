@@ -2,7 +2,7 @@
 import express from "express";
 import route from "../utils/route.js";
 import makeCollection from "../utils/makeCollection.js";
-import { Page } from "#schema";
+import { Page, FeedItems } from "#schema";
 import { getSetting } from "#methods/settings/cache.js";
 
 const router = express.Router({ mergeParams: true });
@@ -134,11 +134,11 @@ router.patch(
   )
 );
 
-// DELETE /admin/pages/:id — soft-delete
+// DELETE /admin/pages/:id — soft-delete (default) or hard-delete (?fullDelete=true)
 router.delete(
   "/:id",
   route(
-    async ({ params, user: adminUser, set, setStatus }) => {
+    async ({ params, query, user: adminUser, set, setStatus }) => {
       const idOrSlug = decodeURIComponent(params.id);
       const page = await Page.findOne({
         $or: [{ id: idOrSlug }, { slug: idOrSlug }],
@@ -147,6 +147,14 @@ router.delete(
       if (!page) {
         setStatus(404);
         set("error", "Page not found");
+        return;
+      }
+
+      if (query.fullDelete === "true") {
+        await FeedItems.deleteMany({ id: page.id });
+        await Page.deleteOne({ id: page.id });
+        set("ok", true);
+        set("hardDeleted", true);
         return;
       }
 

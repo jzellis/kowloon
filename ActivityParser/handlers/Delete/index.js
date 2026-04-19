@@ -72,9 +72,16 @@ export function validate(activity) {
     errors.push("Delete: missing activity.actorId");
   }
 
-  // Required: target (ID of object to delete)
-  if (!activity?.target || typeof activity.target !== "string") {
-    errors.push("Delete: missing required field 'target' (object ID)");
+  // target may be a string or a non-empty array of strings
+  const t = activity?.target;
+  if (!t) {
+    errors.push("Delete: missing required field 'target' (object ID or array of IDs)");
+  } else if (Array.isArray(t)) {
+    if (t.length === 0) errors.push("Delete: 'target' array must not be empty");
+    else if (t.some((id) => typeof id !== "string"))
+      errors.push("Delete: all entries in 'target' array must be strings");
+  } else if (typeof t !== "string") {
+    errors.push("Delete: 'target' must be a string or array of strings");
   }
 
   return {
@@ -94,72 +101,87 @@ export async function getFederationTargets(activity, deleted) {
   return getFederationTargetsHelper(activity, deleted);
 }
 
+async function deleteOne(activity, targetId) {
+  const parsed = kowloonId(targetId);
+  const Model = MODELS[parsed?.type];
+  if (!Model) {
+    return { id: targetId, error: `unsupported target type "${parsed?.type}"` };
+  }
+
+  const query =
+    parsed.type === "URL" ? { url: targetId } : { id: targetId };
+
+  const current =
+    (await Model.findOne(query).lean?.()) ?? (await Model.findOne(query));
+  if (!current) {
+    return { id: targetId, error: `target not found` };
+  }
+
+  const ownerActorId = parsed.type === "User" ? current.id : current.actorId;
+  const isOwner = activity.actorId === ownerActorId;
+  const isAdmin = await isServerAdmin(activity.actorId);
+  if (!isOwner && !isAdmin) {
+    return { id: targetId, error: "not authorized to delete this object" };
+  }
+
+  const tombstoneFields =
+    parsed.type === "User"
+      ? { deletedAt: new Date(), deletedBy: activity.actorId, active: false }
+      : { deletedAt: new Date(), deletedBy: activity.actorId, type: "Tombstone" };
+
+  const deleted =
+    (await Model.findOneAndUpdate(query, { $set: tombstoneFields }, { new: true }).lean?.()) ??
+    (await Model.findOneAndUpdate(query, { $set: tombstoneFields }, { new: true }));
+
+  await tombstoneFeedItems(deleted.id, parsed.type);
+
+  let resultObj = deleted.toObject ? deleted.toObject() : { ...deleted };
+  if (parsed.type === "User") {
+    delete resultObj.password;
+    delete resultObj.privateKey;
+    delete resultObj.publicKeyJwk;
+    delete resultObj.signature;
+  }
+
+  return { id: targetId, deleted: resultObj };
+}
+
 export default async function Delete(activity) {
   try {
-    // 1. Validate
     const validation = validate(activity);
     if (!validation.valid) {
       return { activity, error: validation.errors.join("; ") };
     }
 
-    const parsed = kowloonId(activity.target);
-    const Model = MODELS[parsed?.type];
-    if (!Model) {
-      return {
-        activity,
-        error: `Delete: unsupported target type "${parsed?.type}"`,
-      };
+    const targets = Array.isArray(activity.target)
+      ? activity.target
+      : [activity.target];
+
+    const results = await Promise.all(targets.map((id) => deleteOne(activity, id)));
+
+    const succeeded = results.filter((r) => r.deleted);
+    const failed = results.filter((r) => r.error);
+
+    if (succeeded.length === 0) {
+      return { activity, error: failed.map((r) => `${r.id}: ${r.error}`).join("; ") };
     }
 
-    const query =
-      parsed.type === "URL"
-        ? { url: activity.target }
-        : { id: activity.target };
+    // Use the first successful deletion for federation targeting
+    const primary = succeeded[0].deleted;
+    activity.objectId = primary.id;
+    const federation = await getFederationTargets(activity, primary);
 
-    const current =
-      (await Model.findOne(query).lean?.()) ?? (await Model.findOne(query));
-    if (!current) {
-      return { activity, error: `Delete: target not found: ${activity.target}` };
+    // Single-target: preserve original response shape for backwards compat
+    if (targets.length === 1) {
+      return { activity, created: primary, result: primary, federation };
     }
 
-    // Authorization: owner or server admin
-    const ownerActorId =
-      parsed.type === "User" ? current.id : current.actorId;
-    const isOwner = activity.actorId === ownerActorId;
-    const isAdmin = await isServerAdmin(activity.actorId);
-    if (!isOwner && !isAdmin) {
-      return { activity, error: "Delete: not authorized to delete this object" };
-    }
-
-    // Build the update: Users get active:false instead of type:Tombstone
-    const tombstoneFields =
-      parsed.type === "User"
-        ? { deletedAt: new Date(), deletedBy: activity.actorId, active: false }
-        : { deletedAt: new Date(), deletedBy: activity.actorId, type: "Tombstone" };
-
-    const deleted =
-      (await Model.findOneAndUpdate(query, { $set: tombstoneFields }, { new: true }).lean?.()) ??
-      (await Model.findOneAndUpdate(query, { $set: tombstoneFields }, { new: true }));
-
-    // annotate for downstreams + Undo
-    activity.objectId = deleted.id;
-
-    // Tombstone FeedItems entry
-    await tombstoneFeedItems(deleted.id, parsed.type);
-
-    // 3. Determine federation requirements
-    const federation = await getFederationTargets(activity, deleted);
-
-    // Sanitize result for User objects
-    let resultObj = deleted.toObject ? deleted.toObject() : { ...deleted };
-    if (parsed.type === "User") {
-      delete resultObj.password;
-      delete resultObj.privateKey;
-      delete resultObj.publicKeyJwk;
-      delete resultObj.signature;
-    }
-
-    return { activity, created: resultObj, result: resultObj, federation };
+    return {
+      activity,
+      results: succeeded.map((r) => r.deleted),
+      errors: failed.length > 0 ? failed : undefined,
+      federation,
+    };
   } catch (err) {
     return { activity, error: err?.message || String(err) };
   }

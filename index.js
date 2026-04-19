@@ -32,6 +32,7 @@ await initKowloon(Kowloon, {
   adminDisplayName: process.env.ADMIN_DISPLAY_NAME || undefined,
   adminPassword: process.env.ADMIN_PASSWORD || undefined,
   smtpHost: process.env.SMTP_HOST || undefined,
+  smtpPort: process.env.SMTP_PORT ? Number(process.env.SMTP_PORT) : undefined,
   smtpUser: process.env.SMTP_USER || undefined,
   smtpPass: process.env.SMTP_PASS || undefined,
 });

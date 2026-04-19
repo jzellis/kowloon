@@ -88,7 +88,12 @@ export default async function init(Kowloon, ctx = {}) {
     }
   }
 
-  if ((await Circle.find({}).countDocuments()) === 0) {
+  const adminCircleSetting = await Settings.findOne({ name: "adminCircle" }).lean();
+  const adminCircleExists = adminCircleSetting?.value
+    ? await Circle.exists({ id: adminCircleSetting.value })
+    : false;
+
+  if (!adminCircleExists) {
     const adminCircle = await Circle.create({
       name: `${ctx.SITE_TITLE || "Kowloon"} Admins`,
       to: "",

@@ -28,6 +28,8 @@ const UserSchemaDef = {
 
   password: { type: String },
   email: { type: String, unique: true, sparse: true },
+  passwordResetToken: { type: String, select: false },
+  passwordResetExpires: { type: Date, select: false },
   profile: { type: ProfileSchema, default: {} },
 
   // Preferences (unchanged)

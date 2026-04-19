@@ -5,6 +5,9 @@ import route from "../utils/route.js";
 import { Invite } from "#schema";
 import { activityStreamsCollection } from "../utils/oc.js";
 import { getSetting } from "#methods/settings/cache.js";
+import { sendEmail } from "#methods/email/index.js";
+import { inviteEmail } from "#methods/email/templates.js";
+import logger from "#methods/utils/logger.js";
 
 function sanitizeInvite(invite) {
   const doc = invite.toObject ? invite.toObject() : invite;
@@ -62,6 +65,21 @@ export const create = route(
         note,
         welcomeMessage,
       });
+    }
+
+    // Send invite email for individual invites
+    if (type === "individual") {
+      try {
+        const { subject, html } = inviteEmail({
+          inviteUrl: invite.url,
+          email,
+          welcomeMessage,
+          note,
+        });
+        await sendEmail({ to: email, subject, html });
+      } catch (err) {
+        logger.warn(`[invites] Failed to send invite email to ${email}: ${err.message}`);
+      }
     }
 
     setStatus(201);

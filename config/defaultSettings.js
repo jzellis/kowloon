@@ -226,6 +226,7 @@ const defaultSettings = (ctx) => {
       value: {
         protocol: "smtp",
         host: ctx.smtpHost || "localhost",
+        port: ctx.smtpPort || 587,
         username: ctx.smtpUser || "",
         password: ctx.smtpPass || "",
       },

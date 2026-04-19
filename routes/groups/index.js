@@ -6,13 +6,35 @@ import id from "./id.js";
 import members from "./members.js";
 import posts from "./posts.js";
 import inboxPost from "../inbox/post.js";
+import { Group, FeedItems } from "#schema";
+import feedItemToPost from "#methods/feed/feedItemToPost.js";
+import { getSetting } from "#methods/settings/cache.js";
+import { toRSS } from "#methods/rss/index.js";
 
 const router = express.Router({ mergeParams: true });
 
 router.get("/", collection);
 router.get("/:id", id);
 router.get("/:id/members", members);
-router.get("/:id/posts", posts);
+router.get("/:id/posts", async (req, res, next) => {
+  if (!("rss" in req.query)) return next();
+  const domain = getSetting("domain");
+  const groupId = decodeURIComponent(req.params.id);
+  const group = await Group.findOne({ id: groupId, to: "@public", deletedAt: null }).lean();
+  if (!group) return res.status(404).json({ error: "Not found" });
+  const docs = await FeedItems.find({ group: groupId, tombstoned: { $ne: true }, objectType: "Post" })
+    .sort({ publishedAt: -1 }).limit(20).lean();
+  const proto = req.headers["x-forwarded-proto"] || "https";
+  const base = `${proto}://${domain}`;
+  const xml = toRSS(docs.map(feedItemToPost), {
+    title: `${group.name || groupId} — ${domain}`,
+    link: `${base}/groups/${encodeURIComponent(groupId)}`,
+    feedLink: `${base}/groups/${encodeURIComponent(groupId)}/posts?rss`,
+    description: group.description || `Posts from the ${group.name || groupId} group`,
+    domain,
+  });
+  res.set("Content-Type", "application/rss+xml").send(xml);
+}, posts);
 // S2S: remote servers deliver to group inbox
 router.post("/:id/inbox", inboxPost);
 

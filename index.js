@@ -55,11 +55,26 @@ app.use((req, _res, next) => {
   next();
 });
 
-// 5) Import and mount your existing aggregate router AFTER DB + methods are ready
+// 5) SEO middleware — intercept crawler/scraper requests before API routes
+const { default: botMiddleware } = await import("#methods/seo/botDetect.js");
+app.use(botMiddleware);
+
+// 5a) robots.txt + sitemap.xml
+const { generateRobots } = await import("#methods/seo/robots.js");
+const { generateSitemap } = await import("#methods/seo/sitemap.js");
+app.get("/robots.txt", (req, res) => {
+  res.set("Content-Type", "text/plain").send(generateRobots(req));
+});
+app.get("/sitemap.xml", async (req, res) => {
+  const xml = await generateSitemap(req);
+  res.set("Content-Type", "application/xml").send(xml);
+});
+
+// 6) Import and mount your existing aggregate router AFTER DB + methods are ready
 const routes = (await import("#routes/index.js")).default;
 app.use("/", routes);
 
-// 6) Serve built frontend (if present) — after API routes so they take priority
+// 7) Serve built frontend (if present) — after API routes so they take priority
 const publicDir = join(__dirname, "public");
 if (existsSync(publicDir) && process.env.SERVE_FRONTEND !== "false") {
   const { default: serveStatic } = await import("serve-static");

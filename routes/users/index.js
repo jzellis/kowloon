@@ -56,7 +56,7 @@ router.get("/:id/posts", async (req, res, next) => {
     description: `Public posts by ${handle}`,
     domain,
   });
-  res.set("Content-Type", "application/rss+xml").send(xml);
+  res.set("Content-Type", "text/xml; charset=UTF-8").send(xml);
 }, posts);
 router.get("/:id/circles", circles);
 router.get("/:id/bookmarks", bookmarks);

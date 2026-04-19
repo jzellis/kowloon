@@ -33,7 +33,7 @@ router.get("/:id/posts", async (req, res, next) => {
     description: group.description || `Posts from the ${group.name || groupId} group`,
     domain,
   });
-  res.set("Content-Type", "application/rss+xml").send(xml);
+  res.set("Content-Type", "text/xml; charset=UTF-8").send(xml);
 }, posts);
 // S2S: remote servers deliver to group inbox
 router.post("/:id/inbox", inboxPost);

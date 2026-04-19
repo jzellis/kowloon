@@ -26,7 +26,7 @@ router.get("/", async (req, res, next) => {
     description: `Public posts from ${siteName}`,
     domain,
   });
-  res.set("Content-Type", "application/rss+xml").send(xml);
+  res.set("Content-Type", "text/xml; charset=UTF-8").send(xml);
 }, collection);
 router.get("/server", server);
 router.get("/:id", id);

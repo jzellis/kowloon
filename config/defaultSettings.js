@@ -236,6 +236,14 @@ const defaultSettings = (ctx) => {
       ui: { type: "json", label: "Email Server", group: "email", order: 1 },
     },
 
+    requireEmailVerification: {
+      value: false,
+      summary: "Require new users to verify their email address before they can log in.",
+      to: "@admin",
+      canEdit: "@admin",
+      ui: { type: "boolean", label: "Require Email Verification", group: "email", order: 2 },
+    },
+
     // ── Security / keys (read-only) ──────────────────────────────────────────
     publicKey: {
       value: publicKey,

@@ -54,6 +54,24 @@ export function inviteEmail({ inviteUrl, email, welcomeMessage, note }) {
   };
 }
 
+export function verificationEmail({ verifyUrl }) {
+  const domain = getSetting("domain") || "localhost";
+  const siteName = getSetting("siteName") || "Kowloon";
+
+  const content = `
+    <p>Thanks for signing up for <strong>${siteName}</strong>!</p>
+    <p>Click the button below to verify your email address. This link expires in 24 hours.</p>
+    <p><a class="btn" href="${verifyUrl}">Verify Email Address</a></p>
+    <p>Or copy this link:<br><code>${verifyUrl}</code></p>
+    <p>If you didn't create an account, you can ignore this email.</p>
+  `;
+
+  return {
+    subject: `Verify your email address for ${siteName}`,
+    html: baseLayout(siteName, domain, content),
+  };
+}
+
 export function passwordResetEmail({ resetUrl }) {
   const domain = getSetting("domain") || "localhost";
   const siteName = getSetting("siteName") || "Kowloon";

@@ -1,6 +1,7 @@
 // /methods/auth/login.js
 import { User } from "#schema";
 import generateToken from "#methods/generate/token.js";
+import { getSetting } from "#methods/settings/cache.js";
 
 const S = (v) => (typeof v === "string" ? v : v == null ? "" : String(v));
 
@@ -21,7 +22,7 @@ export default async function login(input, maybePassword = "") {
   const query = actorId ? { id: actorId } : { username };
   const userDoc = await User.findOne(query)
     .select(
-      "id username type profile prefs publicKey password lastLogin circles"
+      "id username type profile prefs publicKey password lastLogin circles emailVerified"
     )
     .lean(false); // need a Mongoose doc to call instance methods
 
@@ -29,6 +30,10 @@ export default async function login(input, maybePassword = "") {
 
   const ok = await userDoc.verifyPassword(password); // bcrypt compare via schema method
   if (!ok) return { error: "Invalid credentials" };
+
+  if (getSetting("requireEmailVerification") === true && !userDoc.emailVerified) {
+    return { error: "Please verify your email address before logging in.", unverified: true };
+  }
 
   // (optional) best-effort lastLogin update
   try {

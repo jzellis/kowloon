@@ -68,6 +68,12 @@ export default route(
     }
 
     if (!result || result.error) {
+      if (result?.unverified) {
+        setStatus(403);
+        set("error", result.error);
+        set("unverified", true);
+        return;
+      }
       // Clean 401 for any auth error ("Invalid credentials", "No password set", etc.)
       setStatus(401);
       set("error", result?.error || "Invalid credentials");

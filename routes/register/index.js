@@ -4,12 +4,15 @@
 // Body: { username, password, email?, profile?, ... }
 // Response (JSON): { user, token }
 
+import crypto from "crypto";
 import express from "express";
 import route from "#routes/utils/route.js";
 import generateToken from "#methods/generate/token.js";
 import getSettings from "#methods/settings/get.js";
 import { User, Invite } from "#schema";
 import { strictRateLimiter } from "../middleware/rateLimiter.js";
+import sendEmail from "#methods/email/index.js";
+import { verificationEmail } from "#methods/email/templates.js";
 
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 const isNonEmpty = (s) => typeof s === "string" && s.trim().length > 0;
@@ -178,6 +181,19 @@ const registerHandler = route(
       return;
     }
 
+    const requireEmailVerification = settings.requireEmailVerification === true;
+
+    if (requireEmailVerification && !isNonEmpty(input.email)) {
+      setStatus(400);
+      set("error", "email is required");
+      return;
+    }
+
+    let verificationToken;
+    if (requireEmailVerification) {
+      verificationToken = crypto.randomBytes(32).toString("hex");
+    }
+
     // Create; your User pre-save hook will:
     // - hash password if modified
     // - set id (@user@domain), actorId (URL), url, server/domain/jwksUrl
@@ -191,6 +207,11 @@ const registerHandler = route(
       to: input.to,
       canReply: input.canReply,
       canReact: input.canReact,
+      ...(requireEmailVerification && {
+        emailVerified: false,
+        emailVerificationToken: verificationToken,
+        emailVerificationExpires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+      }),
     });
 
     // Redeem the invite if one was used
@@ -201,6 +222,21 @@ const registerHandler = route(
         // Log but don't fail registration - user is already created
         console.error("Failed to redeem invite after registration:", err.message);
       }
+    }
+
+    if (requireEmailVerification) {
+      const verifyUrl = `https://${domain}/verify-email?token=${verificationToken}`;
+      try {
+        const { subject, html } = verificationEmail({ verifyUrl });
+        await sendEmail({ to: input.email, subject, html });
+      } catch (err) {
+        console.error("Failed to send verification email:", err.message);
+      }
+
+      setStatus(201);
+      set("requiresVerification", true);
+      set("message", "Account created. Please check your email to verify your address before logging in.");
+      return;
     }
 
     // Generate a full token (same shape as login) so the client gets profile,

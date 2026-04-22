@@ -30,6 +30,9 @@ const UserSchemaDef = {
   email: { type: String, unique: true, sparse: true },
   passwordResetToken: { type: String, select: false },
   passwordResetExpires: { type: Date, select: false },
+  emailVerified: { type: Boolean, default: false },
+  emailVerificationToken: { type: String, select: false },
+  emailVerificationExpires: { type: Date, select: false },
   profile: { type: ProfileSchema, default: {} },
 
   // Preferences (unchanged)

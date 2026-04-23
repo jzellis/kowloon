@@ -244,6 +244,21 @@ const defaultSettings = (ctx) => {
       ui: { type: "boolean", label: "Require Email Verification", group: "email", order: 2 },
     },
 
+    // ── Maintenance ──────────────────────────────────────────────────────────
+    gcRetentionDays: {
+      value: 30,
+      summary: "Days to retain soft-deleted objects before the nightly GC job permanently removes them and their associated files.",
+      to: "@admin",
+      canEdit: "@admin",
+      ui: {
+        type: "number",
+        label: "Deleted Content Retention (days)",
+        group: "maintenance",
+        order: 1,
+        options: { min: 1, max: 365, step: 1 },
+      },
+    },
+
     // ── Security / keys (read-only) ──────────────────────────────────────────
     publicKey: {
       value: publicKey,

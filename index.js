@@ -123,4 +123,12 @@ try {
   console.error("Failed to start poll worker:", err.message);
 }
 
+// Start nightly GC worker (hard-delete aged soft-deleted objects, orphaned FeedItems, files)
+try {
+  const { startGCWorker } = await import("#methods/gc/index.js");
+  startGCWorker();
+} catch (err) {
+  console.error("Failed to start GC worker:", err.message);
+}
+
 export default Kowloon;

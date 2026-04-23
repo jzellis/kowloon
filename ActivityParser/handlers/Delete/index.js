@@ -26,36 +26,11 @@ const MODELS = {
   User,
 };
 
-// Object types that should be tombstoned in FeedItems
-const FEED_CACHEABLE_TYPES = [
-  "Post",
-  "Reply",
-  "Page",
-  "Bookmark",
-  "React",
-  "Group",
-  "Circle",
-];
-
-/**
- * Tombstone FeedItems entry when source object is deleted
- */
-async function tombstoneFeedItems(deletedId, objectType) {
+async function purgeFeedItems(deletedId) {
   try {
-    if (!FEED_CACHEABLE_TYPES.includes(objectType)) return;
-
-    await FeedItems.findOneAndUpdate(
-      { id: deletedId },
-      {
-        $set: {
-          deletedAt: new Date(),
-          tombstoned: true,
-        },
-      }
-    );
+    await FeedItems.deleteOne({ id: deletedId });
   } catch (err) {
-    console.error(`FeedItems tombstone failed for ${deletedId}:`, err.message);
-    // Non-fatal: don't block object deletion if cache tombstone fails
+    console.error(`FeedItems purge failed for ${deletedId}:`, err.message);
   }
 }
 
@@ -133,7 +108,7 @@ async function deleteOne(activity, targetId) {
     (await Model.findOneAndUpdate(query, { $set: tombstoneFields }, { new: true }).lean?.()) ??
     (await Model.findOneAndUpdate(query, { $set: tombstoneFields }, { new: true }));
 
-  await tombstoneFeedItems(deleted.id, parsed.type);
+  await purgeFeedItems(deleted.id);
 
   let resultObj = deleted.toObject ? deleted.toObject() : { ...deleted };
   if (parsed.type === "User") {

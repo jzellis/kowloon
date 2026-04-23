@@ -2,7 +2,8 @@
 import express from "express";
 import route from "../utils/route.js";
 import makeCollection from "../utils/makeCollection.js";
-import { Post, FeedItems } from "#schema";
+import { Post } from "#schema";
+import writeFeedItems from "#methods/feed/writeFeedItems.js";
 
 const router = express.Router({ mergeParams: true });
 
@@ -112,7 +113,10 @@ router.post(
 
       post.deletedAt = null;
       post.deletedBy = null;
+      if (post.type === "Tombstone") post.type = "Note";
       await post.save();
+
+      await writeFeedItems(post.toObject(), "Post");
 
       set("ok", true);
       set("post", sanitize(post.toObject()));

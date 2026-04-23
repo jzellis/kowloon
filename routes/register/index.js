@@ -11,7 +11,7 @@ import generateToken from "#methods/generate/token.js";
 import getSettings from "#methods/settings/get.js";
 import { User, Invite } from "#schema";
 import { strictRateLimiter } from "../middleware/rateLimiter.js";
-import sendEmail from "#methods/email/index.js";
+import { sendEmail } from "#methods/email/index.js";
 import { verificationEmail } from "#methods/email/templates.js";
 
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);

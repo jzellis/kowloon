@@ -15,6 +15,7 @@ import {
 import kowloonId from "#methods/parse/kowloonId.js";
 import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
+import refreshActorCache from "#methods/users/refreshActorCache.js";
 
 const MODELS = {
   Bookmark,
@@ -220,10 +221,18 @@ export default async function Update(activity) {
     // 7. Sync FeedItems cache
     await updateFeedItems(updated, parsed.type, patch);
 
-    // 8. Federation
+    // 8. For local User profile updates, propagate name/icon to all denormalized actor copies
+    if (parsed.type === 'User' && patch.profile) {
+      refreshActorCache(updated.id, {
+        name: updated.profile?.name,
+        icon: updated.profile?.icon,
+      }).catch(() => {}); // fire and forget
+    }
+
+    // 9. Federation
     const federation = await getFederationTargets(activity, updated);
 
-    // 9. Sanitize result — strip sensitive fields from User objects
+    // 10. Sanitize result — strip sensitive fields from User objects
     let resultObj = updated.toObject ? updated.toObject() : { ...updated };
     if (parsed.type === "User") {
       delete resultObj.password;

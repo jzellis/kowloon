@@ -6,7 +6,7 @@ import express from "express";
 import route from "#routes/utils/route.js";
 import { User } from "#schema";
 import { getSetting } from "#methods/settings/cache.js";
-import sendEmail from "#methods/email/index.js";
+import { sendEmail } from "#methods/email/index.js";
 import { verificationEmail } from "#methods/email/templates.js";
 
 const resendVerificationHandler = route(

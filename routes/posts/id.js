@@ -1,5 +1,5 @@
 import route from "../utils/route.js";
-import { FeedItems, File } from "#schema";
+import { FeedItems, File, Post } from "#schema";
 import {
   canView,
   buildFollowerMap,
@@ -79,6 +79,23 @@ export default route(async ({ req, params, set, setStatus }) => {
           return null;
         })
         .filter(Boolean);
+    }
+  }
+
+  // For the owner, include raw editable fields from the Post model
+  if (viewerId && viewerId === feedCacheItem.actorId) {
+    const rawPost = await Post.findOne({ id: feedCacheItem.id })
+      .select("source title href to canReply canReact tags location event")
+      .lean();
+    if (rawPost) {
+      response.source = rawPost.source ?? null;
+      response.title = rawPost.title ?? null;
+      response.href = rawPost.href ?? null;
+      response.to = rawPost.to ?? null;
+      response.tags = rawPost.tags ?? [];
+      response.location = rawPost.location ?? null;
+      response.startTime = rawPost.event?.startDate ?? null;
+      response.endTime = rawPost.event?.endDate ?? null;
     }
   }
 

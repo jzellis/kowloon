@@ -62,6 +62,8 @@ const BookmarkSchema = new Schema(
     actorId: { type: String, default: undefined }, // DEPRECATED
     actor: { type: Object, default: undefined }, // DEPRECATED
     server: { type: String, default: undefined }, // host/domain (kept if you use it elsewhere)
+
+    signature: { type: Buffer, default: undefined },
   },
   {
     strict: false,
@@ -163,10 +165,23 @@ BookmarkSchema.pre("save", async function (next) {
       }
     }
 
+    const User = mongoose.model("User");
+    const actor = await User.findOne({ id: this.actorId });
+    if (actor) {
+      this.signature = actor.sign(`${this.id}|${this.href || this.target || ""}|${this.source?.content || ""}`);
+    }
+
     next();
   } catch (err) {
     next(err);
   }
 });
+
+BookmarkSchema.methods.verifySignature = async function () {
+  const User = mongoose.model("User");
+  const actor = await User.findOne({ id: this.actorId });
+  if (!actor) return false;
+  return actor.verify(`${this.id}|${this.href || this.target || ""}|${this.source?.content || ""}`, this.signature);
+};
 
 export default mongoose.model("Bookmark", BookmarkSchema);

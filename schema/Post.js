@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { marked } from "marked";
-import crypto from "crypto";
+import { signData, verifyData } from "#methods/utils/signing.js";
 import { Settings, User, React, Reply, Circle } from "./index.js";
 import GeoPoint from "./subschema/GeoPoint.js";
 import ActorSchema from "./subschema/Actor.js";
@@ -126,18 +126,9 @@ PostSchema.pre("save", async function (next) {
     //     this.body.match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g).length > 3 ? " ..." : ""
     //   }</p>`;
 
-    let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
-    // Sign this post using the user's private key if it's not signed
+    let actor = await User.findOne({ id: this.actorId });
     if (actor) {
-      // let stringject = Buffer.from(`${this.id} | ${this.createdAt}`);
-      // const sign = crypto.createSign("RSA-SHA256");
-      // sign.update(stringject);
-      // this.signature = sign.sign(actor.privateKey, "base64");
-
-      const sign = crypto.createSign("SHA256");
-      sign.update(this.source.content);
-      sign.end();
-      this.signature = sign.sign(actor.privateKey, "base64");
+      this.signature = actor.sign(`${this.id}|${this.source.content}`);
     }
 
     if (this.type === "Event") {
@@ -159,64 +150,50 @@ PostSchema.pre("save", async function (next) {
 });
 
 PostSchema.pre("updateOne", async function (next) {
-  this.source.mediaType = this.source.mediaType || "text/markdown";
-  switch (this.source.mediaType) {
-    case "text/markdown":
-      this.body = `${marked(this.source.content)}`;
-      break;
-    case "text/markdown":
-      this.body = this.source.content;
-      break;
-    default:
-      this.body = `<p>${this.source.content.replace(
-        /(?:\r\n|\r|\n)/g,
-        "</p><p>",
-      )}</p>`;
-      break;
+  const update = this.getUpdate();
+
+  if (update?.$set?.source?.content !== undefined) {
+    const currentDoc = await this.model.findOne(this.getQuery()).lean();
+    const newSource = { ...(currentDoc?.source || {}), ...update.$set.source };
+
+    update.$set.body = generateBody(newSource);
+    update.$set.wordCount = update.$set.body.replace(/<[^>]*>/g, "").replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").split(" ").length;
+    update.$set.charCount = update.$set.body.replace(/<[^>]*>/g, "").length;
+
+    const actor = await User.findOne({ id: currentDoc.actorId });
+    if (actor) {
+      update.$set.signature = actor.sign(`${currentDoc.id}|${newSource.content}`);
+    }
   }
-
-  this.wordCount =
-    this.wordCount ||
-    this.body
-      .replace(/<[^>]*>/g, "")
-      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
-      .split(" ").length;
-  this.charCount = this.charCount || this.body.replace(/<[^>]*>/g, "").length;
-
-  let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
 
   next();
 });
 
-// Hook for findOneAndUpdate - regenerate body when source.content is updated
 PostSchema.pre("findOneAndUpdate", async function (next) {
   const update = this.getUpdate();
 
-  // Check if source.content is being updated
   if (update?.$set?.source?.content) {
-    // Get the current document to merge source fields
     const currentDoc = await this.model.findOne(this.getQuery()).lean();
     const newSource = {
       ...(currentDoc?.source || {}),
       ...update.$set.source,
     };
 
-    // Regenerate body from the merged source
     update.$set.body = generateBody(newSource);
+
+    const actor = await User.findOne({ id: currentDoc.actorId });
+    if (actor) {
+      update.$set.signature = actor.sign(`${currentDoc.id}|${newSource.content}`);
+    }
   }
 
   next();
 });
 
 PostSchema.methods.verifySignature = async function () {
-  let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
-  let stringject = Buffer.from(JSON.stringify(this.id));
-  return crypto.verify(
-    "RSA-SHA256",
-    stringject,
-    actor.publicKey,
-    this.signature,
-  );
+  const actor = await User.findOne({ id: this.actorId });
+  if (!actor) return false;
+  return actor.verify(`${this.id}|${this.source.content}`, this.signature);
 };
 
 const Post = mongoose.model("Post", PostSchema);

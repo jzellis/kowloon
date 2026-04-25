@@ -27,6 +27,7 @@ const CircleSchema = new Schema(
     deletedBy: { type: String, default: null },
     url: { type: String, default: undefined },
     lastFetchedAt: { type: Date, default: null },
+    signature: { type: Buffer, default: undefined },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }
 );
@@ -50,6 +51,18 @@ CircleSchema.pre("save", async function (next) {
   }
   this.reactCount = (await React.find({ target: this.id }).lean()).length;
   this.replyCount = (await Reply.find({ target: this.id }).lean()).length;
+
+  try {
+    const User = mongoose.model("User");
+    const actor = await User.findOne({ id: this.actorId });
+    if (actor) {
+      const memberList = (this.members || []).map(m => m.id).sort().join(",");
+      this.signature = actor.sign(`${this.id}|${this.name || ""}|${this.to}|${memberList}`);
+    }
+  } catch (e) {
+    // non-fatal — circle saves without signature if actor unavailable
+  }
+
   next();
 });
 
@@ -77,5 +90,13 @@ CircleSchema.post("updateOne", async function () {
     console.error("Circle post-updateOne hook error:", err.message);
   }
 });
+
+CircleSchema.methods.verifySignature = async function () {
+  const User = mongoose.model("User");
+  const actor = await User.findOne({ id: this.actorId });
+  if (!actor) return false;
+  const memberList = (this.members || []).map(m => m.id).sort().join(",");
+  return actor.verify(`${this.id}|${this.name || ""}|${this.to}|${memberList}`, this.signature);
+};
 
 export default mongoose.model("Circle", CircleSchema);

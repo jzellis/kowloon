@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
+import { signData, verifyData } from "#methods/utils/signing.js";
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 import GeoPointSchema from "./subschema/GeoPoint.js";
@@ -320,6 +321,14 @@ UserSchema.methods.getMuted = async function () {
   return (await Circle.findOne({ id: this.circles?.muted })).members.map(
     (m) => m.id,
   );
+};
+
+UserSchema.methods.sign = function (data) {
+  return signData(this.privateKey, data);
+};
+
+UserSchema.methods.verify = function (data, signature) {
+  return verifyData(this.publicKey, data, signature);
 };
 
 UserSchema.methods.createUserSignature = function (timestamp) {

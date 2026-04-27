@@ -56,6 +56,25 @@ export default async function Join(activity, ctx = {}) {
     const target = await Group.findOne({ id: targetId }).lean();
 
     if (!target) {
+      // Remote group: federate the Join activity to the group's home server
+      const parsed = kowloonId(targetId);
+      if (parsed.domain && !isLocalDomain(parsed.domain)) {
+        // Track remote group membership locally so we can fan-out posts later
+        try {
+          const u = await User.findOne({ id: actorId }).lean();
+          if (u?.circles?.groups) {
+            await Circle.updateOne(
+              { id: u.circles.groups, "members.id": { $ne: targetId } },
+              { $push: { members: { id: targetId } }, $inc: { memberCount: 1 } }
+            );
+          }
+        } catch (_) { /* non-fatal */ }
+        return {
+          activity,
+          result: { status: "federated" },
+          federation: { shouldFederate: true, scope: "domain", domains: [parsed.domain] },
+        };
+      }
       return { activity, error: "Join: Group not found" };
     }
 

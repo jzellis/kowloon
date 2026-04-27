@@ -333,6 +333,12 @@ export default async function Create(activity) {
       delete activity.object.endTime;
     }
 
+    // Preserve original ID for federated objects so they're findable by remote ID across servers.
+    // The pre-save hook uses `this.id = this.id || ...` so setting it here is safe.
+    if (activity.federated && activity.objectId && !activity.object.id) {
+      activity.object.id = activity.objectId;
+    }
+
     // If object.actorId is missing, many models will tolerate it, but your
     // outbox added a fallback already. We leave it as-is here.
     let created = await Model.create(activity.object);

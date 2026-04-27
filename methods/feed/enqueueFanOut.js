@@ -10,7 +10,7 @@
 // - Reply: inherits addressing from parent (handled by caller)
 
 import crypto from "crypto";
-import { FeedFanOut, Circle, Group } from "#schema";
+import { FeedFanOut, Circle, Group, User } from "#schema";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 /**
@@ -72,6 +72,13 @@ function parseAudience(to) {
 
   if (groupIds.length > 0) {
     return { type: "group", ids: groupIds };
+  }
+
+  // Check for remote group (group from another server) — fan out to local members
+  for (const token of tokens) {
+    if (token.startsWith("group:")) {
+      return { type: "remote-group", ids: [token] };
+    }
   }
 
   // Default to public if we can't parse
@@ -276,6 +283,42 @@ export default async function enqueueFeedFanOut({
             },
           });
         }
+      }
+    }
+  }
+
+  // REMOTE-GROUP: find local users who joined this remote group and create per-user records
+  else if (parsed.type === "remote-group") {
+    for (const groupId of parsed.ids) {
+      // Find all user Groups circles that contain this remote group as a member
+      const groupsCircles = await Circle.find({ "members.id": groupId }).select("id").lean();
+      if (!groupsCircles.length) continue;
+
+      const circleIds = groupsCircles.map((c) => c.id);
+      const localUsers = await User.find({ "circles.groups": { $in: circleIds } })
+        .select("id")
+        .lean();
+
+      for (const user of localUsers) {
+        operations.push({
+          updateOne: {
+            filter: { dedupeHash: generateDedupeHash(itemId, `${user.id}:${groupId}`) },
+            update: {
+              $setOnInsert: {
+                feedItemId: itemId,
+                objectType,
+                actorId,
+                to: user.id,
+                groupId,
+                reason: "remote-group",
+                canReply: canReply || "public",
+                canReact: canReact || "public",
+                dedupeHash: generateDedupeHash(itemId, `${user.id}:${groupId}`),
+              },
+            },
+            upsert: true,
+          },
+        });
       }
     }
   }

@@ -52,14 +52,9 @@ export async function canView(feedCacheItem, viewerId, context = {}) {
   if (to === "audience") {
     if (!viewerId) return false;
     if (feedCacheItem.actorId === viewerId) return true; // owner always sees own posts
-    if (origin === "local") {
-      // FeedFanOut is the authoritative grant: if this viewer has a fan-out record
-      // for this item, they were in the addressed audience when it was published.
-      return isInFanOutAudience(feedCacheItem.id, viewerId);
-    } else {
-      // Remote: check if viewer has a capability grant
-      return Boolean(grants[viewerId]);
-    }
+    // FeedFanOut is authoritative for both local and remote audience posts
+    // (remote group posts create per-user FeedFanOut records via enqueueFanOut)
+    return isInFanOutAudience(feedCacheItem.id, viewerId);
   }
 
   return false;

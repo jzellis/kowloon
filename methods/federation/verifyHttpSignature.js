@@ -4,6 +4,10 @@ import fetch from "node-fetch";
 import logger from "#methods/utils/logger.js";
 import { SignatureNonce } from "#schema";
 
+// In-memory public key cache: keyId → { pem, fetchedAt }
+const KEY_CACHE = new Map();
+const KEY_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+
 function parseSignatureHeader(sig) {
   // e.g. keyId="...",algorithm="rsa-sha256",headers="(request-target) host date digest",signature="base64..."
   const out = {};
@@ -33,6 +37,12 @@ function buildSigningString(req, headersList) {
 }
 
 async function fetchPublicKeyFromKeyId(keyId) {
+  // Check cache first
+  const cached = KEY_CACHE.get(keyId);
+  if (cached && Date.now() - cached.fetchedAt < KEY_CACHE_TTL_MS) {
+    return cached.keyInfo;
+  }
+
   // Commonly a URL (actor or server key). Fetch it, parse JSON, extract PEM/JWK.
   try {
     const res = await fetch(keyId, { method: "GET", timeout: 5000 });
@@ -46,14 +56,27 @@ async function fetchPublicKeyFromKeyId(keyId) {
       (typeof pk === "object" ? pk?.publicKeyPem : null) ||
       (typeof pk === "string" ? pk : null) ||
       actor?.publicKeyPem;
-    if (pem) return { type: "pem", key: pem };
+    if (pem) {
+      const keyInfo = { type: "pem", key: pem };
+      KEY_CACHE.set(keyId, { keyInfo, fetchedAt: Date.now() });
+      return keyInfo;
+    }
     // JWKS (choose first RSA key)
-    if (json?.keys?.length) return { type: "jwks", jwks: json };
+    if (json?.keys?.length) {
+      const keyInfo = { type: "jwks", jwks: json };
+      KEY_CACHE.set(keyId, { keyInfo, fetchedAt: Date.now() });
+      return keyInfo;
+    }
   } catch (e) {
     logger.warn("verifyHttpSignature: key fetch error", {
       keyId,
       error: e.message,
     });
+    // Return stale cached key if available (better than failing)
+    if (cached) {
+      logger.info("verifyHttpSignature: using stale cached key", { keyId });
+      return cached.keyInfo;
+    }
   }
   throw new Error("unable to resolve key");
 }

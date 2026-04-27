@@ -62,6 +62,16 @@ export default async function enqueueOutbox({
       inboxUrl: `https://${domain}/inbox`,
       host: domain,
     }));
+  } else if (federation?.scope === "group" && federation.groupId) {
+    // Group-addressed activity: extract domain from group ID and deliver to that server
+    const groupId = federation.groupId;
+    const atIdx = groupId.lastIndexOf("@");
+    const groupDomain = atIdx !== -1 ? groupId.slice(atIdx + 1) : null;
+    if (groupDomain) {
+      resolved = [{ target: `@${groupDomain}`, inboxUrl: `https://${groupDomain}/inbox`, host: groupDomain }];
+    } else {
+      resolved = await resolveAudience(activity);
+    }
   } else {
     resolved = await resolveAudience(activity);
   }

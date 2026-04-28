@@ -1,7 +1,6 @@
 // /routes/middleware/rateLimiter.js
-// Simple in-memory rate limiter for federation endpoints
-// For production, consider using Redis-backed rate limiting
 
+import crypto from "crypto";
 import logger from "#methods/utils/logger.js";
 
 // Store for tracking request counts per IP
@@ -106,3 +105,49 @@ export const strictRateLimiter = createRateLimiter({
   max: 20, // Very strict for sensitive endpoints
   message: "Too many requests, please try again later",
 });
+
+// ── Activity deduplicator ─────────────────────────────────────────────────────
+// Rejects identical activities submitted back-to-back within a short window.
+// Catches double-clicks and accidental resubmissions without touching the DB.
+// Key: sha256 of actorId + type + objectType + substantive content + to.
+
+const dedupStore = new Map(); // hash → expiresAt
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, exp] of dedupStore.entries()) {
+    if (exp < now) dedupStore.delete(k);
+  }
+}, 60 * 1000);
+
+export function activityDeduplicator(req, res, next) {
+  if (process.env.RATE_LIMITING_ENABLED === "false") return next();
+  if (req.method !== "POST" || !req.body) return next();
+
+  const body = req.body;
+  const actorId = req.user?.id || body.actorId || "";
+  const type    = body.type || "";
+  const objType = body.objectType || "";
+  const to      = body.to || "";
+  const content =
+    body.object?.source?.content ||
+    body.object?.body             ||
+    body.object?.emoji            ||
+    body.object?.name             ||
+    JSON.stringify(body.object ?? "");
+
+  const hash = crypto
+    .createHash("sha256")
+    .update(`${actorId}|${type}|${objType}|${to}|${content}`)
+    .digest("hex");
+
+  const now = Date.now();
+  const WINDOW = 30_000; // 30 seconds
+
+  if (dedupStore.has(hash) && dedupStore.get(hash) > now) {
+    return res.status(409).json({ error: "Duplicate activity" });
+  }
+
+  dedupStore.set(hash, now + WINDOW);
+  next();
+}

@@ -64,9 +64,11 @@ function authGate(req, res, next) {
   return requireAuth(req, res, next);
 }
 
+import { outboxRateLimiter, activityDeduplicator } from "../middleware/rateLimiter.js";
+
 // Mount handlers
 router.get("/", collection); // S2S pull federation (HTTP Signature auth, handled internally)
-router.post("/", authGate, post);
+router.post("/", outboxRateLimiter, activityDeduplicator, authGate, post);
 router.get("/:id", requireAuth, get);
 
 export default router;

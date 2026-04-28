@@ -5,7 +5,7 @@ import Inbox from "#schema/Inbox.js";
 import { Group, Circle } from "#schema";
 import log from "#methods/utils/logger.js";
 import checkBlocked from "#methods/inbox/checkBlocked.js";
-import { inboxRateLimiter } from "../middleware/rateLimiter.js";
+
 import normalizeInboundActivity from "#methods/federation/normalizeInboundActivity.js";
 import enqueueOutbox from "#methods/federation/enqueueOutbox.js";
 import { getSetting } from "#methods/settings/cache.js";
@@ -278,5 +278,5 @@ export default route(
       }
     });
   },
-  { allowUnauth: true, middleware: [inboxRateLimiter] }
+  { allowUnauth: true }
 );

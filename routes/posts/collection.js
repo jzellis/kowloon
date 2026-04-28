@@ -15,25 +15,9 @@ import feedItemToPost from "#methods/feed/feedItemToPost.js";
 import { getSetting } from "#methods/settings/cache.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
 import kowloonId from "#methods/parse/kowloonId.js";
-
-// Build a proxied serve URL from the current request host (dev-safe).
-// Appends ?token= when a viewer JWT is present so <img> tags can load private files.
-function serveUrl(req, fileId, token, localDomain) {
-  const fileDomain = fileId?.includes("@") ? fileId.slice(fileId.lastIndexOf("@") + 1) : null;
-  if (fileDomain && localDomain && fileDomain.toLowerCase() !== localDomain.toLowerCase()) {
-    return `https://${fileDomain}/files/${encodeURIComponent(fileId)}`;
-  }
-  const proto = req.headers["x-forwarded-proto"] || req.protocol || "http";
-  const host = req.headers["x-forwarded-host"] || req.headers.host;
-  const base = `${proto}://${host}/files/${encodeURIComponent(fileId)}`;
-  return token ? `${base}?token=${token}` : base;
-}
+import { getStorageAdapter } from "#methods/files/index.js";
 
 export default route(async ({ req, query, user, set }) => {
-  // Extract raw JWT for signing file URLs (so <img> tags can load private files)
-  const viewerToken = req.headers.authorization?.match(/^Bearer\s+(.+)$/i)?.[1] ?? null;
-  const localDomain = getSetting("domain");
-
   // Determine visibility tiers for this viewer
   let isLocal = false;
   if (user?.id) {
@@ -64,45 +48,49 @@ export default route(async ({ req, query, user, set }) => {
     FeedItems.countDocuments(filter),
   ]);
 
-  // Collect all File IDs used in `image` or `attachments` across all docs
+  // Collect all local file IDs used in `image` or `attachments` across all docs
   const fileIds = new Set();
   for (const doc of docs) {
     const obj = doc.object ?? {};
-    if (obj.image?.startsWith("file:"))       fileIds.add(obj.image);
+    if (obj.image?.startsWith("file:")) fileIds.add(obj.image);
     for (const id of obj.attachments ?? []) {
       if (id?.startsWith("file:")) fileIds.add(id);
     }
   }
 
-  // Fetch all needed file records in one query
-  const fileMap = new Map();
+  // Generate presigned URLs for all local files in one pass (pure local crypto — no network calls)
+  const presignedMap = new Map(); // fileId → { url, mediaType, name }
   if (fileIds.size > 0) {
+    const storage = await getStorageAdapter();
     const files = await File.find({ id: { $in: [...fileIds] } })
-      .select("id url mediaType name summary")
+      .select("id storageKey mediaType name summary")
       .lean();
-    for (const f of files) fileMap.set(f.id, f);
+    await Promise.all(files.map(async (f) => {
+      if (!f.storageKey) return;
+      try {
+        const url = await storage.getSignedUrl(f.storageKey, 3600);
+        presignedMap.set(f.id, { url, mediaType: f.mediaType ?? "", name: f.name ?? f.summary ?? "" });
+      } catch { /* non-fatal: file omitted from response */ }
+    }));
   }
 
   const items = docs.map((doc) => {
     const item = feedItemToPost(doc);
 
     // Resolve featured image
-    if (item.image) {
-      if (item.image.startsWith("file:")) {
-        item.featuredImage = serveUrl(req, item.image, viewerToken, localDomain);
-      } else if (item.image.startsWith("http")) {
-        item.featuredImage = item.image;
-      }
+    if (item.image?.startsWith("file:")) {
+      item.featuredImage = presignedMap.get(item.image)?.url ?? null;
+    } else if (item.image?.startsWith("http")) {
+      item.featuredImage = item.image;
     }
 
-    // Resolve attachments: replace File ID strings with {url, mediaType, name} objects
+    // Resolve attachments: replace file IDs with {url, mediaType, name} objects
     if (item.attachments?.length) {
       item.attachments = item.attachments
         .map((id) => {
-          if (!id) return null;
-          const f = fileMap.get(id);
-          if (f) return { url: serveUrl(req, id, viewerToken, localDomain), mediaType: f.mediaType ?? "", name: f.name ?? f.summary ?? "" };
-          if (id.startsWith("file:")) return { url: serveUrl(req, id, viewerToken, localDomain), mediaType: "", name: "" };
+          if (!id || typeof id !== "string") return null;
+          const entry = presignedMap.get(id);
+          if (entry) return entry;
           if (id.startsWith("http")) return { url: id, mediaType: "", name: "" };
           return null;
         })

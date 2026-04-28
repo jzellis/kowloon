@@ -5,6 +5,7 @@ import route from "../utils/route.js";
 import { Circle, File } from "#schema";
 import getTimeline from "#methods/feed/getTimeline.js";
 import { getSetting } from "#methods/settings/cache.js";
+import { getStorageAdapter } from "#methods/files/index.js";
 
 const VISIBILITY_MAP = { public: 'Public', server: 'Server', audience: 'Audience' };
 
@@ -13,26 +14,17 @@ function parseUsername(actorId) {
   return actorId.replace(/^@/, '').split('@')[0] || null;
 }
 
-/**
- * Normalize a raw FeedItems document into the shape frontend components expect.
- * Flattens post content from item.object to the top level.
- */
 function normalizeFeedItem(item) {
   const raw = item.toObject ? item.toObject() : { ...item };
   const obj = raw.object ?? {};
   const actor = (obj.actor && Object.keys(obj.actor).length > 0) ? obj.actor : null;
 
   return {
-    // Spread post content fields (body, title, href, tags, event, attachments, etc.)
     ...obj,
-
-    // Top-level identifiers always win
     id: raw.id,
     url: raw.url ?? obj.url,
     objectType: raw.objectType,
     type: raw.type,
-
-    // Author — map actor/actorId → attributedTo (ActivityStreams convention used by frontend)
     attributedTo: {
       id: raw.actorId,
       name: actor?.name ?? parseUsername(raw.actorId),
@@ -40,38 +32,17 @@ function normalizeFeedItem(item) {
       url: actor?.url ?? null,
       server: actor?.server ?? null,
     },
-
-    // Timestamp
     published: raw.publishedAt,
     publishedAt: raw.publishedAt,
-
-    // Visibility string the frontend expects
     visibility: VISIBILITY_MAP[raw.to] ?? 'Public',
-
-    // Capabilities
     canReply: raw.canReply,
     canReact: raw.canReact,
   };
 }
 
-function serveUrl(req, fileId, token, localDomain) {
-  const fileDomain = fileId?.includes("@") ? fileId.slice(fileId.lastIndexOf("@") + 1) : null;
-  if (fileDomain && localDomain && fileDomain.toLowerCase() !== localDomain.toLowerCase()) {
-    // Remote file: point browser directly at the origin server's proxy (no token)
-    return `https://${fileDomain}/files/${encodeURIComponent(fileId)}`;
-  }
-  const proto = req.headers["x-forwarded-proto"] || req.protocol || "http";
-  const host = req.headers["x-forwarded-host"] || req.headers.host;
-  const base = `${proto}://${host}/files/${encodeURIComponent(fileId)}`;
-  return token ? `${base}?token=${token}` : base;
-}
-
 export default route(async ({ req, params, query, user, set, setStatus }) => {
-  const viewerToken = req.headers.authorization?.match(/^Bearer\s+(.+)$/i)?.[1] ?? null;
-  const localDomain = getSetting("domain");
   const circleId = decodeURIComponent(params.id);
 
-  // Always 404 — never reveal whether a circle exists but is private
   const circle = user?.id
     ? await Circle.findOne({ id: circleId, actorId: user.id, deletedAt: null })
         .select("actorId")
@@ -90,51 +61,47 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
   const since = query.since || null;
   const limit = Math.min(Number(query.limit) || 50, 500);
 
-  const result = await getTimeline({
-    viewerId: user.id,
-    circleId,
-    types,
-    since,
-    limit,
-  });
-
+  const result = await getTimeline({ viewerId: user.id, circleId, types, since, limit });
   const normalized = result.items.map(normalizeFeedItem);
 
-  // Resolve File IDs in image and attachments fields to {url, mediaType, name} objects
+  // Collect local file IDs from image and attachments fields
   const fileIds = new Set();
   for (const item of normalized) {
-    if (item.image && item.image.startsWith("file:")) fileIds.add(item.image);
+    if (item.image?.startsWith("file:")) fileIds.add(item.image);
     for (const id of item.attachments ?? []) {
       if (id && typeof id === "string" && id.startsWith("file:")) fileIds.add(id);
     }
   }
 
-  const fileMap = new Map();
+  // Generate presigned URLs for all local files in one pass
+  const presignedMap = new Map(); // fileId → { url, mediaType, name }
   if (fileIds.size > 0) {
+    const storage = await getStorageAdapter();
     const files = await File.find({ id: { $in: [...fileIds] } })
-      .select("id url mediaType name summary")
+      .select("id storageKey mediaType name summary")
       .lean();
-    for (const f of files) fileMap.set(f.id, f);
+    await Promise.all(files.map(async (f) => {
+      if (!f.storageKey) return;
+      try {
+        const url = await storage.getSignedUrl(f.storageKey, 3600);
+        presignedMap.set(f.id, { url, mediaType: f.mediaType ?? "", name: f.name ?? f.summary ?? "" });
+      } catch { /* non-fatal */ }
+    }));
   }
 
   const orderedItems = normalized.map((item) => {
-    if (item.image) {
-      if (item.image.startsWith("file:") && fileMap.has(item.image)) {
-        item.featuredImage = serveUrl(req, item.image, viewerToken, localDomain);
-      } else if (item.image.startsWith("file:")) {
-        // Remote file not in local DB — build URL pointing to origin server
-        item.featuredImage = serveUrl(req, item.image, viewerToken, localDomain);
-      } else if (item.image.startsWith("http")) {
-        item.featuredImage = item.image;
-      }
+    if (item.image?.startsWith("file:")) {
+      item.featuredImage = presignedMap.get(item.image)?.url ?? null;
+    } else if (item.image?.startsWith("http")) {
+      item.featuredImage = item.image;
     }
+
     if (item.attachments?.length) {
       item.attachments = item.attachments
         .map((id) => {
           if (!id || typeof id !== "string") return null;
-          const f = fileMap.get(id);
-          if (f) return { url: serveUrl(req, id, viewerToken, localDomain), mediaType: f.mediaType ?? "", name: f.name ?? f.summary ?? "" };
-          if (id.startsWith("file:")) return { url: serveUrl(req, id, viewerToken, localDomain), mediaType: "", name: "" };
+          const entry = presignedMap.get(id);
+          if (entry) return entry;
           if (id.startsWith("http")) return { url: id, mediaType: "", name: "" };
           return null;
         })
@@ -147,7 +114,5 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
   set("type", "OrderedCollection");
   set("totalItems", orderedItems.length);
   set("orderedItems", orderedItems);
-  if (result.nextCursor) {
-    set("next", result.nextCursor);
-  }
+  if (result.nextCursor) set("next", result.nextCursor);
 });

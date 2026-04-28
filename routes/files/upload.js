@@ -3,6 +3,7 @@
 
 import route from '../utils/route.js';
 import { getStorageAdapter } from '#methods/files/index.js';
+import { validateUpload } from '#methods/files/validateUpload.js';
 import File from '#schema/File.js';
 import isServerAdmin from '#methods/auth/isServerAdmin.js';
 import getSettings from '#methods/settings/get.js';
@@ -21,8 +22,20 @@ export default route(
       return;
     }
 
-    const { originalname: originalFileName, buffer, mimetype } = req.file;
+    const { originalname: originalFileName, mimetype } = req.file;
+    let { buffer } = req.file;
     const { title, summary, generateThumbnail, thumbnailSizes, parentObject } = body;
+
+    // Validate MIME type against allowlist, verify magic bytes, sanitize SVGs,
+    // and re-encode raster images to strip embedded payloads.
+    let mimeType;
+    try {
+      ({ buffer, mimeType } = await validateUpload(buffer, mimetype));
+    } catch (err) {
+      setStatus(415);
+      set('error', err.message);
+      return;
+    }
 
     // Admins may specify an explicit actorId; otherwise use auth user
     let actorId = user.id;
@@ -45,7 +58,7 @@ export default route(
         actorId,
         title,
         summary,
-        contentType: mimetype,
+        contentType: mimeType,
         generateThumbnail: generateThumbnail === 'true' || generateThumbnail === true,
         thumbnailSizes: thumbnailSizes ? JSON.parse(thumbnailSizes) : [200, 400],
         isPublic: false,
@@ -75,7 +88,7 @@ export default route(
         originalFileName,
         name: title || originalFileName,
         summary,
-        type: getFileType(mimetype),
+        type: getFileType(mimeType),
         mediaType: result.metadata.contentType,
         extension: originalFileName.split('.').pop()?.toLowerCase(),
         url: 'pending', // filled in below once we have the id

@@ -5,6 +5,7 @@
 import dns from 'dns';
 import net from 'net';
 import { getStorageAdapter } from './StorageManager.js';
+import { validateUpload } from './validateUpload.js';
 import File from '#schema/File.js';
 import { Post, FeedItems } from '#schema';
 import getSettings from '#methods/settings/get.js';
@@ -106,8 +107,17 @@ export default async function proxyExternalImage({ url, actorId, postId }) {
     const contentLength = parseInt(res.headers.get('content-length') || '0', 10);
     if (contentLength > MAX_SIZE_BYTES) return;
 
-    const buffer = Buffer.from(await res.arrayBuffer());
-    if (!buffer.length || buffer.length > MAX_SIZE_BYTES) return;
+    const rawBuffer = Buffer.from(await res.arrayBuffer());
+    if (!rawBuffer.length || rawBuffer.length > MAX_SIZE_BYTES) return;
+
+    // Validate MIME type, verify magic bytes, sanitize SVGs, re-encode raster images
+    let buffer, mimeType;
+    try {
+      ({ buffer, mimeType } = await validateUpload(rawBuffer, contentType));
+    } catch (err) {
+      console.warn(`[proxyExternalImage] Rejected ${url}: ${err.message}`);
+      return;
+    }
 
     // Derive a filename from the URL path
     let originalFileName = 'image.jpg';
@@ -122,7 +132,7 @@ export default async function proxyExternalImage({ url, actorId, postId }) {
     const result = await storage.upload(buffer, {
       originalFileName,
       actorId,
-      contentType,
+      contentType: mimeType,
       generateThumbnail: true,
       thumbnailSizes: [200, 400],
       isPublic: false,

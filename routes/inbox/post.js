@@ -98,6 +98,21 @@ export default route(
       return;
     }
 
+    // For group fan-out the actor/key domain check is skipped above, but we still must
+    // verify the signing server actually owns the group. Only the group's host server
+    // should be re-broadcasting on its behalf — this prevents evil.local from fanning
+    // out posts into a group hosted on kwln1.local.
+    if (isGroupFanout) {
+      const groupDomain = body.to.slice(body.to.lastIndexOf("@") + 1);
+      let keyDomain = null;
+      try { keyDomain = new URL(sig.keyId).hostname; } catch (_) {}
+      if (!keyDomain || keyDomain !== groupDomain) {
+        setStatus(403);
+        set({ error: `Group fan-out rejected: signer (${keyDomain ?? "unknown"}) does not own group on ${groupDomain}` });
+        return;
+      }
+    }
+
     // 2) Check if actor is blocked before processing
     const isBlocked = await checkBlocked({
       actorId,

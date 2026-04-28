@@ -42,9 +42,30 @@ await initKowloon(Kowloon, {
 
 // 4) Build Express
 const app = express();
-app.use(cors());
-app.use(express.json({ limit: "100mb" }));
-app.use(express.urlencoded({ extended: true, limit: "50mb" }));
+
+// Allow the server's own origin by default. Admins running the frontend on a
+// separate domain can set CORS_ORIGIN (comma-separated) to add extra origins.
+// Federation (server-to-server) and native clients are unaffected by CORS.
+const _corsDomain = process.env.DOMAIN;
+const _corsExtra = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(",").map((s) => s.trim()).filter(Boolean)
+  : [];
+const _corsAllowed = new Set([
+  ...(process.env.NODE_ENV !== "production" ? ["http://localhost:5173", "http://localhost:3000"] : []),
+  ...(_corsDomain ? [`https://${_corsDomain}`, `http://${_corsDomain}`] : []),
+  ..._corsExtra,
+]);
+app.use(cors({
+  origin: (origin, cb) => {
+    // Non-browser requests (native clients, federation) have no origin — always allow.
+    if (!origin) return cb(null, true);
+    cb(null, _corsAllowed.has(origin) ? origin : false);
+  },
+  credentials: true,
+}));
+
+app.use(express.json({ limit: "1mb" }));
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
 app.use(cookieParser());
 app.use(nocache());
 

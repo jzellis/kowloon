@@ -17,6 +17,14 @@ import kowloonId from "#methods/parse/kowloonId.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 import createNotification from "#methods/notifications/create.js";
 import writeFeedItems from "#methods/feed/writeFeedItems.js";
+import sanitizeHtml from "sanitize-html";
+
+// Strip all HTML tags from markdown source so no raw HTML can enter the pipeline.
+// Preserves the markdown text itself; only removes injected tag characters.
+function stripHtmlFromMarkdown(text) {
+  if (typeof text !== "string") return text;
+  return sanitizeHtml(text, { allowedTags: [], allowedAttributes: {} });
+}
 
 const MODELS = {
   Bookmark,
@@ -258,13 +266,20 @@ export default async function Create(activity) {
       // Keep the top-level content for compatibility
     }
 
-    // Set Post/Reply source defaults
+    // Set Post/Reply source defaults and enforce markdown-only policy.
+    // Regardless of what a client sends, mediaType is always text/markdown.
+    // Raw HTML tags in the content are stripped here so nothing reaches
+    // generateBody (or the federated payload) with injected HTML.
     if (type === "Post" || type === "Reply") {
       if (!activity.object.source) {
         activity.object.source = {};
       }
-      if (!activity.object.source.mediaType) {
-        activity.object.source.mediaType = "text/markdown";
+      activity.object.source.mediaType = "text/markdown";
+      if (activity.object.source.content) {
+        activity.object.source.content = stripHtmlFromMarkdown(activity.object.source.content);
+      }
+      if (activity.object.content) {
+        activity.object.content = stripHtmlFromMarkdown(activity.object.content);
       }
       if (!activity.object.source.contentEncoding) {
         activity.object.source.contentEncoding = "utf-8";

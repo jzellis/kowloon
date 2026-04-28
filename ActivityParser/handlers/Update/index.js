@@ -16,6 +16,12 @@ import kowloonId from "#methods/parse/kowloonId.js";
 import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 import refreshActorCache from "#methods/users/refreshActorCache.js";
+import sanitizeHtml from "sanitize-html";
+
+function stripHtmlFromMarkdown(text) {
+  if (typeof text !== "string") return text;
+  return sanitizeHtml(text, { allowedTags: [], allowedAttributes: {} });
+}
 
 const MODELS = {
   Bookmark,
@@ -171,6 +177,16 @@ export default async function Update(activity) {
 
     // 4. Strip disallowed fields from the patch
     const patch = filterPatch(parsed.type, activity.object);
+
+    // Enforce markdown-only for content fields: strip raw HTML from source.content
+    // regardless of what the client sent, so edits can't inject HTML either.
+    if (patch.source?.content) {
+      patch.source = {
+        ...patch.source,
+        mediaType: "text/markdown",
+        content: stripHtmlFromMarkdown(patch.source.content),
+      };
+    }
 
     // 5. Password change — handled separately; cannot be done by admins on behalf of users
     if (parsed.type === "User" && "password" in activity.object) {

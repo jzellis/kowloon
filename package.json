@@ -54,6 +54,7 @@
     "nodemailer": "^8.0.5",
     "qrcode": "^1.5.4",
     "random-words": "^2.0.1",
+    "sanitize-html": "^2.17.3",
     "serve-static": "^2.2.1",
     "sharp": "^0.34.5",
     "winston": "^3.14.2"

@@ -1,9 +1,32 @@
 import mongoose from "mongoose";
 import { marked } from "marked";
+import sanitizeHtml from "sanitize-html";
 import crypto from "crypto";
 import { Settings, User, Reply, React } from "./index.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 import { type } from "os";
+
+const ALLOWED_TAGS = [
+  "p", "br", "strong", "em", "s", "u", "a", "ul", "ol", "li",
+  "blockquote", "code", "pre", "h1", "h2", "h3", "h4", "h5", "h6",
+  "hr", "img",
+];
+const ALLOWED_ATTRIBUTES = {
+  a: ["href", "title", "rel", "target"],
+  img: ["src", "alt", "title"],
+  code: ["class"],
+  pre: ["class"],
+};
+
+function safeMarkdown(content) {
+  const raw = marked(content ?? "");
+  return sanitizeHtml(raw, {
+    allowedTags: ALLOWED_TAGS,
+    allowedAttributes: ALLOWED_ATTRIBUTES,
+    allowedSchemes: ["http", "https", "mailto"],
+    disallowedTagsMode: "discard",
+  });
+}
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -42,8 +65,8 @@ const PageSchema = new Schema(
     slug: { type: String, default: undefined },
     summary: { type: String, default: undefined }, // An optional summary for page types other than Notes
     source: {
-      content: { type: String, default: "" }, // The raw content of the page -- plain text, HTML or Markdown
-      mediaType: { type: String, default: "text/html" },
+      content: { type: String, default: "" },
+      mediaType: { type: String, default: "text/markdown" },
       contentEncoding: { type: String, default: "utf-8" },
     },
     body: { type: String, default: "" },
@@ -100,22 +123,8 @@ PageSchema.pre("save", async function (next) {
     this.id = this.id || `page:${this._id}@${domain}`;
     this.url = this.url || `https://${domain}/pages/${this.slug}`;
     this.server = this.server || actorId;
-    this.source.mediaType = this.source.mediaType || "text/html";
-
-    switch (this.source.mediaType) {
-      case "text/markdown":
-        this.body = `<p>${marked(this.source.content)}</p>`;
-        break;
-      case "text/html":
-        this.body = this.source.content;
-        break;
-      default:
-        this.body = `<p>${this.source.content.replace(
-          /(?:\r\n|\r|\n)/g,
-          "</p><p>"
-        )}</p>`;
-        break;
-    }
+    this.source.mediaType = "text/markdown";
+    this.body = safeMarkdown(this.source.content);
     this.wordCount =
       this.wordCount ||
       this.body
@@ -155,21 +164,8 @@ PageSchema.pre("updateOne", async function (next) {
   this.slug = this.slug || slugify(this.title);
   this.url = this.url || `https://${domain}/pages/${this.slug}`;
 
-  this.source.mediaType = this.source.mediaType || "text/html";
-  switch (this.source.mediaType) {
-    case "text/markdown":
-      this.body = `${marked(this.source.content)}`;
-      break;
-    case "text/html":
-      this.body = this.source.content;
-      break;
-    default:
-      this.body = `<p>${this.source.content.replace(
-        /(?:\r\n|\r|\n)/g,
-        "</p><p>"
-      )}</p>`;
-      break;
-  }
+  this.source.mediaType = "text/markdown";
+  this.body = safeMarkdown(this.source.content);
 
   this.wordCount =
     this.wordCount ||

@@ -2,7 +2,30 @@
 import mongoose from "mongoose";
 import Settings from "./Settings.js";
 import { marked } from "marked";
+import sanitizeHtml from "sanitize-html";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+
+const ALLOWED_TAGS = [
+  "p", "br", "strong", "em", "s", "u", "a", "ul", "ol", "li",
+  "blockquote", "code", "pre", "h1", "h2", "h3", "h4", "h5", "h6",
+  "hr", "img",
+];
+const ALLOWED_ATTRIBUTES = {
+  a: ["href", "title", "rel", "target"],
+  img: ["src", "alt", "title"],
+  code: ["class"],
+  pre: ["class"],
+};
+
+function safeMarkdown(content) {
+  const raw = marked(content ?? "");
+  return sanitizeHtml(raw, {
+    allowedTags: ALLOWED_TAGS,
+    allowedAttributes: ALLOWED_ATTRIBUTES,
+    allowedSchemes: ["http", "https", "mailto"],
+    disallowedTagsMode: "discard",
+  });
+}
 
 const { Schema } = mongoose;
 
@@ -42,8 +65,8 @@ const BookmarkSchema = new Schema(
     tags: { type: [String], default: [] },
     summary: { type: String, default: undefined },
     source: {
-      content: { type: String, default: "" }, // raw text/HTML/Markdown
-      mediaType: { type: String, default: "text/html" },
+      content: { type: String, default: "" },
+      mediaType: { type: String, default: "text/markdown" },
     },
     body: { type: String, default: "" },
 
@@ -132,22 +155,9 @@ BookmarkSchema.pre("save", async function (next) {
       if (!this.title) this.title = this.href || this.target || this.title;
 
       // Render body from source
-      const mediaType = this.source?.mediaType || "text/html";
       const content = this.source?.content || "";
-      switch (mediaType) {
-        case "text/markdown":
-          this.body = `<div>${marked(content)}</div>`;
-          break;
-        case "text/html":
-          this.body = content;
-          break;
-        default:
-          this.body = `<p>${String(content).replace(
-            /(?:\r\n|\r|\n)/g,
-            "</p><p>",
-          )}</p>`;
-          break;
-      }
+      if (this.source) this.source.mediaType = "text/markdown";
+      this.body = safeMarkdown(content);
 
       // Optional: store server label (domain) if you use it for queries
       if (!this.server) this.server = domain;

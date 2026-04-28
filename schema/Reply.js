@@ -1,8 +1,31 @@
 import mongoose from "mongoose";
 import { marked } from "marked";
+import sanitizeHtml from "sanitize-html";
 import crypto from "crypto";
 import { Settings, User, React } from "./index.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+
+const ALLOWED_TAGS = [
+  "p", "br", "strong", "em", "s", "u", "a", "ul", "ol", "li",
+  "blockquote", "code", "pre", "h1", "h2", "h3", "h4", "h5", "h6",
+  "hr", "img",
+];
+const ALLOWED_ATTRIBUTES = {
+  a: ["href", "title", "rel", "target"],
+  img: ["src", "alt", "title"],
+  code: ["class"],
+  pre: ["class"],
+};
+
+function safeMarkdown(content) {
+  const raw = marked(content ?? "");
+  return sanitizeHtml(raw, {
+    allowedTags: ALLOWED_TAGS,
+    allowedAttributes: ALLOWED_ATTRIBUTES,
+    allowedSchemes: ["http", "https", "mailto"],
+    disallowedTagsMode: "discard",
+  });
+}
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -47,22 +70,8 @@ ReplySchema.pre("save", async function (next) {
   this.id = this.id || `reply:${this._id}@${domain}`;
   this.url = this.url || `https://${domain}/posts/${this.id}`;
   this.server = this.server || actorId;
-  this.source.mediaType = this.source.mediaType || "text/markdown";
-
-  switch (this.source.mediaType) {
-    case "text/markdown":
-      this.body = marked(this.source.content);
-      break;
-    case "text/html":
-      this.body = this.source.content;
-      break;
-    default:
-      this.body = `<p>${this.source.content.replace(
-        /(?:\r\n|\r|\n)/g,
-        "</p><p>"
-      )}</p>`;
-      break;
-  }
+  this.source.mediaType = "text/markdown";
+  this.body = safeMarkdown(this.source.content);
 
   if (!this.parent) this.parent = this.target;
   // let stringject = Buffer.from(this.id);

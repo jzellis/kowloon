@@ -1,10 +1,35 @@
 import mongoose from "mongoose";
 import { marked } from "marked";
+import sanitizeHtml from "sanitize-html";
 import { signData, verifyData } from "#methods/utils/signing.js";
 import { Settings, User, React, Reply, Circle } from "./index.js";
 import GeoPoint from "./subschema/GeoPoint.js";
 import ActorSchema from "./subschema/Actor.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+
+// Tags and attributes allowed in rendered post bodies.
+// Matches what the TipTap editor can produce; no scripts, iframes, or event handlers.
+const ALLOWED_TAGS = [
+  "p", "br", "strong", "em", "s", "u", "a", "ul", "ol", "li",
+  "blockquote", "code", "pre", "h1", "h2", "h3", "h4", "h5", "h6",
+  "hr", "img",
+];
+const ALLOWED_ATTRIBUTES = {
+  a: ["href", "title", "rel", "target"],
+  img: ["src", "alt", "title"],
+  code: ["class"],    // for syntax-highlighted fenced code blocks
+  pre: ["class"],
+};
+
+function safeMarkdown(content) {
+  const raw = marked(content ?? "");
+  return sanitizeHtml(raw, {
+    allowedTags: ALLOWED_TAGS,
+    allowedAttributes: ALLOWED_ATTRIBUTES,
+    allowedSchemes: ["http", "https", "mailto"],
+    disallowedTagsMode: "discard",
+  });
+}
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -82,20 +107,20 @@ PostSchema.virtual("attachmentFiles", {
   foreignField: "id",
 });
 
-// Helper function to generate body from source.content
+// Render source content to sanitized HTML.
+// Only text/markdown is accepted; anything else is treated as plain text.
+// safeMarkdown runs marked() then strips all tags not in the allowlist,
+// so raw HTML embedded in the markdown (e.g. <script>) is discarded.
 function generateBody(source) {
-  if (!source || !source.content) return "";
-
-  const mediaType = source.mediaType || "text/markdown";
-
-  switch (mediaType) {
-    case "text/markdown":
-      return `<p>${marked(source.content)}</p>`;
-    case "text/html":
-      return source.content;
-    default:
-      return `<p>${source.content.replace(/(?:\r\n|\r|\n)/g, "</p><p>")}</p>`;
+  if (!source?.content) return "";
+  if ((source.mediaType ?? "text/markdown") === "text/markdown") {
+    return safeMarkdown(source.content);
   }
+  // Plain text: escape HTML entities, convert newlines to paragraph breaks
+  const escaped = source.content.replace(/[<>&"]/g, (c) =>
+    ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c])
+  );
+  return `<p>${escaped.replace(/(?:\r\n|\r|\n)/g, "</p><p>")}</p>`;
 }
 
 PostSchema.pre("save", async function (next) {

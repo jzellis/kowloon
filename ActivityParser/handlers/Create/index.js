@@ -301,13 +301,21 @@ export default async function Create(activity) {
       activity.object.canReact = activity.canReact;
     }
 
-    // Normalize string locations to GeoPoint format (name preserved, coords 0,0 as unknown sentinel)
-    if (activity.object.location && typeof activity.object.location === "string") {
-      activity.object.location = {
-        name: activity.object.location,
-        type: "Point",
-        coordinates: [0, 0],
-      };
+    // Normalize location to GeoPoint format
+    if (activity.object.location) {
+      const loc = activity.object.location;
+      if (typeof loc === "string") {
+        // Plain string — name only, no coordinates
+        activity.object.location = { name: loc, type: "Point", coordinates: [0, 0] };
+      } else if (loc.type === "Place" && typeof loc.lat === "number" && typeof loc.lon === "number") {
+        // PostComposer sends { type: "Place", name, lat, lon } — convert to GeoJSON
+        activity.object.location = {
+          name: loc.name || "",
+          type: "Point",
+          coordinates: [loc.lon, loc.lat], // GeoJSON: [longitude, latitude]
+        };
+      }
+      // Already-valid GeoPoint objects (type:"Point", coordinates:[lng,lat]) pass through unchanged
     }
 
     // Map featuredImage → image for Post/Reply/Page schemas (schema field is 'image')

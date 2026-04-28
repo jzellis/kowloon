@@ -259,6 +259,15 @@ const defaultSettings = (ctx) => {
       },
     },
 
+    // ── Integrations ────────────────────────────────────────────────────────
+    geocodingUrl: {
+      value: "https://nominatim.openstreetmap.org",
+      summary: "Base URL for the forward/reverse geocoding service. Must be compatible with the Nominatim API. Defaults to the public Nominatim instance; replace with a self-hosted Nominatim or Photon instance if preferred.",
+      to: "@public",
+      canEdit: "@admin",
+      ui: { type: "url", label: "Geocoding Service URL", group: "integrations", order: 1 },
+    },
+
     // ── Security / keys (read-only) ──────────────────────────────────────────
     publicKey: {
       value: publicKey,

@@ -210,17 +210,13 @@ export async function evaluateCapability({
     return follows(viewerId, authorId, followerMap);
   }
 
-  // "audience" → depends on origin
+  // "audience" → FeedFanOut is authoritative for both local and remote posts.
+  // For local posts, try membership map first (avoids a DB query when addressedIds are available).
   if (cap === "audience") {
-    if (origin === "remote") {
-      return Boolean(grants[viewerId]);
-    } else {
-      // Local: membership map if addressedIds are available; fall back to FeedFanOut
-      if (addressedIds.length > 0 && inLocalAudience(viewerId, addressedIds, membershipMap)) {
-        return true;
-      }
-      return isInFanOutAudience(feedItemId, viewerId);
+    if (origin !== "remote" && addressedIds.length > 0 && inLocalAudience(viewerId, addressedIds, membershipMap)) {
+      return true;
     }
+    return isInFanOutAudience(feedItemId, viewerId);
   }
 
   return false;

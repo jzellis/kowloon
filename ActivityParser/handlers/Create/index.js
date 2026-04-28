@@ -286,6 +286,15 @@ export default async function Create(activity) {
       activity.object.canReact = activity.canReact;
     }
 
+    // Normalize string locations to GeoPoint format (name preserved, coords 0,0 as unknown sentinel)
+    if (activity.object.location && typeof activity.object.location === "string") {
+      activity.object.location = {
+        name: activity.object.location,
+        type: "Point",
+        coordinates: [0, 0],
+      };
+    }
+
     // Map featuredImage → image for Post/Reply/Page schemas (schema field is 'image')
     if (activity.object.featuredImage && !activity.object.image) {
       activity.object.image = activity.object.featuredImage;

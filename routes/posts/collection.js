@@ -16,14 +16,24 @@ import { getSetting } from "#methods/settings/cache.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 
-// Build a proxied serve URL from the current request host (dev-safe)
-function serveUrl(req, fileId) {
+// Build a proxied serve URL from the current request host (dev-safe).
+// Appends ?token= when a viewer JWT is present so <img> tags can load private files.
+function serveUrl(req, fileId, token, localDomain) {
+  const fileDomain = fileId?.includes("@") ? fileId.slice(fileId.lastIndexOf("@") + 1) : null;
+  if (fileDomain && localDomain && fileDomain.toLowerCase() !== localDomain.toLowerCase()) {
+    return `https://${fileDomain}/files/${encodeURIComponent(fileId)}`;
+  }
   const proto = req.headers["x-forwarded-proto"] || req.protocol || "http";
   const host = req.headers["x-forwarded-host"] || req.headers.host;
-  return `${proto}://${host}/files/${encodeURIComponent(fileId)}`;
+  const base = `${proto}://${host}/files/${encodeURIComponent(fileId)}`;
+  return token ? `${base}?token=${token}` : base;
 }
 
 export default route(async ({ req, query, user, set }) => {
+  // Extract raw JWT for signing file URLs (so <img> tags can load private files)
+  const viewerToken = req.headers.authorization?.match(/^Bearer\s+(.+)$/i)?.[1] ?? null;
+  const localDomain = getSetting("domain");
+
   // Determine visibility tiers for this viewer
   let isLocal = false;
   if (user?.id) {
@@ -78,8 +88,8 @@ export default route(async ({ req, query, user, set }) => {
 
     // Resolve featured image
     if (item.image) {
-      if (item.image.startsWith("file:") && fileMap.has(item.image)) {
-        item.featuredImage = serveUrl(req, item.image);
+      if (item.image.startsWith("file:")) {
+        item.featuredImage = serveUrl(req, item.image, viewerToken, localDomain);
       } else if (item.image.startsWith("http")) {
         item.featuredImage = item.image;
       }
@@ -91,7 +101,8 @@ export default route(async ({ req, query, user, set }) => {
         .map((id) => {
           if (!id) return null;
           const f = fileMap.get(id);
-          if (f) return { url: serveUrl(req, id), mediaType: f.mediaType ?? "", name: f.name ?? f.summary ?? "" };
+          if (f) return { url: serveUrl(req, id, viewerToken, localDomain), mediaType: f.mediaType ?? "", name: f.name ?? f.summary ?? "" };
+          if (id.startsWith("file:")) return { url: serveUrl(req, id, viewerToken, localDomain), mediaType: "", name: "" };
           if (id.startsWith("http")) return { url: id, mediaType: "", name: "" };
           return null;
         })

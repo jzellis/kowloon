@@ -6,6 +6,24 @@ import createActivity from "#methods/activities/create.js"; // fallback creator
 
 const isObj = (v) => v && typeof v === "object" && !Array.isArray(v);
 const isNonEmptyStr = (s) => typeof s === "string" && s.trim().length > 0;
+
+// Before federating, replace internal file: IDs with public HTTP URLs so remote
+// servers can fetch media without needing access to our internal ID scheme.
+function resolveFileIdsForFederation(activity, domain) {
+  if (!activity?.object || !domain) return activity;
+  const obj = activity.object;
+  const toUrl = (id) =>
+    id?.startsWith("file:") ? `https://${domain}/files/${encodeURIComponent(id)}` : id;
+
+  const clone = { ...activity, object: { ...obj } };
+  if (typeof obj.image === "string") clone.object.image = toUrl(obj.image);
+  if (Array.isArray(obj.attachments)) {
+    clone.object.attachments = obj.attachments.map((a) =>
+      typeof a === "string" ? toUrl(a) : a
+    );
+  }
+  return clone;
+}
 const DEV =
   process.env.NODE_ENV === "development" ||
   /^(1|true|yes)$/i.test(process.env.OUTBOX_DEBUG || "");
@@ -148,8 +166,10 @@ export default route(
         const { default: enqueueOutbox } = await import(
           "#methods/federation/enqueueOutbox.js"
         );
+        const settings = await getSettings();
+        const federationActivity = resolveFileIdsForFederation(created.activity, settings?.domain);
         federationJob = await enqueueOutbox({
-          activity: created.activity,
+          activity: federationActivity,
           activityId: createdId,
           actorId: activity.actorId,
           federation: created.federation,

@@ -4,6 +4,7 @@
 import route from "../utils/route.js";
 import { Circle, File } from "#schema";
 import getTimeline from "#methods/feed/getTimeline.js";
+import { getSetting } from "#methods/settings/cache.js";
 
 const VISIBILITY_MAP = { public: 'Public', server: 'Server', audience: 'Audience' };
 
@@ -53,13 +54,21 @@ function normalizeFeedItem(item) {
   };
 }
 
-function serveUrl(req, fileId) {
+function serveUrl(req, fileId, token, localDomain) {
+  const fileDomain = fileId?.includes("@") ? fileId.slice(fileId.lastIndexOf("@") + 1) : null;
+  if (fileDomain && localDomain && fileDomain.toLowerCase() !== localDomain.toLowerCase()) {
+    // Remote file: point browser directly at the origin server's proxy (no token)
+    return `https://${fileDomain}/files/${encodeURIComponent(fileId)}`;
+  }
   const proto = req.headers["x-forwarded-proto"] || req.protocol || "http";
   const host = req.headers["x-forwarded-host"] || req.headers.host;
-  return `${proto}://${host}/files/${encodeURIComponent(fileId)}`;
+  const base = `${proto}://${host}/files/${encodeURIComponent(fileId)}`;
+  return token ? `${base}?token=${token}` : base;
 }
 
 export default route(async ({ req, params, query, user, set, setStatus }) => {
+  const viewerToken = req.headers.authorization?.match(/^Bearer\s+(.+)$/i)?.[1] ?? null;
+  const localDomain = getSetting("domain");
   const circleId = decodeURIComponent(params.id);
 
   // Always 404 — never reveal whether a circle exists but is private
@@ -111,7 +120,10 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
   const orderedItems = normalized.map((item) => {
     if (item.image) {
       if (item.image.startsWith("file:") && fileMap.has(item.image)) {
-        item.featuredImage = serveUrl(req, item.image);
+        item.featuredImage = serveUrl(req, item.image, viewerToken, localDomain);
+      } else if (item.image.startsWith("file:")) {
+        // Remote file not in local DB — build URL pointing to origin server
+        item.featuredImage = serveUrl(req, item.image, viewerToken, localDomain);
       } else if (item.image.startsWith("http")) {
         item.featuredImage = item.image;
       }
@@ -121,7 +133,8 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
         .map((id) => {
           if (!id || typeof id !== "string") return null;
           const f = fileMap.get(id);
-          if (f) return { url: serveUrl(req, id), mediaType: f.mediaType ?? "", name: f.name ?? f.summary ?? "" };
+          if (f) return { url: serveUrl(req, id, viewerToken, localDomain), mediaType: f.mediaType ?? "", name: f.name ?? f.summary ?? "" };
+          if (id.startsWith("file:")) return { url: serveUrl(req, id, viewerToken, localDomain), mediaType: "", name: "" };
           if (id.startsWith("http")) return { url: id, mediaType: "", name: "" };
           return null;
         })

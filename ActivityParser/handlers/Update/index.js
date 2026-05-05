@@ -40,7 +40,7 @@ const ALLOWED_FIELDS = {
   User:     new Set(["profile", "prefs", "to", "canReply", "canReact", "email", "username"]),
   Post:     new Set(["title", "summary", "source", "body", "type", "tags", "to", "canReply", "canReact", "image", "attachments", "href", "target", "location", "event"]),
   Reply:    new Set(["source", "body", "tags"]),
-  Page:     new Set(["title", "summary", "source", "body", "slug", "tags", "to", "canReply", "canReact", "image", "attachments", "href", "parentFolder", "order"]),
+  Page:     new Set(["title", "summary", "source", "body", "slug", "tags", "to", "canReply", "canReact", "image", "attachments", "href", "parentId", "order"]),
   Bookmark: new Set(["title", "summary", "type", "tags", "to", "canReply", "canReact", "href", "target"]),
   Circle:   new Set(["name", "description", "to", "canReply", "canReact"]),
   Group:    new Set(["name", "description", "icon", "to", "canReply", "canReact", "rsvpPolicy", "location"]),

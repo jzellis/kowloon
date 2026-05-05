@@ -188,7 +188,7 @@ async function main() {
       slug: fields.slug,
       summary: fields.summary,
       order: fields.order ?? 0,
-      parentFolder,
+      parentId: parentFolder,
       source: fields.source,
       to: "@public",
       canReply: "@public",

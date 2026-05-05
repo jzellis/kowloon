@@ -16,6 +16,6 @@ export default makeCollection({
     return filter;
   },
   select:
-    "id type title slug summary url image tags to parentFolder order createdAt updatedAt",
+    "id type title slug summary url image tags to parentId order createdAt updatedAt",
   sort: { order: 1, createdAt: -1 },
 });

@@ -50,5 +50,8 @@ export default function feedItemToPost(doc) {
     reactCount:  obj.reactCount  ?? 0,
     reactPreview: obj.reactPreview ?? null,
     shareCount:  obj.shareCount  ?? 0,
+    // Event dates — map nested schema fields to flat API fields
+    startTime:   (doc.type === 'Event' || obj.type === 'Event') ? (obj.event?.startDate ?? null) : undefined,
+    endTime:     (doc.type === 'Event' || obj.type === 'Event') ? (obj.event?.endDate   ?? null) : undefined,
   };
 }

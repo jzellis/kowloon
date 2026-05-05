@@ -30,7 +30,7 @@ router.get(
 
     const [docs, total] = await Promise.all([
       Circle.find(filter)
-        .select("id name summary icon memberCount to createdAt updatedAt")
+        .select("id name summary icon memberCount to lastSeenAt createdAt updatedAt")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -60,6 +60,54 @@ router.get(
 router.get("/browse", browse);
 router.get("/:id", id);
 router.get("/:id/posts", posts);
+
+// PATCH /circles/:id/seen — update the high-water mark for this circle's feed
+router.patch(
+  "/:id/seen",
+  route(async ({ params, body, user, set, setStatus }) => {
+    if (!user?.id) {
+      setStatus(401);
+      set("error", "Authentication required");
+      return;
+    }
+
+    const circleId = decodeURIComponent(params.id);
+    const circle = await Circle.findOne({ id: circleId, deletedAt: null })
+      .select("id actorId lastSeenAt")
+      .lean();
+
+    if (!circle) {
+      setStatus(404);
+      set("error", "Circle not found");
+      return;
+    }
+
+    if (circle.actorId !== user.id) {
+      setStatus(403);
+      set("error", "Only the circle owner can update seen state");
+      return;
+    }
+
+    const incoming = body?.lastSeenAt ? new Date(body.lastSeenAt) : null;
+    if (!incoming || isNaN(incoming.getTime())) {
+      setStatus(400);
+      set("error", "lastSeenAt must be a valid ISO date string");
+      return;
+    }
+
+    // Only advance the mark — never move it backwards
+    const current = circle.lastSeenAt ? new Date(circle.lastSeenAt) : null;
+    if (current && incoming <= current) {
+      set("ok", true);
+      set("lastSeenAt", circle.lastSeenAt);
+      return;
+    }
+
+    await Circle.updateOne({ id: circleId }, { $set: { lastSeenAt: incoming } });
+    set("ok", true);
+    set("lastSeenAt", incoming);
+  })
+);
 
 // GET /circles/:id/members — list members of a circle (authorized users)
 router.get(

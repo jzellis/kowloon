@@ -310,7 +310,7 @@ async function main() {
       { label: "public",  to: "@public",             canReply: "@public",             canReact: "@public" },
       { label: "server",  to: `@${DOMAIN}`,           canReply: `@${DOMAIN}`,           canReact: "@public" },
       { label: "circle",  to: userCircles.public.id,  canReply: userCircles.public.id,  canReact: `@${DOMAIN}` },
-      { label: "private", to: user.id,                canReply: user.id,                canReact: user.id },
+      { label: "private", to: userCircles.private.id,  canReply: userCircles.private.id,  canReact: userCircles.private.id },
     ];
 
     posts[name] = {};

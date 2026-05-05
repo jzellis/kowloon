@@ -37,6 +37,8 @@ function normalizeFeedItem(item) {
     visibility: VISIBILITY_MAP[raw.to] ?? 'Public',
     canReply: raw.canReply,
     canReact: raw.canReact,
+    startTime: raw.type === 'Event' ? (obj.event?.startDate ?? null) : undefined,
+    endTime:   raw.type === 'Event' ? (obj.event?.endDate   ?? null) : undefined,
   };
 }
 
@@ -58,10 +60,10 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
   const types = query.types
     ? String(query.types).split(",").map((s) => s.trim()).filter(Boolean)
     : [];
-  const since = query.since || null;
+  const before = query.before || null;
   const limit = Math.min(Number(query.limit) || 50, 500);
 
-  const result = await getTimeline({ viewerId: user.id, circleId, types, since, limit });
+  const result = await getTimeline({ viewerId: user.id, circleId, types, before, limit });
   const normalized = result.items.map(normalizeFeedItem);
 
   // Collect local file IDs from image and attachments fields
@@ -111,8 +113,8 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
   });
 
   set("@context", "https://www.w3.org/ns/activitystreams");
-  set("type", "OrderedCollection");
-  set("totalItems", orderedItems.length);
+  set("type", "OrderedCollectionPage");
+  set("totalItems", result.total);
   set("orderedItems", orderedItems);
-  if (result.nextCursor) set("next", result.nextCursor);
+  if (result.nextCursor) set("nextCursor", result.nextCursor);
 });

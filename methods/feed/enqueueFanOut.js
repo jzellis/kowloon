@@ -81,8 +81,8 @@ function parseAudience(to) {
     }
   }
 
-  // Default to public if we can't parse
-  return { type: "public", ids: [] };
+  // Unrecognized addressing — skip fan-out rather than expose publicly
+  return { type: "invalid", ids: [] };
 }
 
 /**
@@ -321,6 +321,11 @@ export default async function enqueueFeedFanOut({
         });
       }
     }
+  }
+
+  if (parsed.type === "invalid") {
+    console.warn(`enqueueFeedFanOut: unrecognized 'to' value "${to}" for ${itemId} — skipping fan-out`);
+    return { created: 0, total: 0 };
   }
 
   if (operations.length === 0) {

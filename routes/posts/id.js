@@ -84,6 +84,12 @@ export default route(async ({ req, params, set, setStatus }) => {
       .filter(Boolean);
   }
 
+  // Map event dates for all viewers
+  if (feedCacheItem.type === 'Event') {
+    response.startTime = response.event?.startDate ?? null;
+    response.endTime   = response.event?.endDate   ?? null;
+  }
+
   // For the owner, include raw editable fields from the Post model
   if (viewerId && viewerId === feedCacheItem.actorId) {
     const rawPost = await Post.findOne({ id: feedCacheItem.id })
@@ -97,7 +103,7 @@ export default route(async ({ req, params, set, setStatus }) => {
       response.tags = rawPost.tags ?? [];
       response.location = rawPost.location ?? null;
       response.startTime = rawPost.event?.startDate ?? null;
-      response.endTime = rawPost.event?.endDate ?? null;
+      response.endTime   = rawPost.event?.endDate   ?? null;
     }
   }
 

@@ -94,16 +94,16 @@ async function updateMemberFetchedAt(circleId, circle, memberIds) {
  * @param {string} options.viewerId - Required: user requesting timeline
  * @param {string} options.circleId - Required: Circle to view timeline for
  * @param {string[]} [options.types=[]] - Filter by post types (Note, Article, etc.)
- * @param {string|Date} [options.since=null] - Pagination cursor (ISO string or Date)
+ * @param {string|Date} [options.before=null] - Pagination cursor: return items older than this date
  * @param {number} [options.limit=50] - Max results
  *
- * @returns {Promise<{items: Array, nextCursor: string|null}>}
+ * @returns {Promise<{items: Array, nextCursor: string|null, total: number}>}
  */
 export default async function getTimeline({
   viewerId,
   circleId,
   types = [],
-  since = null,
+  before = null,
   limit = 50,
 } = {}) {
   if (!viewerId) throw new Error("getTimeline requires viewerId");
@@ -111,13 +111,13 @@ export default async function getTimeline({
 
   const { domain: ourDomain } = getServerSettings();
 
-  logger.info("getTimeline: Request", { viewerId, circleId, types: types.length, since, limit });
+  logger.info("getTimeline: Request", { viewerId, circleId, types: types.length, before, limit });
 
   // 1. Get circle (with members including lastFetchedAt)
   const circle = await Circle.findOne({ id: circleId }).lean();
   if (!circle) {
     logger.warn("getTimeline: Circle not found", { circleId });
-    return { items: [], nextCursor: null };
+    return { items: [], nextCursor: null, total: 0 };
   }
 
   // Always include the viewer so their own posts appear even when the circle is empty
@@ -158,9 +158,9 @@ export default async function getTimeline({
   for (const [remoteDomain, remoteAuthors] of remoteMembersByDomain.entries()) {
     const remoteGroups = remoteGroupsByDomain.get(remoteDomain) || [];
 
-    // Use oldest lastFetchedAt across these members as the since cursor
-    // (null = at least one member never fetched — pull everything)
-    const pullSince = since ?? oldestFetchedAt(circle, remoteAuthors);
+    // Use oldest lastFetchedAt across these members to determine what to pull.
+    // Always based on fetch history, never on the UI pagination cursor.
+    const pullSince = oldestFetchedAt(circle, remoteAuthors);
 
     const result = await Kowloon.federation.pullFromRemote({
       remoteDomain,
@@ -209,34 +209,41 @@ export default async function getTimeline({
 
   if (feedItemIds.length === 0) {
     logger.info("getTimeline: No FeedFanOut records found", { viewerId, circleId });
-    return { items: [], nextCursor: null };
+    return { items: [], nextCursor: null, total: 0 };
   }
 
   // 7. Query FeedItems by IDs with optional filters
-  const itemsQuery = {
+  const baseQuery = {
     id: { $in: feedItemIds },
     tombstoned: { $ne: true },
     objectType: { $nin: ["Group", "Circle"] },
   };
 
   if (types.length > 0) {
-    itemsQuery.type = { $in: types };
+    baseQuery.type = { $in: types };
   }
 
-  if (since) {
-    const sinceDate = since instanceof Date ? since : new Date(since);
-    itemsQuery.publishedAt = { $gte: sinceDate };
+  // Pagination: items older than `before` cursor (newest-first feed, scroll backward in time)
+  const pageQuery = { ...baseQuery };
+  if (before) {
+    const beforeDate = before instanceof Date ? before : new Date(before);
+    pageQuery.publishedAt = { $lt: beforeDate };
   }
 
-  const items = await FeedItems.find(itemsQuery)
-    .sort({ publishedAt: -1 })
-    .limit(Number(limit))
-    .lean();
+  const [items, total] = await Promise.all([
+    FeedItems.find(pageQuery)
+      .sort({ publishedAt: -1 })
+      .limit(Number(limit))
+      .lean(),
+    FeedItems.countDocuments(baseQuery),
+  ]);
 
-  logger.info("getTimeline: Retrieved items", { viewerId, circleId, count: items.length });
+  logger.info("getTimeline: Retrieved items", { viewerId, circleId, count: items.length, total });
 
-  return {
-    items,
-    nextCursor: items.length > 0 ? new Date(items[items.length - 1].publishedAt).toISOString() : null,
-  };
+  // nextCursor is null when we got fewer items than the limit (end of feed reached)
+  const nextCursor = items.length === Number(limit)
+    ? new Date(items[items.length - 1].publishedAt).toISOString()
+    : null;
+
+  return { items, nextCursor, total };
 }

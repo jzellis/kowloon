@@ -27,6 +27,7 @@ const CircleSchema = new Schema(
     deletedBy: { type: String, default: null },
     url: { type: String, default: undefined },
     lastFetchedAt: { type: Date, default: null },
+    lastSeenAt: { type: Date, default: null },   // high-water mark: most recent post the owner has seen
     signature: { type: Buffer, default: undefined },
   },
   { timestamps: true, toJSON: { virtuals: true }, toObject: { virtuals: true } }

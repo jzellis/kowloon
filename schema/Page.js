@@ -54,7 +54,7 @@ const PageSchema = new Schema(
     id: { type: String, key: true },
     objectType: { type: String, default: "Page" },
     type: { type: String, default: "Page", enum: ["Page", "Folder"] }, // The type of page this is
-    parentFolder: { type: String, default: null },
+    parentId: { type: String, default: null }, // Kowloon ID of parent Page or Folder (null = top-level)
     order: { type: Number, default: 0 },
     url: { type: String }, // The URL of the page
     href: { type: String, default: undefined }, // If the page is a link, this is what it links to
@@ -161,21 +161,19 @@ PageSchema.pre("save", async function (next) {
 });
 
 PageSchema.pre("updateOne", async function (next) {
-  this.slug = this.slug || slugify(this.title);
-  this.url = this.url || `https://${domain}/pages/${this.slug}`;
+  const update = this.getUpdate();
+  if (update?.$set?.source?.content !== undefined) {
+    const currentDoc = await this.model.findOne(this.getQuery()).lean();
+    const newSource = { ...(currentDoc?.source || {}), ...update.$set.source };
 
-  this.source.mediaType = "text/markdown";
-  this.body = safeMarkdown(this.source.content);
+    update.$set.body = safeMarkdown(newSource.content);
+    update.$set.wordCount = update.$set.body.replace(/<[^>]*>/g, "").replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").split(" ").length;
+    update.$set.charCount = update.$set.body.replace(/<[^>]*>/g, "").length;
+  }
 
-  this.wordCount =
-    this.wordCount ||
-    this.body
-      .replace(/<[^>]*>/g, "")
-      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
-      .split(" ").length;
-  this.charCount = this.charCount || this.body.replace(/<[^>]*>/g, "").length;
-
-  let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
+  if (update?.$set?.title && !update.$set.slug) {
+    update.$set.slug = slugify(update.$set.title);
+  }
 
   next();
 });

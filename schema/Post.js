@@ -21,6 +21,43 @@ const ALLOWED_ATTRIBUTES = {
   pre: ["class"],
 };
 
+// Generate a summary for timeline display.
+// Algorithm:
+//   1. ≤ 2 paragraphs, all < 1000 chars → no truncation needed
+//   2. > 2 paragraphs, first 2 both < 1000 chars → show first 2 paragraphs
+//   3. Otherwise (long paragraphs, or many short ones with a long one) →
+//      truncate by sentence boundary until total ≈ 1000 chars
+export function generateSummary(source) {
+  const content = source?.content;
+  if (!content?.trim()) return undefined;
+
+  const paragraphs = content.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
+
+  // Short post — no summary needed
+  if (paragraphs.length <= 2 && paragraphs.every(p => p.length < 1000)) {
+    return undefined;
+  }
+
+  // More than 2 paragraphs, first 2 are readable length
+  if (paragraphs.length > 2) {
+    const first2 = paragraphs.slice(0, 2);
+    if (first2.every(p => p.length < 1000)) {
+      return safeMarkdown(first2.join('\n\n'));
+    }
+  }
+
+  // Sentence-level truncation to ~1000 chars
+  const fullText = paragraphs.join(' ');
+  const sentences = fullText.split(/(?<=[.!?])\s+/);
+  let result = '';
+  for (const sentence of sentences) {
+    if (result.length + sentence.length > 1000) break;
+    result += (result ? ' ' : '') + sentence;
+  }
+
+  return result ? safeMarkdown(result) : undefined;
+}
+
 function safeMarkdown(content) {
   const raw = marked(content ?? "");
   return sanitizeHtml(raw, {
@@ -141,15 +178,7 @@ PostSchema.pre("save", async function (next) {
         .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "")
         .split(" ").length;
     this.charCount = this.charCount || this.body.replace(/<[^>]*>/g, "").length;
-    // this.summary =
-    //   this.summary ||
-    //   `<p>${this.body
-    //     .match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g)
-    //     .slice(0, 3)
-    //     .join("</p>")
-    //     .trim()}${
-    //     this.body.match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g).length > 3 ? " ..." : ""
-    //   }</p>`;
+    this.summary = generateSummary(this.source);
 
     let actor = await User.findOne({ id: this.actorId });
     if (actor) {

@@ -11,6 +11,7 @@ import {
   Group,
   Circle,
   User,
+  FeedItems,
 } from "#schema";
 import createNotification from "#methods/notifications/create.js";
 import kowloonId from "#methods/parse/kowloonId.js";
@@ -108,7 +109,7 @@ export default async function Reply(activity, ctx = {}) {
     const created = await ReplyModel.create(replyData);
     activity.objectId = created.id;
 
-    // 4. Bump replyCount on the parent object
+    // 4. Bump replyCount on the parent object and its FeedItems entry
     // Use raw collection driver to bypass all Mongoose middleware/hooks
     const collections = [
       Post?.collection,
@@ -126,6 +127,8 @@ export default async function Reply(activity, ctx = {}) {
         // ignore model mismatches
       }
     }
+    // Keep FeedItems in sync so getPost returns the updated count immediately
+    await FeedItems.updateOne({ id: targetId }, { $inc: { "object.replyCount": 1 } });
 
     // 5. Create notification for the parent object's author
     try {

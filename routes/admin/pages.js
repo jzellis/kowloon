@@ -9,7 +9,7 @@ const router = express.Router({ mergeParams: true });
 
 // Fields admins can set on create/update
 const ALLOWED_FIELDS = [
-  "type", "title", "slug", "summary", "parentFolder", "order",
+  "type", "title", "slug", "summary", "parentId", "order",
   "source", "image", "attachments", "tags", "to", "canReply", "canReact", "href",
 ];
 
@@ -38,7 +38,7 @@ router.get(
         filter.deletedAt = null;
       }
       if (query.type) filter.type = query.type;
-      if (query.parentFolder) filter.parentFolder = query.parentFolder;
+      if (query.parentId) filter.parentId = query.parentId;
       return filter;
     },
     select: "-signature",

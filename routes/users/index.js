@@ -2,6 +2,7 @@ import express from "express";
 import collection from "./collection.js";
 import id from "./id.js";
 import lookup from "./lookup.js";
+import search from "./search.js";
 import actor from "./actor.js";
 import posts from "./posts.js";
 import circles from "./circles.js";
@@ -17,7 +18,10 @@ import { toRSS } from "#methods/rss/index.js";
 const router = express.Router({ mergeParams: true });
 import Kowloon from "#kowloon";
 
+const STATIC_SEGMENTS = new Set(["lookup", "search"]);
+
 router.param("id", async (req, _res, next, val) => {
+  if (STATIC_SEGMENTS.has(val)) return next();
   if (!val.includes("@") && req.method === "GET") {
     const domain = Kowloon.settings.domain;
     if (domain) req.params.id = `@${val}@${domain}`;
@@ -36,6 +40,7 @@ function isApRequest(req) {
 
 router.get("/", collection);
 router.get("/lookup", lookup);
+router.get("/search", search);
 router.get("/:id", (req, res, next) => {
   if (isApRequest(req)) return actor(req, res, next);
   next();

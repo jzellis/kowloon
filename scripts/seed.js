@@ -329,7 +329,7 @@ async function main() {
         type: type ?? "Page",
         actorId: serverActorId,
         title, slug, summary, order, source,
-        parentFolder,
+        parentId: parentFolder,
         to: "@public", canReply: "@public", canReact: "@public",
       });
       slugToId[slug] = p.id;
@@ -368,7 +368,7 @@ async function main() {
       type: "Page",
       actorId: owner.id,
       title,
-      parentFolder: parent ? parent.id : undefined,
+      parentId: parent ? parent.id : undefined,
       source: { mediaType: "text/markdown", content: md },
       summary: shortText(240),
       to,

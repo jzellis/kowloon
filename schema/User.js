@@ -191,7 +191,7 @@ UserSchema.pre("save", async function (next) {
     // Profile defaults
     this.profile = this.profile || {};
     this.profile.icon =
-      this.profile.icon || `https://${domain}/images/user.png`;
+      this.profile.icon || `https://${domain}/images/user.svg`;
 
     // Keep your existing url behavior
     this.url = this.url || `https://${domain}/users/${this.id}`;

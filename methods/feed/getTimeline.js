@@ -179,7 +179,12 @@ export default async function getTimeline({
   // 5. Get blocked/muted users
   const blockedMutedUsers = await getBlockedMutedUsers(viewerId);
 
-  // 6. Query FeedFanOut for feed item IDs
+  // 6. Query FeedFanOut for feed item IDs.
+  //
+  // The selected circle defines the audience: only items from authors who are
+  // members of THIS circle should appear. We intentionally do NOT include a
+  // catch-all `{ to: viewerId }` clause — that leaked items addressed to the
+  // viewer via OTHER circles into every circle's feed.
   const fanOutActorFilter = blockedMutedUsers.length > 0
     ? { $in: allMembers, $nin: blockedMutedUsers }
     : { $in: allMembers };
@@ -189,10 +194,24 @@ export default async function getTimeline({
       actorId: fanOutActorFilter,
       to: { $in: ["@public", "@server", viewerId] },
     },
-    // Items delivered directly to this viewer by pullFromRemote (e.g. via a
-    // server-level follow where actorId may not be in the circle member list)
-    { to: viewerId },
   ];
+
+  // Server-domain members in this circle (e.g. `@kwln2.local`) — pull in items
+  // from any author whose actorId domain matches one of those servers and was
+  // delivered directly to this viewer. Covers the server-level-follow case
+  // without leaking other circles' content.
+  const serverMemberDomains = (circle.members ?? [])
+    .map((m) => m.id)
+    .filter((id) => typeof id === "string" && id.startsWith("@") && !id.slice(1).includes("@"))
+    .map((id) => id.slice(1));
+
+  if (serverMemberDomains.length > 0) {
+    const escaped = serverMemberDomains.map((d) => d.replace(/[.\\+*?^${}()|[\]]/g, "\\$&"));
+    fanOutOrConditions.push({
+      actorId: { $regex: `@(${escaped.join("|")})$` },
+      to: viewerId,
+    });
+  }
 
   if (localGroups.length > 0) {
     fanOutOrConditions.push({

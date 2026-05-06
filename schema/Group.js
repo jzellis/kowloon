@@ -86,7 +86,7 @@ GroupSchema.pre("save", async function (next) {
     if (!this.id && domain) this.id = `group:${this._id}@${domain}`;
     if (!this.url && domain && this.id)
       this.url = `https://${domain}/groups/${this.id}`;
-    if (!this.icon && domain) this.icon = `https://${domain}/images/group.png`;
+    if (!this.icon && domain) this.icon = `https://${domain}/images/group.svg`;
     if (!this.server && actorId) this.server = actorId;
 
     if (!this.inbox) this.inbox = `https://${domain}/groups/${this.id}/inbox`;

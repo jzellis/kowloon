@@ -95,6 +95,25 @@ app.get("/sitemap.xml", async (req, res) => {
 const routes = (await import("#routes/index.js")).default;
 app.use("/", routes);
 
+// Sample media — dev/seed icons served from the repo's sample-media folder.
+// Mounted unconditionally (not gated on SERVE_FRONTEND) so seeded user/circle/
+// group icon URLs keep resolving in any environment.
+const sampleMediaDir = join(__dirname, "..", "sample-media");
+if (existsSync(sampleMediaDir)) {
+  const { default: serveStatic } = await import("serve-static");
+  app.use("/sample-icons", serveStatic(sampleMediaDir, { maxAge: "1y" }));
+}
+
+// Built-in placeholder icons (user.svg, circle.svg, group.svg) — referenced by
+// schema defaults so a brand-new User/Circle/Group has a valid icon URL even
+// before any custom upload. Mounted unconditionally for the same reason as
+// sample-icons above.
+const imagesDir = join(__dirname, "public", "images");
+if (existsSync(imagesDir)) {
+  const { default: serveStatic } = await import("serve-static");
+  app.use("/images", serveStatic(imagesDir, { maxAge: "1y" }));
+}
+
 // 7) Serve built frontend (if present) — after API routes so they take priority
 const publicDir = join(__dirname, "public");
 if (existsSync(publicDir) && process.env.SERVE_FRONTEND !== "false") {

@@ -40,10 +40,12 @@ export default function makeGetById({
         return;
       }
 
-      // Sanitize the object to remove sensitive fields
-      const sanitized = sanitizeObject(result.object, {
-        objectType: result.object.objectType || result.object.type,
-      });
+      // Sanitize the object. For User profiles, audience-gated personal
+      // fields are filtered based on viewer context.
+      const objectType = result.object.objectType || result.object.type;
+      const isUser    = objectType === "User" || objectType === "Person";
+      const viewerCtx = isUser ? await getViewerContext(viewerId) : null;
+      const sanitized = sanitizeObject(result.object, { objectType, viewer: viewerCtx });
 
       setStatus(200);
       set("item", sanitized);

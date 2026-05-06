@@ -101,8 +101,13 @@ export default route(
 
       await file.save(); // pre-save hook sets file.id = file:<_id>@domain
 
-      // Now set the canonical app-proxied URL and save again
-      file.url = `https://${domain}/files/${file.id}`;
+      // Build the canonical app-proxied URL. Honors X-Forwarded-Proto (Caddy /
+      // nginx in front of the app) and the actual request Host so dev URLs land
+      // at http://kwln.org:3000/... while prod URLs are https://kwln.org/...
+      const proto = req.headers['x-forwarded-proto'] || req.protocol || 'https';
+      const host  = req.headers['x-forwarded-host'] || req.headers.host || domain;
+      const baseUrl = `${proto}://${host}`;
+      file.url = `${baseUrl}/files/${file.id}`;
       await file.save();
 
       // Build thumbnail response URLs (same pattern: /files/<id>?size=<n>)
@@ -110,7 +115,7 @@ export default route(
         ? Object.fromEntries(
             Object.keys(thumbnails).map((size) => [
               size,
-              `https://${domain}/files/${file.id}?size=${size}`,
+              `${baseUrl}/files/${file.id}?size=${size}`,
             ])
           )
         : null;

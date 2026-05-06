@@ -1,0 +1,20 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Hex frame -->
+  <path
+    fill="none"
+    stroke="currentColor"
+    stroke-width="6.75668"
+    transform="matrix(1.7760201,0,0,1.7760201,-32.924208,-82.846169)"
+    d="m 31.542594,126.76095 10e-7,-47.616389 a 2.0642639,2.0642639 120 0 1 1.032132,-1.787705 L 73.811734,53.54866 a 2.0642639,2.0642639 1.2609945e-6 0 1 2.064263,0 L 117.113,77.356858 a 2.0642639,2.0642639 60.000001 0 1 1.03214,1.787705 l -1e-5,47.616397 a 2.0642639,2.0642639 120 0 1 -1.03213,1.7877 l -41.237005,23.8082 a 2.0642639,2.0642639 1.2609945e-6 0 1 -2.064264,0 l -41.237005,-23.8082 a 2.0642639,2.0642639 60.000001 0 1 -1.032132,-1.78771 z"
+  />
+  <!-- Three clustered figures: two front, one centered/back -->
+  <!-- Back center figure (slightly higher) -->
+  <circle cx="100" cy="78" r="13" fill="currentColor"/>
+  <path d="M 78 134 C 78 121 88 110 100 110 C 112 110 122 121 122 134 L 122 138 L 78 138 Z" fill="currentColor"/>
+  <!-- Front-left figure -->
+  <circle cx="68" cy="93" r="13" fill="currentColor"/>
+  <path d="M 46 149 C 46 136 56 125 68 125 C 80 125 90 136 90 149 L 90 153 L 46 153 Z" fill="currentColor"/>
+  <!-- Front-right figure -->
+  <circle cx="132" cy="93" r="13" fill="currentColor"/>
+  <path d="M 110 149 C 110 136 120 125 132 125 C 144 125 154 136 154 149 L 154 153 L 110 153 Z" fill="currentColor"/>
+</svg>

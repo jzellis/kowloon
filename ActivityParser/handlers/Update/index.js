@@ -47,8 +47,9 @@ const ALLOWED_FIELDS = {
   React:    new Set(["emoji", "name"]),
 };
 
-// Object types that should be synced to FeedItems
-const FEED_CACHEABLE_TYPES = ["Post", "Reply", "Page", "Bookmark", "Group", "Circle"];
+// Object types that should be synced to FeedItems.
+// Bookmarks are excluded — they're personal utility, not feed content.
+const FEED_CACHEABLE_TYPES = ["Post", "Reply", "Page", "Group", "Circle"];
 
 /**
  * Strip disallowed fields from patch; return only the allowed subset.
@@ -178,6 +179,20 @@ export default async function Update(activity) {
     // 4. Strip disallowed fields from the patch
     const patch = filterPatch(parsed.type, activity.object);
 
+    // User profile audience: cap to @public or the user's own server domain.
+    // Accept a couple of friendly shorthands ("public", "server") from clients.
+    if (parsed.type === "User" && "to" in patch) {
+      const ownDomain = current.domain || (typeof current.id === "string" ? current.id.split("@").pop() : null);
+      const raw = String(patch.to ?? "").trim().toLowerCase();
+      if (raw === "" || raw === "@public" || raw === "public") {
+        patch.to = "@public";
+      } else if (raw === "server" || (raw.startsWith("@") && ownDomain && raw === `@${ownDomain.toLowerCase()}`)) {
+        patch.to = ownDomain ? `@${ownDomain}` : "@public";
+      } else {
+        return { activity, error: "Update: User.to must be '@public' or '@<own-domain>'" };
+      }
+    }
+
     // Enforce markdown-only for content fields: strip raw HTML from source.content
     // regardless of what the client sent, so edits can't inject HTML either.
     if (patch.source?.content) {
@@ -245,8 +260,10 @@ export default async function Update(activity) {
       }).catch(() => {}); // fire and forget
     }
 
-    // 9. Federation
-    const federation = await getFederationTargets(activity, updated);
+    // 9. Federation — bookmarks are personal-only, never federated.
+    const federation = parsed.type === "Bookmark"
+      ? { shouldFederate: false }
+      : await getFederationTargets(activity, updated);
 
     // 10. Sanitize result — strip sensitive fields from User objects
     let resultObj = updated.toObject ? updated.toObject() : { ...updated };

@@ -5,13 +5,15 @@ import { FeedItems } from "#schema";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 
-const FEED_CACHEABLE_TYPES = ["Post", "Reply", "Page", "Bookmark", "Group", "Circle"];
+// Bookmarks are personal utility, not feed content — they don't generate
+// FeedItems. Users who want to broadcast a URL post a Link instead.
+const FEED_CACHEABLE_TYPES = ["Post", "Reply", "Page", "Group", "Circle"];
 
 function shouldWriteFeedItem(created, objectType) {
   if (!FEED_CACHEABLE_TYPES.includes(objectType)) return false;
   if (objectType === "Post" || objectType === "Reply" || objectType === "Page") return true;
   if (objectType === "Group") return true;
-  if (objectType === "Circle" || objectType === "Bookmark") {
+  if (objectType === "Circle") {
     return created.to !== created.actorId;
   }
   return false;

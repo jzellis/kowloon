@@ -38,6 +38,16 @@ export function sanitizeAudience(obj, ctx) {
 export async function canSeeObject(obj, ctx) {
   if (!obj) return false;
 
+  // User profiles are always findable when active. Personal-info fields
+  // are gated at sanitize time based on the user's `to` audience — see
+  // methods/sanitize/object.js. A deactivated/deleted user 404s.
+  const objType = obj.objectType || obj.type;
+  if (objType === "User" || objType === "Person") {
+    if (obj.deletedAt) return false;
+    if (obj.active === false) return false;
+    return true;
+  }
+
   // The object's owner can always see their own content
   if (ctx?.viewerId) {
     if (obj.actorId && obj.actorId === ctx.viewerId) return true;

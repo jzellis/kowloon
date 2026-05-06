@@ -405,8 +405,12 @@ export default async function Create(activity) {
         .catch(() => {}); // truly non-fatal
     }
 
-    // 3. Determine federation requirements
-    const federation = await getFederationTargets(activity, created);
+    // 3. Determine federation requirements.
+    // Bookmarks are personal utility — they do not federate. Users who
+    // want to broadcast a URL post a Link instead.
+    const federation = type === "Bookmark"
+      ? { shouldFederate: false }
+      : await getFederationTargets(activity, created);
 
     return {
       activity,

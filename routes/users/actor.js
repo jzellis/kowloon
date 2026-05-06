@@ -8,6 +8,7 @@
 
 import { User } from "#schema";
 import sanitizeObject from "#methods/sanitize/object.js";
+import { getViewerContext } from "#methods/visibility/context.js";
 import { getSetting } from "#methods/settings/cache.js";
 
 export default async function actorHandler(req, res) {
@@ -37,7 +38,11 @@ export default async function actorHandler(req, res) {
     return res.status(404).json({ error: "Actor not found" });
   }
 
-  const actor = sanitizeObject(user, { objectType: "User" });
+  // Federation/AP fetches: viewer is whoever's authenticated on the request.
+  // For unauthenticated remote fetches this is null → personal fields are
+  // gated by the user's `to` audience.
+  const viewer = await getViewerContext(req.user?.id || null);
+  const actor  = sanitizeObject(user, { objectType: "User", viewer });
 
   // Serve with AP content type
   res.set("Content-Type", "application/activity+json; charset=utf-8");

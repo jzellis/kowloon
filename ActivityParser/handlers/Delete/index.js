@@ -141,10 +141,14 @@ export default async function Delete(activity) {
       return { activity, error: failed.map((r) => `${r.id}: ${r.error}`).join("; ") };
     }
 
-    // Use the first successful deletion for federation targeting
+    // Use the first successful deletion for federation targeting.
+    // Bookmarks are personal-only, never federated.
     const primary = succeeded[0].deleted;
     activity.objectId = primary.id;
-    const federation = await getFederationTargets(activity, primary);
+    const primaryType = (primary.objectType || primary.type);
+    const federation = primaryType === "Bookmark"
+      ? { shouldFederate: false }
+      : await getFederationTargets(activity, primary);
 
     // Single-target: preserve original response shape for backwards compat
     if (targets.length === 1) {

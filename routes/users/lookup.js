@@ -5,9 +5,10 @@
 import route from "../utils/route.js";
 import Kowloon from "#kowloon";
 import sanitizeObject from "#methods/sanitize/object.js";
+import { getViewerContext } from "#methods/visibility/context.js";
 
 export default route(
-  async ({ query, set, setStatus }) => {
+  async ({ req, query, set, setStatus }) => {
     const { id } = query;
 
     if (!id) {
@@ -30,7 +31,8 @@ export default route(
         return;
       }
 
-      const sanitized = sanitizeObject(result.object, { objectType: "User" });
+      const viewer    = await getViewerContext(req.user?.id || null);
+      const sanitized = sanitizeObject(result.object, { objectType: "User", viewer });
       set("item", sanitized);
     } catch (err) {
       const code =

@@ -1,16 +1,63 @@
 // /methods/sanitize/object.js
-// Sanitize objects for public/authenticated/owner access
+// Sanitize objects for public/authenticated/owner access.
+//
+// User profiles are always visible at a baseline (so discovery and follow flows
+// keep working) but personal-info fields can be gated to @public or @<domain>
+// via the user's `to` setting. See `pickProfileFields` below for the split.
+
+const PERSONAL_FIELDS = ["description", "urls", "pronouns", "location", "subtitle"];
+
+// Decide whether a viewer should see audience-gated personal info on a user.
+// `viewer` is the viewer-context object (see methods/visibility/context.js)
+// or `null` for an anonymous request (e.g. remote AP fetch with no signature).
+function canSeePersonalInfo(user, viewer) {
+  const to = user?.to || "@public";
+
+  // Owner sees everything about themselves.
+  if (viewer?.viewerId && viewer.viewerId === user?.id) return true;
+
+  if (to === "@public") return true;
+
+  // Server-restricted: viewer must be authenticated AND on the same server
+  // as this user. Domain comes from user.domain (preferred) or by parsing
+  // the user.id handle (`@user@domain`).
+  const userDomain = user?.domain || (typeof user?.id === "string" ? user.id.split("@").pop() : null);
+  if (typeof to === "string" && to.startsWith("@") && to !== "@public") {
+    const audienceDomain = to.slice(1);
+    return !!(viewer?.isAuthenticated && viewer?.viewerDomain && viewer.viewerDomain === audienceDomain && audienceDomain === userDomain);
+  }
+
+  // Anything else (legacy circle/group IDs, etc.) — gated.
+  return false;
+}
+
+function pickProfileFields(profile, includePersonal) {
+  if (!profile) return {};
+  const picked = {};
+  if (profile.name != null) picked.name = profile.name;
+  if (profile.icon != null) picked.icon = profile.icon;
+  if (includePersonal) {
+    for (const k of PERSONAL_FIELDS) {
+      if (profile[k] != null) picked[k] = profile[k];
+    }
+  }
+  return picked;
+}
 
 /**
- * Sanitize a User object - always return public fields only.
- * Returns a full ActivityPub actor document.
+ * Sanitize a User object. Returns a full ActivityPub actor document with
+ * personal-info fields gated by the user's `to` audience.
+ *
+ * @param {object} user
+ * @param {object|null} viewer  viewer context from getViewerContext()
  */
-function sanitizeUser(user) {
+function sanitizeUser(user, viewer = null) {
   if (!user) return null;
 
   const actorId = user.actorId || user.id;
+  const personal = canSeePersonalInfo(user, viewer);
+  const profile  = pickProfileFields(user.profile, personal);
 
-  // Full AP publicKey object (required for HTTP signature verification)
   const publicKeyObj = user.publicKey
     ? {
         id: `${actorId}#main-key`,
@@ -19,7 +66,6 @@ function sanitizeUser(user) {
       }
     : undefined;
 
-  // Derive followers/following collection URLs from inbox/outbox pattern
   let followersUrl, followingUrl;
   if (user.inbox) {
     const base = user.inbox.replace(/\/inbox$/, "");
@@ -27,7 +73,6 @@ function sanitizeUser(user) {
     followingUrl = `${base}/following`;
   }
 
-  // Shared inbox (server-level inbox for efficient delivery)
   let sharedInbox;
   if (user.inbox) {
     try {
@@ -38,12 +83,11 @@ function sanitizeUser(user) {
     }
   }
 
-  // Normalize icon to AP Image object
   let iconObj;
-  if (user.profile?.icon) {
-    iconObj = typeof user.profile.icon === "string"
-      ? { type: "Image", url: user.profile.icon }
-      : user.profile.icon;
+  if (profile.icon) {
+    iconObj = typeof profile.icon === "string"
+      ? { type: "Image", url: profile.icon }
+      : profile.icon;
   }
 
   return {
@@ -55,8 +99,8 @@ function sanitizeUser(user) {
     type: user.type || "Person",
     objectType: user.objectType || "User",
     preferredUsername: user.username,
-    name: user.profile?.name || user.username,
-    summary: user.profile?.description ?? null,
+    name: profile.name || user.username,
+    summary: personal ? (user.profile?.description ?? null) : null,
     icon: iconObj ?? null,
     url: user.url || actorId,
     inbox: user.inbox,
@@ -65,6 +109,27 @@ function sanitizeUser(user) {
     following: followingUrl,
     ...(sharedInbox ? { endpoints: { sharedInbox } } : {}),
     publicKey: publicKeyObj,
+    // Kowloon-flavoured handle — always visible
+    handle: user.id,
+    domain: user.domain,
+    // Personal-info subset, only when audience permits
+    ...(personal ? {
+      profile: {
+        name: profile.name ?? null,
+        subtitle: profile.subtitle ?? null,
+        description: profile.description ?? null,
+        urls: profile.urls ?? [],
+        pronouns: profile.pronouns ?? null,
+        location: profile.location ?? null,
+        icon: profile.icon ?? null,
+      },
+    } : {
+      profile: {
+        name: profile.name ?? null,
+        icon: profile.icon ?? null,
+      },
+      audienceRestricted: true,
+    }),
   };
 }
 
@@ -73,14 +138,11 @@ function sanitizeUser(user) {
  */
 function removeInternalFields(obj) {
   const sanitized = { ...obj };
-  // MongoDB internal fields
   delete sanitized._id;
   delete sanitized.__v;
-  // Security-sensitive fields
   delete sanitized.password;
   delete sanitized.privateKey;
   delete sanitized.privateKeyPem;
-  // Kowloon internal fields
   delete sanitized.cached;
   delete sanitized.tombstoned;
   return sanitized;
@@ -88,17 +150,20 @@ function removeInternalFields(obj) {
 
 /**
  * Sanitize any object based on type
+ *
+ * @param {object} obj
+ * @param {object} [opts]
+ * @param {string} [opts.objectType]
+ * @param {object} [opts.viewer]  viewer context (see methods/visibility/context.js)
  */
-export default function sanitizeObject(obj, { objectType = null } = {}) {
+export default function sanitizeObject(obj, { objectType = null, viewer = null } = {}) {
   if (!obj) return null;
 
   const type = objectType || obj.objectType || obj.type;
 
-  // User objects have special handling
   if (type === "User" || type === "Person") {
-    return sanitizeUser(obj);
+    return sanitizeUser(obj, viewer);
   }
 
-  // For all other objects, just remove internal fields
   return removeInternalFields(obj);
 }

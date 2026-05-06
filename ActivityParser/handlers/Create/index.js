@@ -11,6 +11,7 @@ import {
   User,
   Settings,
   FeedItems, // <- ensure Settings is exported from #schema/index.js
+  File,
 } from "#schema";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 import kowloonId from "#methods/parse/kowloonId.js";
@@ -387,6 +388,27 @@ export default async function Create(activity) {
     } else {
       // Convert to plain object to access all fields including virtuals
       created = created.toObject ? created.toObject() : created;
+    }
+
+    // Back-link any referenced files to this object so File.parentObject
+    // resolves visibility correctly at serve time. Only set parentObject if
+    // the file doesn't already have one (don't override an earlier link).
+    {
+      const fileIds = new Set();
+      if (typeof activity.object.image === "string" && activity.object.image.startsWith("file:")) {
+        fileIds.add(activity.object.image);
+      }
+      if (Array.isArray(activity.object.attachments)) {
+        for (const a of activity.object.attachments) {
+          if (typeof a === "string" && a.startsWith("file:")) fileIds.add(a);
+        }
+      }
+      if (fileIds.size > 0) {
+        await File.updateMany(
+          { id: { $in: [...fileIds] }, $or: [{ parentObject: { $exists: false } }, { parentObject: null }] },
+          { $set: { parentObject: created.id } },
+        );
+      }
     }
 
     // Write to FeedItems for timeline delivery

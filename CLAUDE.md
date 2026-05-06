@@ -196,6 +196,7 @@ A `PETTY_LIMITS` array at the top of the registration handler enforces arbitrary
 - Event type / RSVP system (can defer post-alpha)
 - Full S2S federation edge case testing
 - Remote grants for `canReply`/`canReact` on remote "audience" posts (deferred)
+- **Storage public URL for prod/federation**: presigned S3 URLs use `S3_PUBLIC_URL` host (currently `http://jzenbook:9000` for Tailscale dev). For production this must be a real public hostname reachable by any federation peer — e.g. `https://files.kwln.org/kowloon` (separate subdomain), or proxy MinIO under the API domain (`https://kwln.org/storage/...`) via nginx. Without this, remote servers can't fetch federated images. See `S3Adapter.presignClient`.
 
 ## Batch-Pull Outbox Federation (COMPLETE as of 2026-03-09)
 

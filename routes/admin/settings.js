@@ -1,5 +1,6 @@
 // routes/admin/settings.js
 import express from "express";
+import sanitizeHtml from "sanitize-html";
 import route from "../utils/route.js";
 import { Settings } from "#schema";
 import { setSetting, getAllSettings } from "#methods/settings/cache.js";
@@ -18,6 +19,40 @@ function sanitizeSetting(doc) {
     return { ...doc, value: "[redacted]" };
   }
   return doc;
+}
+
+// Settings whose values include HTML fields rendered by clients.
+// Map: setting name → list of nested field names to sanitize.
+const HTML_FIELDS_BY_SETTING = {
+  profile: ["description"],
+};
+
+const SANITIZE_OPTIONS = {
+  allowedTags: [
+    "p", "br", "strong", "em", "s", "u", "a", "ul", "ol", "li",
+    "blockquote", "code", "pre", "h1", "h2", "h3", "h4", "h5", "h6",
+    "hr", "img",
+  ],
+  allowedAttributes: {
+    a: ["href", "title", "rel", "target"],
+    img: ["src", "alt", "title"],
+    code: ["class"],
+    pre: ["class"],
+  },
+  allowedSchemes: ["http", "https", "mailto"],
+  disallowedTagsMode: "discard",
+};
+
+function sanitizeIncomingValue(name, value) {
+  const fields = HTML_FIELDS_BY_SETTING[name];
+  if (!fields || !value || typeof value !== "object") return value;
+  const out = { ...value };
+  for (const field of fields) {
+    if (typeof out[field] === "string") {
+      out[field] = sanitizeHtml(out[field], SANITIZE_OPTIONS);
+    }
+  }
+  return out;
 }
 
 // GET /admin/settings — list all settings
@@ -56,7 +91,8 @@ router.patch(
       }
 
       const updated = [];
-      for (const [name, value] of Object.entries(body)) {
+      for (const [name, rawValue] of Object.entries(body)) {
+        const value = sanitizeIncomingValue(name, rawValue);
         await Settings.findOneAndUpdate(
           { name },
           { $set: { name, value } },
@@ -93,13 +129,14 @@ router.patch(
         return;
       }
 
+      const value = sanitizeIncomingValue(name, body.value);
       const doc = await Settings.findOneAndUpdate(
         { name },
-        { $set: { name, value: body.value } },
+        { $set: { name, value } },
         { upsert: true, new: true }
       ).lean();
 
-      setSetting(name, body.value); // update in-memory cache
+      setSetting(name, value); // update in-memory cache
 
       const { _id, __v, ...rest } = doc;
       set("ok", true);

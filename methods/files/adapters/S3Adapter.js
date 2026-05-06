@@ -25,17 +25,33 @@ export default class S3Adapter extends StorageAdapter {
       throw new Error('S3Adapter requires bucket configuration');
     }
 
+    const credentials = config.accessKeyId
+      ? { accessKeyId: config.accessKeyId, secretAccessKey: config.secretAccessKey }
+      : undefined;
+
     this.client = new S3Client({
       region: config.region || 'us-east-1',
       endpoint: config.endpoint, // For MinIO
-      credentials: config.accessKeyId
-        ? {
-            accessKeyId: config.accessKeyId,
-            secretAccessKey: config.secretAccessKey,
-          }
-        : undefined,
+      credentials,
       forcePathStyle: config.forcePathStyle || false, // Required for MinIO
     });
+
+    // A second client whose endpoint is the *publicly-reachable* host, used
+    // only for generating presigned URLs. Without this, signed URLs inherit
+    // S3_ENDPOINT (typically localhost) and can't be fetched by phones,
+    // remote federation peers, or anyone outside the server's loopback.
+    // Falls back to the internal client when no public URL is configured.
+    if (this.publicUrl) {
+      const publicEndpoint = new URL(this.publicUrl).origin;
+      this.presignClient = new S3Client({
+        region: config.region || 'us-east-1',
+        endpoint: publicEndpoint,
+        credentials,
+        forcePathStyle: true,
+      });
+    } else {
+      this.presignClient = this.client;
+    }
   }
 
   async upload(buffer, options) {
@@ -236,7 +252,7 @@ export default class S3Adapter extends StorageAdapter {
       Key: key,
     });
 
-    return getS3SignedUrl(this.client, command, { expiresIn });
+    return getS3SignedUrl(this.presignClient, command, { expiresIn });
   }
 
   async getMetadata(key) {

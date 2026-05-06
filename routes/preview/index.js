@@ -1,6 +1,7 @@
 import express from "express";
 import { getLinkPreview } from "link-preview-js";
 import route from "../utils/route.js";
+import { isSafeUrl } from "#methods/utils/safeUrl.js";
 
 const router = express.Router({ mergeParams: true });
 
@@ -13,6 +14,17 @@ router.get(
       if (!url) {
         setStatus(400);
         set("error", "Missing required query parameter: url");
+        return;
+      }
+
+      // SSRF guard: reject loopback/private/link-local hosts before letting
+      // link-preview-js make any request. This is the workaround the v4
+      // advisory recommends for users who can't upgrade — and we can't, since
+      // link-preview-js@4.x ships ESM imports without .js extensions and
+      // won't load under Node's native ESM. See package.json overrides.
+      if (!await isSafeUrl(url)) {
+        setStatus(400);
+        set("error", "URL is not allowed");
         return;
       }
 

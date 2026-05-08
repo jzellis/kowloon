@@ -1,6 +1,7 @@
 // GET /auth/me — return fresh profile + prefs for the authenticated user
 import route from '../utils/route.js';
 import { User } from '#schema';
+import isServerAdmin from '#methods/auth/isServerAdmin.js';
 
 export default route(async ({ user, set, setStatus }) => {
   const userDoc = await User.findOne({ id: user.id })
@@ -24,5 +25,6 @@ export default route(async ({ user, set, setStatus }) => {
     allFollowing: userDoc.circles?.allFollowing,
     blocked: userDoc.circles?.blocked,
     muted: userDoc.circles?.muted,
+    isServerAdmin: !!(await isServerAdmin(userDoc.id)),
   });
 }, { allowUnauth: false });

@@ -49,6 +49,7 @@ export default function feedItemToPost(doc) {
     replyCount:  obj.replyCount  ?? 0,
     reactCount:  obj.reactCount  ?? 0,
     reactPreview: obj.reactPreview ?? null,
+    reactSummary: obj.reactSummary ?? null,
     shareCount:  obj.shareCount  ?? 0,
     // Event dates — map nested schema fields to flat API fields
     startTime:   (doc.type === 'Event' || obj.type === 'Event') ? (obj.event?.startDate ?? null) : undefined,

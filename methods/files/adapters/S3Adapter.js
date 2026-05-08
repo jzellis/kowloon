@@ -69,6 +69,10 @@ export default class S3Adapter extends StorageAdapter {
     const key = this.generateKey(originalFileName);
     const mimeType = contentType || mime.lookup(originalFileName) || 'application/octet-stream';
 
+    // File contents under a given storage key are immutable, so the bytes can
+    // be cached aggressively — 1 year, private (the proxy enforces visibility).
+    const cacheControl = 'private, max-age=31536000, immutable';
+
     // Upload main file
     await this.client.send(
       new PutObjectCommand({
@@ -76,6 +80,7 @@ export default class S3Adapter extends StorageAdapter {
         Key: key,
         Body: buffer,
         ContentType: mimeType,
+        CacheControl: cacheControl,
         ACL: isPublic ? 'public-read' : 'private',
         Metadata: {
           'original-filename': originalFileName,
@@ -119,6 +124,7 @@ export default class S3Adapter extends StorageAdapter {
               Key: thumbKey,
               Body: thumbBuffer,
               ContentType: 'image/webp',
+              CacheControl: cacheControl,
               ACL: isPublic ? 'public-read' : 'private',
             })
           );

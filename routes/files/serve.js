@@ -100,9 +100,11 @@ export default async function serve(req, res) {
 
     let storageKey = file.storageKey;
     if (sizeParam) {
+      // Prefer the requested thumbnail; gracefully fall back to the original
+      // so older files without thumbnails still serve when callers request a
+      // size variant.
       const thumbKey = file.thumbnails?.[sizeParam];
-      if (!thumbKey) return res.status(404).json({ error: `No thumbnail at size ${sizeParam}` });
-      storageKey = thumbKey;
+      if (thumbKey) storageKey = thumbKey;
     }
     if (!storageKey) return res.status(404).json({ error: 'File has no storage key' });
 
@@ -111,12 +113,14 @@ export default async function serve(req, res) {
     const exists = await storage.exists(storageKey);
     if (!exists) return res.status(404).json({ error: 'File not found in storage' });
 
-    // Short-lived presigned URL — 60 seconds is enough for the browser to follow the redirect.
-    // The token never appears in any client-visible URL.
-    const signedUrl = await storage.getSignedUrl(storageKey, 60);
+    // Presigned URL TTL is set longer than the redirect's cache window so the
+    // cached redirect URL is still valid when the browser re-uses it.
+    const signedUrl = await storage.getSignedUrl(storageKey, 600);
 
-    // Don't cache the redirect itself — each request generates a fresh presigned URL.
-    res.setHeader('Cache-Control', 'no-store');
+    // Cache the redirect for 5 minutes so the browser can re-use the same
+    // presigned URL across page loads. `private` keeps shared caches out of it
+    // since the redirect target embeds visibility logic.
+    res.setHeader('Cache-Control', 'private, max-age=300');
     return res.redirect(302, signedUrl);
   } catch (err) {
     console.error('[files/serve] Error:', err);

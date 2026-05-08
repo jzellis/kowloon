@@ -13,15 +13,22 @@ import {
   FeedItems,
 } from "#schema";
 
-/** Return the emoji with the highest count for a given target, or null. */
-async function topEmoji(targetId) {
-  const [top] = await ReactModel.aggregate([
+/**
+ * Aggregate reactions for a target. Returns:
+ *   - top    : single most-used emoji (used for legacy reactPreview)
+ *   - summary: distinct emojis joined, sorted by count desc (e.g. "👍❤️😂")
+ */
+async function summarizeReacts(targetId) {
+  const groups = await ReactModel.aggregate([
     { $match: { target: targetId } },
     { $group: { _id: "$emoji", count: { $sum: 1 } } },
-    { $sort: { count: -1 } },
-    { $limit: 1 },
+    { $sort: { count: -1, _id: 1 } },
   ]);
-  return top?._id ?? null;
+  const emojis = groups.map((g) => g._id).filter(Boolean);
+  return {
+    top: emojis[0] ?? null,
+    summary: emojis.length ? emojis.join("") : null,
+  };
 }
 import createNotification from "#methods/notifications/create.js";
 import kowloonId from "#methods/parse/kowloonId.js";
@@ -166,27 +173,34 @@ export default async function React(activity, ctx = {}) {
       }
     }
 
-    // Compute and write reactPreview (most-used emoji) to source model + FeedItems cache
-    // Always bump FeedItems.reactCount; set reactPreview only when topEmoji returns a value
+    // Compute and write reactPreview (top emoji) + reactSummary (sorted emoji
+    // string) to source model + FeedItems cache. Always bump FeedItems.reactCount.
     try {
-      const preview = await topEmoji(targetId);
+      const { top, summary } = await summarizeReacts(targetId);
 
-      if (preview !== null) {
+      if (top !== null) {
         for (const Model of models) {
           try {
             if (!Model) continue;
-            const r = await Model.updateOne({ id: targetId }, { $set: { reactPreview: preview } });
+            const r = await Model.updateOne(
+              { id: targetId },
+              { $set: { reactPreview: top, reactSummary: summary } }
+            );
             if (r?.matchedCount > 0) break;
           } catch (e) { /* ignore */ }
         }
       }
 
-      // Always keep FeedItems reactCount in sync; only set reactPreview when we have one
       const feedUpdate = { $inc: { "object.reactCount": 1 } };
-      if (preview !== null) feedUpdate.$set = { "object.reactPreview": preview };
+      if (top !== null) {
+        feedUpdate.$set = {
+          "object.reactPreview": top,
+          "object.reactSummary": summary,
+        };
+      }
       await FeedItems.updateOne({ "object.id": targetId }, feedUpdate);
     } catch (e) {
-      // Non-fatal — reactPreview is display-only
+      // Non-fatal — display-only fields
     }
 
     const result = { status: "reacted", react: reactKind, bumped };

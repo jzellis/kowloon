@@ -128,6 +128,7 @@ const PostSchema = new Schema(
     replyCount: { type: Number, default: 0 }, // The number of replies to this post
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     reactPreview: { type: String, default: null }, // Most-used emoji react
+    reactSummary: { type: String, default: null }, // Distinct emojis joined, sorted by count desc
     shareCount: { type: Number, default: 0 }, // The number of shares of this post
     image: { type: String, default: undefined }, // The post's featured/preview image (File ID or URL for backwards compatibility)
     attachments: { type: [String], default: [] }, // Array of File IDs

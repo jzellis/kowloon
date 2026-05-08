@@ -179,6 +179,22 @@ export default async function Update(activity) {
     // 4. Strip disallowed fields from the patch
     const patch = filterPatch(parsed.type, activity.object);
 
+    // For nested object patches like User.profile, expand to dot-notation so
+    // a partial patch (e.g. `{ profile: { name: 'New' } }`) doesn't replace
+    // the entire embedded document and wipe sibling fields like icon/urls.
+    if (parsed.type === 'User' && patch.profile && typeof patch.profile === 'object') {
+      for (const [k, v] of Object.entries(patch.profile)) {
+        patch[`profile.${k}`] = v;
+      }
+      delete patch.profile;
+    }
+    if (patch.prefs && typeof patch.prefs === 'object') {
+      for (const [k, v] of Object.entries(patch.prefs)) {
+        patch[`prefs.${k}`] = v;
+      }
+      delete patch.prefs;
+    }
+
     // User profile audience: cap to @public or the user's own server domain.
     // Accept a couple of friendly shorthands ("public", "server") from clients.
     if (parsed.type === "User" && "to" in patch) {
@@ -253,10 +269,10 @@ export default async function Update(activity) {
     await updateFeedItems(updated, parsed.type, patch);
 
     // 8. For local User profile updates, propagate name/icon to all denormalized actor copies
-    if (parsed.type === 'User' && patch.profile) {
+    if (parsed.type === 'User' && ('profile.name' in patch || 'profile.icon' in patch)) {
       refreshActorCache(updated.id, {
-        name: updated.profile?.name,
-        icon: updated.profile?.icon,
+        ...('profile.name' in patch ? { name: updated.profile?.name } : {}),
+        ...('profile.icon' in patch ? { icon: updated.profile?.icon } : {}),
       }).catch(() => {}); // fire and forget
     }
 

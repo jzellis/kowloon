@@ -24,7 +24,12 @@ export default route(
 
     const { originalname: originalFileName, mimetype } = req.file;
     let { buffer } = req.file;
-    const { title, summary, generateThumbnail, thumbnailSizes, parentObject } = body;
+    const { title, summary, thumbnailSizes, parentObject } = body;
+    // Default to generating thumbnails; allow opting out by sending "false".
+    // The S3Adapter will skip non-image MIME types regardless.
+    const generateThumbnail = body.generateThumbnail === 'false' || body.generateThumbnail === false
+      ? false
+      : true;
 
     // Validate MIME type against allowlist, verify magic bytes, sanitize SVGs,
     // and re-encode raster images to strip embedded payloads.
@@ -59,7 +64,7 @@ export default route(
         title,
         summary,
         contentType: mimeType,
-        generateThumbnail: generateThumbnail === 'true' || generateThumbnail === true,
+        generateThumbnail,
         thumbnailSizes: thumbnailSizes ? JSON.parse(thumbnailSizes) : [200, 400],
         isPublic: false,
       });

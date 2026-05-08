@@ -67,6 +67,39 @@ function safeMarkdown(content) {
     disallowedTagsMode: "discard",
   });
 }
+
+// Render markdown/source to plain text, dropping all markup. Inserts a space at
+// every tag boundary so block elements (lists, paragraphs) don't get glued
+// together when the tags are stripped.
+function stripToText(content) {
+  if (!content) return "";
+  const html = marked(content).replace(/></g, "> <");
+  const text = sanitizeHtml(html, { allowedTags: [], allowedAttributes: {} });
+  return text.replace(/\s+/g, " ").trim();
+}
+
+// Plain-text preview for cards, federation summary, og:description, etc.
+// First two sentences OR 200 chars, whichever is shorter; '…' appended when
+// truncated. Word-boundary trim when hard-cutting.
+export function generateTextPreview(source) {
+  const fullText = stripToText(source?.content);
+  if (!fullText) return undefined;
+
+  const sentences = fullText.split(/(?<=[.!?])\s+/);
+  let preview = sentences.slice(0, 2).join(" ");
+
+  if (preview.length > 200) {
+    preview = preview.slice(0, 200);
+    const lastSpace = preview.lastIndexOf(" ");
+    if (lastSpace > 150) preview = preview.slice(0, lastSpace);
+  }
+
+  if (preview.length < fullText.length) {
+    preview = preview.replace(/[\s.,;:!?]+$/, "") + "…";
+  }
+
+  return preview;
+}
 const Schema = mongoose.Schema;
 const ObjectId = mongoose.Types.ObjectId;
 
@@ -89,6 +122,7 @@ const PostSchema = new Schema(
       language: { type: String, default: "en" },
     },
     body: { type: String, default: "" },
+    textPreview: { type: String, default: undefined },
     wordCount: { type: Number, default: 0 },
     charCount: { type: Number, default: 0 },
     replyCount: { type: Number, default: 0 }, // The number of replies to this post
@@ -179,6 +213,7 @@ PostSchema.pre("save", async function (next) {
         .split(" ").length;
     this.charCount = this.charCount || this.body.replace(/<[^>]*>/g, "").length;
     this.summary = generateSummary(this.source);
+    this.textPreview = generateTextPreview(this.source);
 
     let actor = await User.findOne({ id: this.actorId });
     if (actor) {
@@ -211,6 +246,7 @@ PostSchema.pre("updateOne", async function (next) {
     const newSource = { ...(currentDoc?.source || {}), ...update.$set.source };
 
     update.$set.body = generateBody(newSource);
+    update.$set.textPreview = generateTextPreview(newSource);
     update.$set.wordCount = update.$set.body.replace(/<[^>]*>/g, "").replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").split(" ").length;
     update.$set.charCount = update.$set.body.replace(/<[^>]*>/g, "").length;
 
@@ -234,6 +270,7 @@ PostSchema.pre("findOneAndUpdate", async function (next) {
     };
 
     update.$set.body = generateBody(newSource);
+    update.$set.textPreview = generateTextPreview(newSource);
 
     const actor = await User.findOne({ id: currentDoc.actorId });
     if (actor) {

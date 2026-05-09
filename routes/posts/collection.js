@@ -35,7 +35,10 @@ export default route(async ({ req, query, user, set }) => {
     objectType: "Post",
   };
 
-  if (query.type)     filter.type       = query.type;
+  if (query.type) {
+    const types = String(query.type).split(",").map((s) => s.trim()).filter(Boolean);
+    filter.type = types.length > 1 ? { $in: types } : types[0];
+  }
   if (query.since)    filter.publishedAt = { $gte: new Date(query.since) };
   if (query.serverId) filter.server      = query.serverId;
 

@@ -1,14 +1,103 @@
 // routes/posts/replies.js
 // GET /posts/:id/replies — Replies to a post
+//
+// For local posts: query the local Reply collection.
+// For remote posts: proxy to the parent post's home server, which holds the
+// canonical aggregate (every reply federates to it). Third-party servers do
+// not keep per-server reply state — the parent host is the single source of
+// truth, so deletes/edits never need to fan out beyond it.
 
-import makeCollection from "../utils/makeCollection.js";
+import route from "../utils/route.js";
 import { Reply } from "#schema";
+import { activityStreamsCollection } from "../utils/oc.js";
+import { getSetting } from "#methods/settings/cache.js";
+import kowloonId from "#methods/parse/kowloonId.js";
 
-export default makeCollection({
-  model: Reply,
-  buildQuery: (req) => ({
-    target: decodeURIComponent(req.params.id),
-    deletedAt: null,
-  }),
-  sort: { createdAt: 1 },
+const DEFAULT_LIMIT = 20;
+const MAX_LIMIT = 100;
+
+async function serveLocal(ctx) {
+  const { req, query, set } = ctx;
+  const postId = decodeURIComponent(req.params.id);
+  const page = Math.max(1, parseInt(query.page, 10) || 1);
+  const limit = Math.min(
+    Math.max(1, parseInt(query.limit, 10) || DEFAULT_LIMIT),
+    MAX_LIMIT
+  );
+  const skip = (page - 1) * limit;
+
+  const filter = { target: postId, deletedAt: null };
+
+  const [docs, total] = await Promise.all([
+    Reply.find(filter).sort({ createdAt: 1 }).skip(skip).limit(limit).lean(),
+    Reply.countDocuments(filter),
+  ]);
+
+  const domain = getSetting("domain");
+  const protocol = req.headers["x-forwarded-proto"] || "https";
+  const base = `${protocol}://${domain}${req.baseUrl}${req.path}`;
+
+  const collection = activityStreamsCollection({
+    id: page ? `${base}?page=${page}` : base,
+    orderedItems: docs,
+    totalItems: total,
+    page,
+    itemsPerPage: limit,
+    baseUrl: base,
+  });
+
+  for (const [key, value] of Object.entries(collection)) {
+    set(key, value);
+  }
+}
+
+async function proxyToRemote(ctx, remoteDomain, postId) {
+  const { query, set, setStatus } = ctx;
+
+  const params = new URLSearchParams();
+  if (query.page) params.append("page", String(query.page));
+  if (query.limit) params.append("limit", String(query.limit));
+  const qs = params.toString();
+  const url = `https://${remoteDomain}/posts/${encodeURIComponent(postId)}/replies${qs ? "?" + qs : ""}`;
+
+  const localDomain = getSetting("domain") || "unknown";
+
+  try {
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        Accept: "application/activity+json",
+        "User-Agent": `Kowloon/${localDomain}`,
+      },
+      signal: AbortSignal.timeout(15000),
+    });
+
+    if (!response.ok) {
+      setStatus(response.status);
+      set("error", `Remote replies fetch failed (${response.status})`);
+      return;
+    }
+
+    const body = await response.json();
+    for (const [key, value] of Object.entries(body)) {
+      set(key, value);
+    }
+  } catch (err) {
+    setStatus(502);
+    set("error", `Failed to fetch replies from ${remoteDomain}: ${err.message}`);
+  }
+}
+
+export default route(async (ctx) => {
+  const { req } = ctx;
+  const postId = decodeURIComponent(req.params.id);
+  const localDomain = (getSetting("domain") || "").toLowerCase();
+  const parsed = kowloonId(postId);
+  const parentDomain = parsed?.domain?.toLowerCase();
+
+  if (!parentDomain || parentDomain === localDomain) {
+    return serveLocal(ctx);
+  }
+
+  return proxyToRemote(ctx, parsed.domain, postId);
 });

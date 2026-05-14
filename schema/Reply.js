@@ -82,6 +82,21 @@ ReplySchema.pre("save", async function (next) {
   next();
 });
 
+// Keep body in sync when source.content is patched via findOneAndUpdate
+// (the pre-save hook above only fires on .save()).
+ReplySchema.pre("findOneAndUpdate", async function (next) {
+  const update = this.getUpdate();
+  if (update?.$set?.source?.content) {
+    const current = await this.model.findOne(this.getQuery()).lean();
+    const newSource = {
+      ...(current?.source || {}),
+      ...update.$set.source,
+    };
+    update.$set.body = safeMarkdown(newSource.content);
+  }
+  next();
+});
+
 ReplySchema.methods.verifySignature = async function () {
   let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
   let stringject = Buffer.from(JSON.stringify(this.id));

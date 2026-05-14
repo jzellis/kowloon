@@ -1,6 +1,5 @@
 // /methods/federation/verifyHttpSignature.js
 import crypto from "crypto";
-import fetch from "node-fetch";
 import logger from "#methods/utils/logger.js";
 import { SignatureNonce } from "#schema";
 
@@ -45,7 +44,7 @@ async function fetchPublicKeyFromKeyId(keyId) {
 
   // Commonly a URL (actor or server key). Fetch it, parse JSON, extract PEM/JWK.
   try {
-    const res = await fetch(keyId, { method: "GET", timeout: 5000 });
+    const res = await fetch(keyId, { method: "GET", signal: AbortSignal.timeout(5000) });
     if (!res.ok) throw new Error(`key fetch ${res.status}`);
     const json = await res.json();
     // Unwrap Kowloon API envelope { item: { ... } }

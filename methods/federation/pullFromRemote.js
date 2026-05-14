@@ -9,8 +9,6 @@
 // records based on the recipients map returned by the remote server.
 
 import crypto from "crypto";
-import fetch from "node-fetch";
-import https from "https";
 import { FeedItems, FeedFanOut } from "#schema";
 import logger from "#methods/utils/logger.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
@@ -71,19 +69,15 @@ export default async function pullFromRemote({
       limit,
     });
 
-    // Allow self-signed certs for local development
-    const agent = new https.Agent({
-      rejectUnauthorized: process.env.NODE_ENV === "production",
-    });
-
+    // Self-signed certs in dev are handled via NODE_TLS_REJECT_UNAUTHORIZED=0
+    // (set on app containers in docker-compose.yml).
     const response = await fetch(url, {
       method: "GET",
       headers: {
         Accept: "application/activity+json",
         "User-Agent": `Kowloon/${ourDomain}`,
       },
-      agent,
-      timeout: 30000,
+      signal: AbortSignal.timeout(30000),
     });
 
     if (!response.ok) {

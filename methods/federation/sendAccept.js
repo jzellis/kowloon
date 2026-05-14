@@ -7,7 +7,6 @@
 
 import signHttpRequest from "./signHttpRequest.js";
 import logger from "#methods/utils/logger.js";
-import https from "https";
 
 /**
  * Resolve the inbox URL for a remote actor.
@@ -19,12 +18,9 @@ async function resolveInbox(actorId, knownInbox) {
   if (!actorId?.startsWith("http")) return null;
 
   try {
-    const agent = new https.Agent({ rejectUnauthorized: process.env.NODE_ENV === "production" });
-    const { default: fetch } = await import("node-fetch");
     const res = await fetch(actorId, {
       headers: { Accept: "application/activity+json, application/ld+json" },
-      agent,
-      timeout: 8000,
+      signal: AbortSignal.timeout(8000),
     });
     if (!res.ok) return null;
     const doc = await res.json();
@@ -62,7 +58,6 @@ export default async function sendAccept({ localActorUrl, remoteActorId, remoteI
       },
     });
 
-    const { default: fetch } = await import("node-fetch");
     const { headers } = await signHttpRequest({
       method: "POST",
       url: inboxUrl,
@@ -70,13 +65,11 @@ export default async function sendAccept({ localActorUrl, remoteActorId, remoteI
       body: acceptBody,
     });
 
-    const agent = new https.Agent({ rejectUnauthorized: process.env.NODE_ENV === "production" });
     const res = await fetch(inboxUrl, {
       method: "POST",
       headers,
       body: acceptBody,
-      agent,
-      timeout: 10000,
+      signal: AbortSignal.timeout(10000),
     });
 
     if (res.ok) {

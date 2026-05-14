@@ -1,7 +1,6 @@
 // /methods/federation/fetchServerPublicKey.js
 // Fetch and store a remote server's public key
 
-import fetch from "node-fetch";
 import { Server } from "#schema";
 
 /**
@@ -32,7 +31,7 @@ export default async function fetchServerPublicKey(domain) {
       headers: {
         Accept: "text/plain",
       },
-      timeout: 10000,
+      signal: AbortSignal.timeout(10000),
     });
 
     if (response.status !== 200) {

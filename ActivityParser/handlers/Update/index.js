@@ -17,6 +17,21 @@ import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 import refreshActorCache from "#methods/users/refreshActorCache.js";
 import sanitizeHtml from "sanitize-html";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+
+// Reply (and React) records have empty `to` by design — visibility inherits
+// from the parent — so the generic federation helper returns no targets. For
+// these we route based on the parent's domain (held in `target`).
+function getChildFederationTargets(childObj) {
+  const parentId = childObj?.target;
+  if (!parentId) return { shouldFederate: false };
+  const parsedParent = kowloonId(parentId);
+  const { domain: serverDomain } = getServerSettings();
+  if (!parsedParent.domain || parsedParent.domain.toLowerCase() === serverDomain?.toLowerCase()) {
+    return { shouldFederate: false };
+  }
+  return { shouldFederate: true, scope: "domain", domains: [parsedParent.domain] };
+}
 
 function stripHtmlFromMarkdown(text) {
   if (typeof text !== "string") return text;
@@ -276,9 +291,13 @@ export default async function Update(activity) {
       }).catch(() => {}); // fire and forget
     }
 
-    // 9. Federation — bookmarks are personal-only, never federated.
+    // 9. Federation — bookmarks are personal-only, never federated. Replies
+    // and Reacts have empty `to` (visibility inherits from parent), so the
+    // generic helper would return no targets — route via the parent's domain.
     const federation = parsed.type === "Bookmark"
       ? { shouldFederate: false }
+      : parsed.type === "Reply" || parsed.type === "React"
+      ? getChildFederationTargets(updated)
       : await getFederationTargets(activity, updated);
 
     // 10. Sanitize result — strip sensitive fields from User objects

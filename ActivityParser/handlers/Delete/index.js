@@ -14,6 +14,21 @@ import {
 import kowloonId from "#methods/parse/kowloonId.js";
 import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
+import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+
+// Reply (and React) records have empty `to` by design — visibility inherits
+// from the parent — so the generic federation helper returns shouldFederate:
+// false. For these we route based on the parent's domain (held in `target`).
+function getChildFederationTargets(childObj) {
+  const parentId = childObj?.target;
+  if (!parentId) return { shouldFederate: false };
+  const parsed = kowloonId(parentId);
+  const { domain: serverDomain } = getServerSettings();
+  if (!parsed.domain || parsed.domain.toLowerCase() === serverDomain?.toLowerCase()) {
+    return { shouldFederate: false };
+  }
+  return { shouldFederate: true, scope: "domain", domains: [parsed.domain] };
+}
 
 const MODELS = {
   Bookmark,
@@ -104,11 +119,37 @@ async function deleteOne(activity, targetId) {
       ? { deletedAt: new Date(), deletedBy: activity.actorId, active: false }
       : { deletedAt: new Date(), deletedBy: activity.actorId, type: "Tombstone" };
 
+  const wasAlreadyDeleted = !!current.deletedAt;
+
   const deleted =
     (await Model.findOneAndUpdate(query, { $set: tombstoneFields }, { new: true }).lean?.()) ??
     (await Model.findOneAndUpdate(query, { $set: tombstoneFields }, { new: true }));
 
   await purgeFeedItems(deleted.id);
+
+  // Reply: decrement replyCount on the parent (mirror of Reply handler's bump
+  // at create time). Only on the first tombstone so repeat Deletes don't
+  // double-decrement.
+  if (parsed.type === "Reply" && !wasAlreadyDeleted && current.target) {
+    const parentId = current.target;
+    const parentCollections = [
+      Post?.collection,
+      Page?.collection,
+      Bookmark?.collection,
+      Group?.collection,
+      Circle?.collection,
+    ];
+    for (const col of parentCollections) {
+      try {
+        if (!col) continue;
+        const r = await col.updateOne({ id: parentId }, { $inc: { replyCount: -1 } });
+        if (r?.modifiedCount > 0) break;
+      } catch (e) {
+        // ignore model mismatches
+      }
+    }
+    await FeedItems.updateOne({ id: parentId }, { $inc: { "object.replyCount": -1 } });
+  }
 
   let resultObj = deleted.toObject ? deleted.toObject() : { ...deleted };
   if (parsed.type === "User") {
@@ -118,7 +159,7 @@ async function deleteOne(activity, targetId) {
     delete resultObj.signature;
   }
 
-  return { id: targetId, deleted: resultObj };
+  return { id: targetId, deleted: resultObj, type: parsed.type };
 }
 
 export default async function Delete(activity) {
@@ -145,9 +186,11 @@ export default async function Delete(activity) {
     // Bookmarks are personal-only, never federated.
     const primary = succeeded[0].deleted;
     activity.objectId = primary.id;
-    const primaryType = (primary.objectType || primary.type);
+    const primaryType = succeeded[0].type || primary.objectType || primary.type;
     const federation = primaryType === "Bookmark"
       ? { shouldFederate: false }
+      : primaryType === "Reply" || primaryType === "React"
+      ? getChildFederationTargets(primary)
       : await getFederationTargets(activity, primary);
 
     // Single-target: preserve original response shape for backwards compat

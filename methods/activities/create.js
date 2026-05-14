@@ -77,6 +77,18 @@ export default async function createActivity(input) {
       return { error: result.error, result };
     }
 
+    // Handler signaled a content-level duplicate (e.g. Reply: same actor +
+    // target + content within the dedup window). Skip persisting a new
+    // Activity record and return the existing payload.
+    if (result?.duplicated) {
+      return {
+        activity,
+        result,
+        duplicated: true,
+        federate: false,
+      };
+    }
+
     // ---- Persist the Activity (annotate with handler effects) --------------
     const toSave = {
       ...activity,

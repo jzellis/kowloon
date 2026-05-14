@@ -16,6 +16,7 @@ import {
 import createNotification from "#methods/notifications/create.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+import getMultiFederationTargets from "../utils/getMultiFederationTargets.js";
 
 /**
  * Validate Reply activity
@@ -68,6 +69,10 @@ export async function getFederationTargets(activity, created) {
   };
 }
 
+// Window in which an identical reply from the same actor on the same target is
+// treated as a duplicate (5 minutes).
+const CONTENT_DEDUPE_WINDOW_MS = 5 * 60 * 1000;
+
 export default async function Reply(activity, ctx = {}) {
   try {
     // 1. Validate
@@ -78,6 +83,32 @@ export default async function Reply(activity, ctx = {}) {
 
     const actorId = activity.actorId;
     const targetId = activity.to;
+
+    // 1b. Content-based dedup — same actor sending the same content to the same
+    // target within the window is treated as a duplicate. Returns the existing
+    // reply rather than creating a new one. Prevents spam-clicking the submit
+    // button (client-side network-retry idempotency is handled separately via
+    // `dedupeKey` in methods/activities/create.js).
+    const submittedContent =
+      activity.object?.source?.content ?? activity.object?.content;
+    if (typeof submittedContent === "string" && submittedContent.trim()) {
+      const since = new Date(Date.now() - CONTENT_DEDUPE_WINDOW_MS);
+      const existing = await ReplyModel.findOne({
+        actorId,
+        target: targetId,
+        "source.content": submittedContent,
+        createdAt: { $gte: since },
+      }).lean();
+      if (existing) {
+        activity.objectId = existing.id;
+        return {
+          activity,
+          created: existing,
+          duplicated: true,
+          federation: { shouldFederate: false },
+        };
+      }
+    }
 
     // 2. Build the Reply document
     const replyData = {
@@ -130,26 +161,31 @@ export default async function Reply(activity, ctx = {}) {
     // Keep FeedItems in sync so getPost returns the updated count immediately
     await FeedItems.updateOne({ id: targetId }, { $inc: { "object.replyCount": 1 } });
 
-    // 5. Create notification for the parent object's author
-    try {
-      let targetAuthorId;
-      for (const Model of [Post, Page, Bookmark, Group]) {
-        try {
-          if (!Model) continue;
-          const target = await Model.findOne({ id: targetId })
-            .select("actorId")
-            .lean();
-          if (target?.actorId) {
-            targetAuthorId = target.actorId;
-            break;
-          }
-        } catch (e) {
-          // Continue to next model
+    // 5. Look up the parent object once for BOTH notification and federation.
+    // Reply included so threaded replies (Reply targeting Reply) resolve their
+    // author and grandparent for fan-out.
+    let parentAuthorId;
+    let grandparentId;
+    for (const Model of [Post, Reply, Page, Bookmark, Group]) {
+      try {
+        if (!Model) continue;
+        const parent = await Model.findOne({ id: targetId })
+          .select("actorId target")
+          .lean();
+        if (parent?.actorId) {
+          parentAuthorId = parent.actorId;
+          grandparentId = parent.target;
+          break;
         }
+      } catch (e) {
+        // Continue to next model
       }
+    }
 
-      if (targetAuthorId && targetAuthorId !== actorId) {
-        const recipient = await User.findOne({ id: targetAuthorId })
+    // Create notification for the parent object's author
+    try {
+      if (parentAuthorId && parentAuthorId !== actorId) {
+        const recipient = await User.findOne({ id: parentAuthorId })
           .select("prefs")
           .lean();
         const wantsNotification =
@@ -158,7 +194,7 @@ export default async function Reply(activity, ctx = {}) {
         if (wantsNotification) {
           await createNotification({
             type: "reply",
-            recipientId: targetAuthorId,
+            recipientId: parentAuthorId,
             actorId,
             objectId: targetId,
             objectType: "Post",
@@ -173,9 +209,11 @@ export default async function Reply(activity, ctx = {}) {
       // Non-fatal
     }
 
-    // 6. Federation
+    // 6. Federation — parent host (canonical aggregate), parent author's home
+    // (notification side-effect), and (for threaded replies) the grandparent
+    // host (canonical view of the chain).
     const createdObj = created.toObject ? created.toObject() : created;
-    const federation = await getFederationTargets(activity, createdObj);
+    const federation = getMultiFederationTargets(targetId, parentAuthorId, grandparentId);
 
     return {
       activity,

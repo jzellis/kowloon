@@ -195,6 +195,7 @@ export default route(
     set("result", created.result?.created || created.result);
     if (createdId) set("createdId", createdId);
     set("federate", !!created.federate);
+    if (created.duplicated) set("duplicated", true);
     if (federationJob) {
       set("federationJob", {
         jobId: federationJob.jobId,

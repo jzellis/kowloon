@@ -6,6 +6,7 @@
 import {
   React as ReactModel,
   Post,
+  Reply,
   Page,
   Bookmark,
   Group,
@@ -33,6 +34,7 @@ async function summarizeReacts(targetId) {
 import createNotification from "#methods/notifications/create.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+import getMultiFederationTargets from "../utils/getMultiFederationTargets.js";
 
 /**
  * Type-specific validation for React activities
@@ -138,10 +140,9 @@ export default async function React(activity, ctx = {}) {
     );
 
     if ((up.upsertedCount || 0) === 0 && (up.matchedCount || 0) > 0) {
-      // Already had this reaction
+      // Already had this reaction — no state change, skip federation.
       const result = { status: "already_reacted" };
-      const federation = await getFederationTargets(activity, result);
-      return { activity, result, federation };
+      return { activity, result, federation: { shouldFederate: false } };
     }
 
     // updateOne/upsert bypasses the pre-save hook, so set id + server manually
@@ -156,7 +157,7 @@ export default async function React(activity, ctx = {}) {
     // Try to bump reactCount on a known target collection
     // Use findOneAndUpdate (not updateOne) to avoid the broken pre("updateOne") hook on Post
     let bumped = false;
-    const models = [Post, Page, Bookmark, Group];
+    const models = [Post, Reply, Page, Bookmark, Group];
     for (const Model of models) {
       try {
         if (!Model) continue;
@@ -205,25 +206,28 @@ export default async function React(activity, ctx = {}) {
 
     const result = { status: "reacted", react: reactKind, bumped };
 
+    // Look up the target object once — fields needed for BOTH notification
+    // (target.actorId) AND federation (target.target = parent ID when the
+    // target is a Reply; null for top-level objects).
+    let targetAuthorId;
+    let parentId;
+    for (const Model of [Post, Reply, Page, Bookmark, Group]) {
+      try {
+        if (!Model) continue;
+        const target = await Model.findOne({ id: targetId }).select("actorId target").lean();
+        if (target?.actorId) {
+          targetAuthorId = target.actorId;
+          parentId = target.target;
+          break;
+        }
+      } catch (e) {
+        // Continue to next model
+      }
+    }
+
     // Create notification for the author of the target object (if they have it enabled)
     try {
-      // Find the target object to get its author
-      let targetAuthorId;
-      for (const Model of [Post, Page, Bookmark, Group]) {
-        try {
-          if (!Model) continue;
-          const target = await Model.findOne({ id: targetId }).select("actorId").lean();
-          if (target?.actorId) {
-            targetAuthorId = target.actorId;
-            break;
-          }
-        } catch (e) {
-          // Continue to next model
-        }
-      }
-
       if (targetAuthorId) {
-        // Check if user wants react notifications (default true)
         const recipient = await User.findOne({ id: targetAuthorId }).select("prefs").lean();
         const wantsNotification = recipient?.prefs?.notifications?.react !== false;
 
@@ -245,8 +249,10 @@ export default async function React(activity, ctx = {}) {
       // Non-fatal
     }
 
-    // 3. Determine federation requirements
-    const federation = await getFederationTargets(activity, result);
+    // 3. Federation — deliver to the target's host, the target's author's home,
+    // and (when reacting to a Reply) the parent post's host so its canonical
+    // reactCount stays in sync for proxied reads.
+    const federation = getMultiFederationTargets(targetId, targetAuthorId, parentId);
 
     return {
       activity,

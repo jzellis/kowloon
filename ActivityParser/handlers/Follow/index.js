@@ -71,7 +71,6 @@ export async function getFederationTargets(activity, result) {
 async function fetchRemoteActor(actorId) {
   if (!actorId?.startsWith("http")) return null;
   try {
-    const { default: fetch } = await import("node-fetch");
     const res = await fetch(actorId, {
       headers: { Accept: "application/activity+json, application/json" },
       signal: AbortSignal.timeout(8000),

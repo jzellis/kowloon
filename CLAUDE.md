@@ -133,6 +133,15 @@ MongoDB via Mongoose. Connection URI from env: `MONGO_URI` (or `MONGODB_URI`, `M
 - `scripts/seed.js` — Random seed with faker (configurable counts)
 - `POST /__test/wipe` — Wipes all collections except settings (non-production only)
 
+#### Seeding gotchas
+
+Both seeders have known gaps you'll trip over until they're fixed:
+
+1. **`seed.js` bypasses the outbox pipeline.** It writes Posts/Replies/Pages via direct `Model.create()`, which means: (a) no `actor` embed (only `actorId`), and (b) no `FeedItems` rows. `GET /posts`, `GET /circles/:id/posts`, `GET /groups/:id/posts` all read FeedItems — so seeded posts are invisible in the UI until backfilled. Same root cause as the "Direct `Model.create()` skips actor embed, feed fan-out, notifications, federation" note above. Fix: have `seed.js` build the `actor` subdoc from the User and call `methods/feed/writeFeedItems.js#default` after each create. Until then, run a post-seed backfill script that does the same.
+2. **`seed-test.js` step 4 fails.** It tries to set Carol's `User.to` to a circle ID, but `ActivityParser/handlers/Update/index.js` only allows `@public` or `@<own-domain>` for User profiles. The first three steps (users + their per-user circles) complete; everything after Carol's profile update doesn't run. Either drop step 4 or change it to set a circle-scoped *profile field*, not the user's `to`.
+
+Also remember to pass `DOMAIN=localhost` (or whatever the server's actual domain is) when running `seed-test.js` from the host — it defaults to `kwln.org` and will produce activities the server rejects with "User.to must be '@public' or '@<own-domain>'".
+
 ## Current State (as of 2026-03-09)
 
 ### Working

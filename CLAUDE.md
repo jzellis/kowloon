@@ -93,6 +93,10 @@ Handlers do: validation, model creation, circle/group membership updates, notifi
 
 In-memory Map loaded from Settings collection. Must call `loadSettings()` or `initKowloon()` before use. `getSetting(name)` reads from cache. Schema hooks use `getServerSettings()` which falls back to env vars if cache isn't loaded yet.
 
+### HTML Sanitization (`methods/utils/sanitize.js`)
+
+Always import `sanitizeHtml` from `#methods/utils/sanitize.js`, NOT from `sanitize-html` directly. The wrapper hardens the `nonTextTags` default to include `xmp`, which sanitize-html's defaults leak (CVE-2026-44990 / GHSA-rpr9-rxv7-x643 — disallowed `<xmp>` tags pass their raw text through unescaped, enabling stored XSS). Dependabot alert #140 is dismissed with this mitigation noted. Drop the wrapper if upstream ever ships a patched release.
+
 ## File Structure
 
 ```

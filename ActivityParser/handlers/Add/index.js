@@ -6,6 +6,7 @@ import isServerMod from "#methods/auth/isServerMod.js";
 import isGroupAdmin from "#methods/groups/isAdmin.js";
 import toMember from "#methods/parse/toMember.js";
 import createNotification from "#methods/notifications/create.js";
+import getMultiFederationTargets from "../utils/getMultiFederationTargets.js";
 
 export default async function Add(activity) {
   try {
@@ -274,12 +275,26 @@ export default async function Add(activity) {
           : remoteMembers.map((m) => m.id);
     }
 
+    // For Group adds (join_approved being the common case), deliver the Add
+    // to each remote member's home server so it can run the handler locally
+    // and create the notification there. Without this, the approval is only
+    // recorded on the group's host and the approved user sees nothing when
+    // they log into their own server. Personal/server-admin circles keep the
+    // legacy resolveAudience path via `federate: true`.
+    let federation;
+    if (ownerType === "Group" && remoteMembers.length > 0) {
+      federation = getMultiFederationTargets(
+        ...remoteMembers.map((m) => m.id),
+      );
+    }
+
     return {
       activity,
       circleId: activity.target,
       added: (res.modifiedCount || 0) > 0,
       addedCount: toAdd.length,
       federate: remoteMembers.length > 0,
+      federation,
     };
   } catch (err) {
     return { activity, error: err?.message || String(err) };

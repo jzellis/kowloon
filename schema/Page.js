@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 import { marked } from "marked";
-import sanitizeHtml from "sanitize-html";
+import sanitizeHtml from "#methods/utils/sanitize.js";
 import crypto from "crypto";
 import { Settings, User, Reply, React } from "./index.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";

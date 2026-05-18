@@ -2,7 +2,7 @@
 // MIME type validation, allowlisting, and SVG sanitization for file uploads.
 
 import { fileTypeFromBuffer } from 'file-type';
-import sanitizeHtml from 'sanitize-html';
+import sanitizeHtml from '#methods/utils/sanitize.js';
 import sharp from 'sharp';
 
 // ── Allowlist ─────────────────────────────────────────────────────────────────

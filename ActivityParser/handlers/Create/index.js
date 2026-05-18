@@ -18,7 +18,7 @@ import kowloonId from "#methods/parse/kowloonId.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 import createNotification from "#methods/notifications/create.js";
 import writeFeedItems from "#methods/feed/writeFeedItems.js";
-import sanitizeHtml from "sanitize-html";
+import sanitizeHtml from "#methods/utils/sanitize.js";
 
 // Strip all HTML tags from markdown source so no raw HTML can enter the pipeline.
 // Preserves the markdown text itself; only removes injected tag characters.

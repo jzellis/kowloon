@@ -1,6 +1,6 @@
 // routes/admin/settings.js
 import express from "express";
-import sanitizeHtml from "sanitize-html";
+import sanitizeHtml from "#methods/utils/sanitize.js";
 import route from "../utils/route.js";
 import { Settings } from "#schema";
 import { setSetting, getAllSettings } from "#methods/settings/cache.js";

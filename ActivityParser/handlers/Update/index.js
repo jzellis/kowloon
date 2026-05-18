@@ -16,7 +16,7 @@ import kowloonId from "#methods/parse/kowloonId.js";
 import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 import refreshActorCache from "#methods/users/refreshActorCache.js";
-import sanitizeHtml from "sanitize-html";
+import sanitizeHtml from "#methods/utils/sanitize.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
 // Reply (and React) records have empty `to` by design — visibility inherits

@@ -28,19 +28,10 @@ import writeFeedItems from "#methods/feed/writeFeedItems.js";
 
 const DRY_RUN = process.env.DRY_RUN === "1";
 
-const MONGO_URI =
-  process.env.MONGO_URI ||
-  process.env.MONGODB_URI ||
-  process.env.MONGO_URL ||
-  process.env.DATABASE_URL;
-
-if (!MONGO_URI) {
-  console.error("Missing MONGO_URI env var.");
-  process.exit(1);
-}
-
-await mongoose.connect(MONGO_URI);
-await initKowloon();
+await initKowloon(Kowloon, {
+  domain: process.env.DOMAIN,
+  siteTitle: process.env.SITE_TITLE || "Kowloon",
+});
 await attachMethodDomains(Kowloon);
 
 const { domain } = getServerSettings();

@@ -306,6 +306,18 @@ async function main() {
   console.log(`→ Seeding ${USER_COUNT} users + ${POST_COUNT} posts at ${BASE_URL}`);
   console.log(`  Sample image pool: ${sampleFiles.length} files`);
 
+  // Fetch current server rules so registrations can auto-acknowledge them.
+  // The /register handler rejects with 400 if any rule id isn't acknowledged.
+  let ruleIds = [];
+  try {
+    const info = await fetch(`${BASE_URL}/`).then((r) => r.json());
+    const rules = Array.isArray(info?.settings?.rules) ? info.settings.rules : [];
+    ruleIds = rules.map((r) => r.id).filter(Boolean);
+    if (ruleIds.length) console.log(`  Auto-acknowledging ${ruleIds.length} server rule(s)`);
+  } catch (err) {
+    console.warn(`  Could not fetch server rules: ${err.message}`);
+  }
+
   // 1. Register users (with random profile.icon and bio)
   const users = [];
   for (let i = 0; i < USER_COUNT; i++) {
@@ -323,6 +335,7 @@ async function main() {
         password: PASSWORD,
         profile: { name: display, description: bio, icon },
         to: "@public",
+        acknowledgedRules: ruleIds,
       });
       if (token) users.push({ username, display, token });
       else       console.warn(`  skip ${username}: no token returned`);

@@ -4,6 +4,7 @@ import sanitizeHtml from "#methods/utils/sanitize.js";
 import route from "../utils/route.js";
 import { Settings } from "#schema";
 import { setSetting, getAllSettings } from "#methods/settings/cache.js";
+import normalizeRules from "#methods/settings/normalizeRules.js";
 
 const router = express.Router({ mergeParams: true });
 
@@ -44,6 +45,7 @@ const SANITIZE_OPTIONS = {
 };
 
 function sanitizeIncomingValue(name, value) {
+  if (name === "rules") return normalizeRules(value);
   const fields = HTML_FIELDS_BY_SETTING[name];
   if (!fields || !value || typeof value !== "object") return value;
   const out = { ...value };

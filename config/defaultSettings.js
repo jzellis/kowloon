@@ -161,6 +161,15 @@ const defaultSettings = (ctx) => {
       ui: { type: "json", label: "Blocked Domains", group: "moderation", order: 1 },
     },
 
+    rules: {
+      value: [],
+      summary:
+        "Community rules new users must acknowledge at registration. Each entry: { id, text (markdown), html }. The html is rendered server-side on save.",
+      to: "@public",
+      canEdit: "@admin",
+      ui: { type: "rules", label: "Community Rules", group: "moderation", order: 3 },
+    },
+
     flagOptions: {
       value: {
         spam: {

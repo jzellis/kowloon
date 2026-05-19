@@ -96,6 +96,18 @@ const UserSchemaDef = {
   domain: { type: String }, // e.g., kwln.org
   jwksUrl: { type: String }, // e.g., https://kwln.org/.well-known/jwks.json
   actorId: { type: String, unique: true, sparse: true }, // canonical AS `id` (URL), optional for migration
+
+  // Audit record of which community rules this user acknowledged at
+  // registration. Snapshot of the rule text is stored so the record survives
+  // later edits to the rules setting.
+  acknowledgedRules: [
+    {
+      _id: false,
+      id: { type: String, required: true },
+      text: { type: String, required: true },
+      acknowledgedAt: { type: Date, default: Date.now },
+    },
+  ],
 };
 
 // Meta

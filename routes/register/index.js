@@ -189,6 +189,28 @@ const registerHandler = route(
       return;
     }
 
+    // Rules acknowledgement: every server rule's id must appear in the
+    // submitted acknowledgedRules array. Store a snapshot so a later rules
+    // edit doesn't rewrite the user's consent history.
+    const currentRules = Array.isArray(settings.rules) ? settings.rules : [];
+    let acknowledgedRules = [];
+    if (currentRules.length > 0) {
+      const submitted = Array.isArray(body.acknowledgedRules) ? body.acknowledgedRules : [];
+      const submittedIds = new Set(submitted.map(String));
+      const missing = currentRules.filter((r) => !submittedIds.has(r.id));
+      if (missing.length > 0) {
+        setStatus(400);
+        set("error", "You must acknowledge all server rules to register.");
+        return;
+      }
+      const now = new Date();
+      acknowledgedRules = currentRules.map((r) => ({
+        id: r.id,
+        text: r.text,
+        acknowledgedAt: now,
+      }));
+    }
+
     let verificationToken;
     if (requireEmailVerification) {
       verificationToken = crypto.randomBytes(32).toString("hex");
@@ -207,6 +229,7 @@ const registerHandler = route(
       to: input.to,
       canReply: input.canReply,
       canReact: input.canReact,
+      acknowledgedRules,
       ...(requireEmailVerification && {
         emailVerified: false,
         emailVerificationToken: verificationToken,

@@ -58,6 +58,15 @@ const UserSchemaDef = {
       join_request: { type: Boolean, default: true },
       join_approved: { type: Boolean, default: true },
     },
+    // Reading typography — set from the mobile app, synced per-account so the
+    // reading experience follows the user across devices. Stepped string
+    // values; the mobile client owns the px/multiplier mapping.
+    typography: {
+      fontFamily: { type: String, default: "inter" },
+      fontSize: { type: String, default: "m" },
+      lineSpacing: { type: String, default: "normal" },
+      columnWidth: { type: String, default: "normal" },
+    },
   },
 
   // ActivityPub endpoints (+ aliases)

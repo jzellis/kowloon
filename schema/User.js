@@ -47,6 +47,10 @@ const UserSchemaDef = {
       default: ["Note", "Article", "Media", "Link"],
     },
     defaultCircleView: { type: String, default: "" },
+    // Default feed view for the mobile timeline picker:
+    // "public" | "server" | a circle ID. Empty = no preference (client falls
+    // back to its own default).
+    defaultFeedView: { type: String, default: "" },
     defaultEditorType: { type: String, default: "html" },
     lang: { type: String, default: "en" },
     theme: { type: String, default: "system" },

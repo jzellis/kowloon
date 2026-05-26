@@ -17,7 +17,7 @@ import isLocalDomain from "#methods/parse/isLocalDomain.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 import { getStorageAdapter } from "#methods/files/index.js";
 
-export default route(async ({ req, query, user, set }) => {
+export default route(async ({ req, query, user, set, setStatus }) => {
   // Determine visibility tiers for this viewer
   let isLocal = false;
   if (user?.id) {
@@ -25,9 +25,24 @@ export default route(async ({ req, query, user, set }) => {
     isLocal = parsed.domain && isLocalDomain(parsed.domain);
   }
 
-  const visibilityFilter = isLocal
-    ? { $in: ["public", "server"] }
-    : "public";
+  // Optional ?to=public|server restricts the visibility tier — used by mobile
+  // and other clients to request explicit firehoses. Omitted = the default
+  // merged view (public + server for authed local users; public only otherwise).
+  const toFilter = query.to ? String(query.to).toLowerCase() : null;
+  if (toFilter === "server" && !isLocal) {
+    setStatus(403);
+    set("error", "Server-only posts are restricted to authenticated local users");
+    return;
+  }
+
+  const visibilityFilter =
+    toFilter === "public"
+      ? "public"
+      : toFilter === "server"
+      ? "server"
+      : isLocal
+      ? { $in: ["public", "server"] }
+      : "public";
 
   const filter = {
     to: visibilityFilter,

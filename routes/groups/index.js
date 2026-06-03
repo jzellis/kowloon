@@ -4,6 +4,7 @@ import express from "express";
 import collection from "./collection.js";
 import id from "./id.js";
 import members from "./members.js";
+import pending from "./pending.js";
 import posts from "./posts.js";
 import inboxPost from "../inbox/post.js";
 import { Group, FeedItems } from "#schema";
@@ -16,6 +17,7 @@ const router = express.Router({ mergeParams: true });
 router.get("/", collection);
 router.get("/:id", id);
 router.get("/:id/members", members);
+router.get("/:id/pending", pending);
 router.get("/:id/posts", async (req, res, next) => {
   if (!("rss" in req.query)) return next();
   const domain = getSetting("domain");

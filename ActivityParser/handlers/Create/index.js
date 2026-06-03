@@ -385,6 +385,32 @@ export default async function Create(activity) {
     if (type === "Group") {
       const refetched = await Model.findOne({ id: created.id }).lean();
       if (refetched) created = refetched;
+
+      // Mirror the Join handler: add the new group to the creator's Groups
+      // system circle so it appears in their "My Groups" list. Pre-save
+      // already seeded them into the group's admins/moderators/members
+      // circles, but those track membership of *the group* — the user's own
+      // circles.groups is the source of truth for "groups I belong to."
+      try {
+        const u = await User.findOne({ id: created.actorId }).lean();
+        if (u?.circles?.groups) {
+          const groupMember = {
+            id: created.id,
+            name: created.name || "",
+            icon: created.icon || "",
+            url: created.url || "",
+            inbox: created.inbox || "",
+            outbox: created.outbox || "",
+            server: created.server || "",
+          };
+          await Circle.updateOne(
+            { id: u.circles.groups, "members.id": { $ne: created.id } },
+            { $push: { members: groupMember }, $inc: { memberCount: 1 } }
+          );
+        }
+      } catch (_) {
+        /* non-fatal — visible in Browse, just missing from My Groups */
+      }
     } else {
       // Convert to plain object to access all fields including virtuals
       created = created.toObject ? created.toObject() : created;

@@ -25,6 +25,7 @@ export default route(async ({ user, set, setStatus }) => {
     allFollowing: userDoc.circles?.allFollowing,
     blocked: userDoc.circles?.blocked,
     muted: userDoc.circles?.muted,
+    groups: userDoc.circles?.groups,
     isServerAdmin: !!(await isServerAdmin(userDoc.id)),
   });
 }, { allowUnauth: false });

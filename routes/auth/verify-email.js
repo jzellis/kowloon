@@ -52,6 +52,7 @@ const verifyEmailHandler = route(
       allFollowing: uo.circles?.allFollowing,
       blocked: uo.circles?.blocked,
       muted: uo.circles?.muted,
+      groups: uo.circles?.groups,
     });
     set("token", jwtToken);
   },

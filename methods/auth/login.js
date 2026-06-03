@@ -59,6 +59,7 @@ export default async function login(input, maybePassword = "") {
     allFollowing: uo.circles?.allFollowing,
     blocked: uo.circles?.blocked,
     muted: uo.circles?.muted,
+    groups: uo.circles?.groups,
     isServerAdmin: !!(await isServerAdmin(uo.id)),
   };
 

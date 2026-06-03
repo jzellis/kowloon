@@ -67,6 +67,7 @@ function sanitizeUser(u) {
     allFollowing: doc.circles?.allFollowing || null,
     blocked: doc.circles?.blocked || null,
     muted: doc.circles?.muted || null,
+    groups: doc.circles?.groups || null,
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
   };

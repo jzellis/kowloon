@@ -1,13 +1,16 @@
 // routes/groups/members.js
 // GET /groups/:id/members — Group members list
+//
+// Visibility gated by the group's `to` field via canSeeObject: public is
+// always visible, @<domain> requires local-authed, circle:<id> requires the
+// viewer be a member of that circle.
 
 import route from "../utils/route.js";
 import { Group, Circle } from "#schema";
-import { getSetting } from "#methods/settings/cache.js";
-import isLocalDomain from "#methods/parse/isLocalDomain.js";
-import kowloonId from "#methods/parse/kowloonId.js";
+import { getViewerContext } from "#methods/visibility/context.js";
+import { canSeeObject } from "#methods/visibility/helpers.js";
 
-export default route(async ({ req, params, user, set, setStatus }) => {
+export default route(async ({ params, user, set, setStatus }) => {
   const groupId = decodeURIComponent(params.id);
   const group = await Group.findOne({ id: groupId, deletedAt: null }).lean();
 
@@ -17,25 +20,11 @@ export default route(async ({ req, params, user, set, setStatus }) => {
     return;
   }
 
-  const domain = getSetting("domain");
-  const toValue = (group.to || "").toLowerCase().trim();
-
-  // Check visibility
-  let isLocal = false;
-  if (user?.id) {
-    const parsed = kowloonId(user.id);
-    isLocal = parsed.domain && isLocalDomain(parsed.domain);
-  }
-
-  if (toValue === `@${domain}` && !isLocal) {
-    setStatus(403);
-    set("error", "Access denied");
-    return;
-  }
-
-  if (toValue !== "@public" && toValue !== `@${domain}` && !user?.id) {
-    setStatus(401);
-    set("error", "Authentication required");
+  // Single visibility check covering all three tiers.
+  const ctx = await getViewerContext(user?.id || null);
+  if (!(await canSeeObject(group, ctx))) {
+    setStatus(user?.id ? 403 : 401);
+    set("error", user?.id ? "Access denied" : "Authentication required");
     return;
   }
 

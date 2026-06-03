@@ -1,15 +1,21 @@
 // routes/groups/collection.js
 // GET /groups — List groups visible to the viewer
+//
+// Visibility tiers (Group.to):
+//   @public               — anyone, including unauthenticated
+//   @<domain>             — local authenticated users
+//   circle:<id>           — members of that circle (creator-owned)
 
 import makeCollection from "../utils/makeCollection.js";
 import { Group } from "#schema";
 import { getSetting } from "#methods/settings/cache.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
 import kowloonId from "#methods/parse/kowloonId.js";
+import { getViewerContext } from "#methods/visibility/context.js";
 
 export default makeCollection({
   model: Group,
-  buildQuery: (req, { user }) => {
+  buildQuery: async (req, { user }) => {
     const domain = getSetting("domain");
     const filter = { deletedAt: null };
 
@@ -20,15 +26,14 @@ export default makeCollection({
       isLocal = parsed.domain && isLocalDomain(parsed.domain);
     }
 
-    if (!user?.id) {
-      // Unauthenticated: only public groups
-      filter.to = "@public";
-    } else if (!isLocal) {
-      // Remote authenticated: only public groups
+    if (!user?.id || !isLocal) {
+      // Unauthenticated or remote: only public groups
       filter.to = "@public";
     } else {
-      // Local authenticated: public + server groups
-      filter.to = { $in: ["@public", `@${domain}`] };
+      // Local authenticated: public + server + any circles the viewer's in
+      const ctx = await getViewerContext(user.id);
+      const allowed = ["@public", `@${domain}`, ...(ctx?.circleIds || [])];
+      filter.to = { $in: allowed };
     }
 
     return filter;

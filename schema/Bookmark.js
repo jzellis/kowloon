@@ -175,6 +175,13 @@ BookmarkSchema.pre("save", async function (next) {
       }
     }
 
+    // Folder depth cap (also catches cycles). Only relevant for Folders;
+    // Bookmarks are allowed inside the deepest folder.
+    if (this.type === "Folder" && (this.isModified("parentFolder") || this.isNew)) {
+      const { assertFolderDepthOk } = await import("#methods/bookmarks/visibility.js");
+      await assertFolderDepthOk(this.parentFolder, this.id);
+    }
+
     const User = mongoose.model("User");
     const actor = await User.findOne({ id: this.actorId });
     if (actor) {

@@ -49,6 +49,42 @@ async function purgeFeedItems(deletedId) {
   }
 }
 
+// Soft-delete every Bookmark or Folder descended from rootFolderId. Owner
+// auth is enforced by the caller — here we only touch records the owner
+// already owns. Returns the number of records tombstoned.
+async function cascadeDeleteFolder(rootFolderId, actorId) {
+  let cascadeCount = 0;
+  const queue = [rootFolderId];
+  const seen = new Set();
+  while (queue.length) {
+    const parentId = queue.shift();
+    if (seen.has(parentId)) continue;
+    seen.add(parentId);
+    const children = await Bookmark.find({
+      parentFolder: parentId,
+      actorId,
+      deletedAt: null,
+    })
+      .select("id type")
+      .lean();
+    for (const child of children) {
+      await Bookmark.updateOne(
+        { id: child.id },
+        {
+          $set: {
+            deletedAt: new Date(),
+            deletedBy: actorId,
+            type: "Tombstone",
+          },
+        }
+      );
+      cascadeCount += 1;
+      if (child.type === "Folder") queue.push(child.id);
+    }
+  }
+  return cascadeCount;
+}
+
 /**
  * Type-specific validation for Delete activities
  * Per specification: target REQUIRED (all other fields optional)
@@ -127,6 +163,18 @@ async function deleteOne(activity, targetId) {
 
   await purgeFeedItems(deleted.id);
 
+  // Folder cascade: when a Bookmark record of type Folder is tombstoned,
+  // recursively tombstone every descendant the same owner owns. Skipped
+  // for repeat deletes so re-running can't re-process tombstones.
+  let cascadeCount = 0;
+  if (
+    parsed.type === "Bookmark" &&
+    current.type === "Folder" &&
+    !wasAlreadyDeleted
+  ) {
+    cascadeCount = await cascadeDeleteFolder(current.id, activity.actorId);
+  }
+
   // Reply: decrement replyCount on the parent (mirror of Reply handler's bump
   // at create time). Only on the first tombstone so repeat Deletes don't
   // double-decrement.
@@ -159,7 +207,12 @@ async function deleteOne(activity, targetId) {
     delete resultObj.signature;
   }
 
-  return { id: targetId, deleted: resultObj, type: parsed.type };
+  return {
+    id: targetId,
+    deleted: resultObj,
+    type: parsed.type,
+    cascadeCount,
+  };
 }
 
 export default async function Delete(activity) {

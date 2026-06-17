@@ -12,12 +12,20 @@ import sanitizeObject from "#methods/sanitize/object.js";
  * @param {"local"|"remote"|"prefer-local"|"both"} [opts.mode="local"]  - default local-only
  * @param {boolean} [opts.enforceLocalVisibility=true]                  - public-only if no viewer
  * @param {(req)=>string} [opts.idFromParams]                           - build the global id from params, if needed
+ * @param {(viewerId:string|null, doc:object)=>Promise<boolean>} [opts.canView] - custom visibility check (defaults to canSeeObject)
  */
 export default function makeGetById({
   mode = "local",
   enforceLocalVisibility = true,
   idFromParams = (req) => decodeURIComponent(req.params.id),
+  canView,
 } = {}) {
+  const defaultCanView = async (viewerId, doc) => {
+    const ctx = await getViewerContext(viewerId);
+    return canSeeObject(doc, ctx);
+  };
+  const canViewFn = canView || defaultCanView;
+
   return route(async ({ req, params, query, set, setStatus }) => {
     const id = idFromParams(req) || decodeURIComponent(params.id);
     const viewerId = req.user?.id || null;
@@ -27,11 +35,7 @@ export default function makeGetById({
         viewerId,
         mode,
         enforceLocalVisibility,
-        // Use proper visibility checking with viewer context
-        canView: async (viewerId, doc) => {
-          const ctx = await getViewerContext(viewerId);
-          return canSeeObject(doc, ctx);
-        },
+        canView: canViewFn,
       });
 
       if (!result || !result.object) {

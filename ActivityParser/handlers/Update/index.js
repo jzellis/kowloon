@@ -56,7 +56,7 @@ const ALLOWED_FIELDS = {
   Post:     new Set(["title", "summary", "source", "body", "type", "tags", "to", "canReply", "canReact", "image", "attachments", "href", "target", "location", "event"]),
   Reply:    new Set(["source", "body", "tags"]),
   Page:     new Set(["title", "summary", "source", "body", "slug", "tags", "to", "canReply", "canReact", "image", "attachments", "href", "parentId", "order"]),
-  Bookmark: new Set(["title", "summary", "type", "tags", "to", "canReply", "canReact", "href", "target"]),
+  Bookmark: new Set(["title", "summary", "source", "body", "type", "tags", "to", "canReply", "canReact", "href", "target", "parentFolder", "image"]),
   Circle:   new Set(["name", "description", "to", "canReply", "canReact"]),
   Group:    new Set(["name", "description", "icon", "to", "canReply", "canReact", "rsvpPolicy", "location"]),
   React:    new Set(["emoji", "name"]),
@@ -221,6 +221,21 @@ export default async function Update(activity) {
         patch.to = ownDomain ? `@${ownDomain}` : "@public";
       } else {
         return { activity, error: "Update: User.to must be '@public' or '@<own-domain>'" };
+      }
+    }
+
+    // Folder moves (Bookmark or Folder rec with new parentFolder) need the
+    // depth/cycle check that pre-save would enforce on .save(). Update goes
+    // through findOneAndUpdate, which skips that hook.
+    if (parsed.type === "Bookmark" && "parentFolder" in patch) {
+      const targetType = patch.type || current.type;
+      if (targetType === "Folder") {
+        const { assertFolderDepthOk } = await import("#methods/bookmarks/visibility.js");
+        try {
+          await assertFolderDepthOk(patch.parentFolder || undefined, current.id);
+        } catch (err) {
+          return { activity, error: `Update: ${err.message}` };
+        }
       }
     }
 

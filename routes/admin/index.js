@@ -18,6 +18,15 @@ import systemRouter from "./system.js";
 
 const router = express.Router({ mergeParams: true });
 
+// Browser requests to /admin/* get the SPA; the React Router handles them client-side.
+// API clients send Accept: application/json (set by HttpClient._buildHeaders) and go through.
+router.use((req, res, next) => {
+  if (req.app.locals.frontendEnabled && req.accepts(["html", "json"]) === "html") {
+    return next("router");
+  }
+  next();
+});
+
 // Admin auth guard middleware
 router.use(async (req, res, next) => {
   try {

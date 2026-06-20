@@ -102,6 +102,17 @@ BookmarkSchema.index({ parentFolder: 1, createdAt: -1 }); // folder views
 BookmarkSchema.index({ to: 1, ownerType: 1 });
 BookmarkSchema.index({ target: 1, createdAt: -1 }); // reverse lookups / cleanup
 
+// Full-text index for local search. Bookmarks never federate (they're a personal
+// utility), so this only ever serves the owner's own tree, scoped by
+// buildVisibilityQuery. See memory: bookmarks-are-personal-only.
+BookmarkSchema.index({
+  title: "text",
+  summary: "text",
+  "source.content": "text",
+  body: "text",
+  tags: "text",
+});
+
 // If you want reactions *to bookmarks* (optional; keep if you use it)
 BookmarkSchema.virtual("reacts", {
   ref: "React",

@@ -134,6 +134,25 @@ function sanitizeUser(user, viewer = null) {
 }
 
 /**
+ * Gate the personal-info subset of a user's `profile` for a given viewer,
+ * returning a shallow-cleaned profile that keeps the always-visible fields
+ * (name, icon, ...) and drops audience-gated fields when the viewer isn't
+ * permitted. Used by lean consumers (e.g. search) that want the gating rules
+ * without the full ActivityPub actor shape sanitizeUser produces.
+ *
+ * @param {object} user    user doc (needs `to`, `domain`/`id`, `profile`)
+ * @param {object|null} viewer  viewer context from getViewerContext()
+ * @returns {object} profile with personal fields stripped if not permitted
+ */
+export function gateUserProfile(user, viewer = null) {
+  const profile = user?.profile || {};
+  if (canSeePersonalInfo(user, viewer)) return { ...profile };
+  const gated = { ...profile };
+  for (const k of PERSONAL_FIELDS) delete gated[k];
+  return gated;
+}
+
+/**
  * Remove internal MongoDB fields from any object
  */
 function removeInternalFields(obj) {

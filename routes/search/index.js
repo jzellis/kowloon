@@ -1,45 +1,84 @@
 // routes/search/index.js
-// GET /search?q=term&type=Post&page=1
+// GET /search?q=term&searchIn=posts,users&page=1
+//
+// Local-only search: each server searches the content IT holds (locally-owned
+// Posts/Pages/Groups/Bookmarks plus federated content already delivered). Every
+// result passes the same consent gate as the timeline — buildVisibilityQuery for
+// authored content, the always-discoverable rule for Users, and group
+// discoverability for Groups. Network-wide (cross-server) search is a later
+// phase (a third-party indexer); it is intentionally NOT part of this endpoint.
 
 import express from "express";
 import route from "../utils/route.js";
 import { Post, Page, User, Group, Bookmark } from "#schema";
 import { activityStreamsCollection } from "../utils/oc.js";
 import { getSetting } from "#methods/settings/cache.js";
-
-const router = express.Router({ mergeParams: true });
+import { getViewerContext } from "#methods/visibility/context.js";
+import { buildVisibilityQuery } from "#methods/visibility/filter.js";
+import { gateUserProfile } from "#methods/sanitize/object.js";
 
 const SEARCHABLE = {
   Post: {
     model: Post,
-    filter: { deletedAt: null, to: "@public" },
-    select: "id type title summary body url actorId tags to createdAt",
+    // `actor` is the embedded author subdoc the post cards render (avatar +
+    // name); without it clients fall back to the bare handle.
+    select: "id type title summary body url actor actorId tags to createdAt",
   },
   Page: {
     model: Page,
-    filter: { deletedAt: null, to: "@public" },
     select: "id type title slug summary url tags to createdAt",
   },
   User: {
+    // `to` + `domain` are needed to gate personal-info profile fields; they are
+    // stripped from the response below.
     model: User,
-    filter: { deletedAt: null, active: true, to: "@public" },
-    select: "id type username profile url",
+    select: "id type username profile url to domain",
   },
   Group: {
     model: Group,
-    filter: { deletedAt: null, to: "@public" },
     select: "id name description icon url memberCount to createdAt",
   },
   Bookmark: {
     model: Bookmark,
-    filter: { deletedAt: null, to: "@public" },
     select: "id type title summary href target url tags to createdAt",
   },
 };
 
+// Per-type consent gate. Authored content (Post/Page/Bookmark) reuses the shared
+// timeline visibility query. Users are always discoverable (profile baseline),
+// minus blocked actors. Groups are discoverable when public, same-server, or the
+// viewer is a member.
+function typeFilter(typeName, ctx) {
+  switch (typeName) {
+    case "Post":
+    case "Page":
+    case "Bookmark":
+      return buildVisibilityQuery(ctx);
+
+    case "User": {
+      const f = { deletedAt: null, active: true };
+      if (ctx.blockedActorIds?.size) f.id = { $nin: [...ctx.blockedActorIds] };
+      return f;
+    }
+
+    case "Group": {
+      if (!ctx.isAuthenticated) return { deletedAt: null, to: "@public" };
+      const or = [{ to: "@public" }];
+      if (ctx.viewerDomain) or.push({ to: `@${ctx.viewerDomain}` });
+      if (ctx.groupIds.size) or.push({ id: { $in: [...ctx.groupIds] } });
+      return { deletedAt: null, $or: or };
+    }
+
+    default:
+      return { deletedAt: null, to: "@public" };
+  }
+}
+
+const router = express.Router({ mergeParams: true });
+
 router.get(
   "/",
-  route(async ({ req, query, set, setStatus }) => {
+  route(async ({ req, query, user, set, setStatus }) => {
     const q = (query.q || "").trim();
     if (!q) {
       setStatus(400);
@@ -72,6 +111,8 @@ router.get(
     const limit = Math.min(Math.max(1, parseInt(query.limit, 10) || 20), 50);
     const skip = (page - 1) * limit;
 
+    const ctx = await getViewerContext(user?.id || null);
+
     // Collect results from all requested types
     const allResults = [];
 
@@ -79,8 +120,11 @@ router.get(
       requestedTypes
         .filter((t) => SEARCHABLE[t])
         .map(async (typeName) => {
-          const { model, filter, select } = SEARCHABLE[typeName];
-          const textFilter = { ...filter, $text: { $search: q } };
+          const { model, select } = SEARCHABLE[typeName];
+          const textFilter = {
+            ...typeFilter(typeName, ctx),
+            $text: { $search: q },
+          };
 
           try {
             const docs = await model
@@ -108,6 +152,13 @@ router.get(
     const total = allResults.length;
     const paged = allResults.slice(skip, skip + limit).map((r) => {
       const { _score, score, ...rest } = r;
+      // Gate personal-info profile fields per viewer; drop the helper fields
+      // (`to`/`domain`) only selected to compute that gate.
+      if (rest._searchType === "User") {
+        rest.profile = gateUserProfile(rest, ctx);
+        delete rest.to;
+        delete rest.domain;
+      }
       return rest;
     });
 

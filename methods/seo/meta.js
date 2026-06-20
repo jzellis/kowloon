@@ -21,15 +21,17 @@ function resolveImageUrl(fileIdOrUrl, domain, proto) {
 // Returns { title, description, image, url, type, jsonLd }
 export async function fetchMeta(pathname, req) {
   const domain = getSetting("domain") || req.hostname;
-  const siteName = getSetting("siteName") || "Kowloon";
+  const profile = getSetting("profile") || {};
+  const siteName = profile.name || "Kowloon";
   const proto = req.headers["x-forwarded-proto"] || "https";
   const base = `${proto}://${domain}`;
-  const siteIcon = resolveImageUrl(getSetting("profile")?.icon, domain, proto);
+  const siteIcon  = resolveImageUrl(profile.icon,  domain, proto);
+  const siteHero  = resolveImageUrl(profile.image, domain, proto);
 
   const defaults = {
     title: siteName,
-    description: getSetting("profile")?.description || `A Kowloon federated server`,
-    image: siteIcon,
+    description: profile.description || `A Kowloon federated server`,
+    image: siteHero || siteHero || siteIcon,
     url: `${base}${pathname}`,
     type: "website",
     siteName,
@@ -59,7 +61,7 @@ export async function fetchMeta(pathname, req) {
     const obj = item.object ?? {};
     const title = obj.name || obj.title || (item.type === "Note" ? "Note" : item.type) || "Post";
     const description = excerpt(obj.source?.content || obj.body || obj.content || "");
-    const image = resolveImageUrl(obj.image, domain, proto) || siteIcon;
+    const image = resolveImageUrl(obj.image, domain, proto) || siteHero || siteIcon;
     const authorName = obj.actor?.name || obj.actor?.preferredUsername || item.actorId;
     return {
       ...defaults,
@@ -87,7 +89,7 @@ export async function fetchMeta(pathname, req) {
     const user = await User.findOne({ id: userId, active: true }).lean();
     if (!user) return defaults;
     const name = user.profile?.name || user.username;
-    const image = resolveImageUrl(user.profile?.icon, domain, proto) || siteIcon;
+    const image = resolveImageUrl(user.profile?.icon, domain, proto) || siteHero || siteIcon;
     return {
       ...defaults,
       title: `${name} — ${siteName}`,
@@ -111,7 +113,7 @@ export async function fetchMeta(pathname, req) {
     const groupId = decodeURIComponent(groupMatch[1]);
     const group = await Group.findOne({ id: groupId, to: "@public", deletedAt: null }).lean();
     if (!group) return defaults;
-    const image = resolveImageUrl(group.icon, domain, proto) || siteIcon;
+    const image = resolveImageUrl(group.icon, domain, proto) || siteHero || siteIcon;
     return {
       ...defaults,
       title: `${group.name} — ${siteName}`,
@@ -137,7 +139,7 @@ export async function fetchMeta(pathname, req) {
       (await Page.findOne({ id: idOrSlug, deletedAt: null }).lean()) ||
       (await Page.findOne({ slug: idOrSlug, deletedAt: null }).lean());
     if (!page) return defaults;
-    const image = resolveImageUrl(page.image, domain, proto) || siteIcon;
+    const image = resolveImageUrl(page.image, domain, proto) || siteHero || siteIcon;
     return {
       ...defaults,
       title: `${page.title} — ${siteName}`,

@@ -13,7 +13,17 @@ function excerpt(html, maxLen = 200) {
 
 function resolveImageUrl(fileIdOrUrl, domain, proto) {
   if (!fileIdOrUrl) return null;
-  if (fileIdOrUrl.startsWith("http")) return fileIdOrUrl;
+  if (fileIdOrUrl.startsWith("http")) {
+    // Re-encode the path so special chars in file IDs (: @) don't confuse
+    // social-media scrapers that mis-parse them as protocol/user-info.
+    try {
+      const u = new URL(fileIdOrUrl);
+      u.pathname = u.pathname.split("/").map(encodeURIComponent).join("/");
+      return u.toString();
+    } catch {
+      return fileIdOrUrl;
+    }
+  }
   if (fileIdOrUrl.startsWith("file:")) return `${proto}://${domain}/files/${encodeURIComponent(fileIdOrUrl)}`;
   return null;
 }
@@ -30,7 +40,7 @@ export async function fetchMeta(pathname, req) {
 
   const defaults = {
     title: siteName,
-    description: profile.description || `A Kowloon federated server`,
+    description: excerpt(profile.description) || `A Kowloon federated server`,
     image: siteHero || siteHero || siteIcon,
     url: `${base}${pathname}`,
     type: "website",

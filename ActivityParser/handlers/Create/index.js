@@ -20,11 +20,22 @@ import createNotification from "#methods/notifications/create.js";
 import writeFeedItems from "#methods/feed/writeFeedItems.js";
 import sanitizeHtml from "#methods/utils/sanitize.js";
 
-// Strip all HTML tags from markdown source so no raw HTML can enter the pipeline.
-// Preserves the markdown text itself; only removes injected tag characters.
+// Strip dangerous HTML tags from Markdown source while preserving:
+//   1. Markdown syntax — sanitize-html encodes stray > chars to &gt;, which
+//      breaks "> blockquote" syntax. We decode entities back after stripping.
+//   2. <u> and <s> inline HTML — tiptap-markdown emits these for marks that
+//      have no Markdown equivalent (underline, strikethrough). Full XSS
+//      sanitization runs in safeMarkdown() at render time via ALLOWED_TAGS.
 function stripHtmlFromMarkdown(text) {
   if (typeof text !== "string") return text;
-  return sanitizeHtml(text, { allowedTags: [], allowedAttributes: {} });
+  const stripped = sanitizeHtml(text, {
+    allowedTags: ["u", "s"],
+    allowedAttributes: {},
+  });
+  return stripped
+    .replace(/&gt;/g, ">")
+    .replace(/&lt;/g, "<")
+    .replace(/&amp;/g, "&");
 }
 
 const MODELS = {

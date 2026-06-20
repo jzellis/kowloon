@@ -91,6 +91,9 @@ echo ""
 
 # Run in foreground — blocks until setup server calls process.exit(0).
 # The /config volume is mounted to our INSTALL_DIR so generated files land here.
+# Clear any leftover setup container from a previous or cancelled run so the
+# name isn't already taken.
+docker rm -f kowloon-setup &>/dev/null || true
 docker run --rm \
   --name kowloon-setup \
   -p "${SETUP_PORT}:${SETUP_PORT}" \

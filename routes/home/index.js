@@ -8,9 +8,7 @@ import { Settings } from "#schema";
 
 const router = express.Router({ mergeParams: true });
 
-router.get(
-  "/",
-  route(async ({ set }) => {
+const serverInfo = route(async ({ set }) => {
     const settings = await getSettings();
 
     set("type", "Service");
@@ -41,7 +39,16 @@ router.get(
       publicSettings[doc.name] = doc.value;
     }
     set("settings", publicSettings);
-  })
-);
+  });
+
+router.get("/", (req, res, next) => {
+  // Browsers get the web app (SPA served further down the stack); ActivityPub /
+  // API clients get the server-info JSON. Only fall through when the frontend is
+  // actually mounted, so a frontend-less install still answers `/` with JSON.
+  if (req.app.locals.frontendEnabled && req.accepts(["html", "json"]) === "html") {
+    return next();
+  }
+  return serverInfo(req, res, next);
+});
 
 export default router;

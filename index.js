@@ -116,8 +116,14 @@ if (existsSync(imagesDir)) {
 
 // 7) Serve built frontend (if present) — after API routes so they take priority
 const publicDir = join(__dirname, "public");
-if (existsSync(publicDir) && process.env.SERVE_FRONTEND !== "false") {
+// Gate on index.html specifically: public/ also exists (for /images placeholder
+// icons) in dev where the frontend isn't built, and serving an absent index.html
+// would 404 every SPA route.
+if (existsSync(join(publicDir, "index.html")) && process.env.SERVE_FRONTEND !== "false") {
   const { default: serveStatic } = await import("serve-static");
+  // Lets the `/` route fall through to the SPA for browser requests instead of
+  // returning the server-info JSON (see routes/home/index.js).
+  app.locals.frontendEnabled = true;
   app.use(serveStatic(publicDir, { maxAge: "1y", immutable: true, index: false }));
   // SPA fallback — any unmatched route serves index.html
   app.get("*", (_req, res) => res.sendFile(join(publicDir, "index.html")));

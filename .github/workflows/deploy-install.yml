@@ -6,6 +6,9 @@ on:
       - main
     paths:
       - install.sh
+  # Allow redeploying the current install.sh on demand (e.g. after the script
+  # was fixed in a commit that didn't itself touch install.sh).
+  workflow_dispatch:
 
 jobs:
   deploy:

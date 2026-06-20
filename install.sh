@@ -95,6 +95,7 @@ docker run --rm \
   --name kowloon-setup \
   -p "${SETUP_PORT}:${SETUP_PORT}" \
   -v "${INSTALL_DIR}:/config" \
+  -e SERVER_IP="${SERVER_IP}" \
   "$SETUP_IMAGE"
 
 # ── Verify config was written ─────────────────────────────────────────────────

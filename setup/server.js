@@ -38,11 +38,11 @@ app.get("/check-dns", async (req, res) => {
   if (!domain) return res.json({ ok: false, error: "No domain provided" });
   try {
     const addresses = await dns.resolve4(domain);
-    const serverIp = getServerIp();
+    const serverIp = await getPublicIp();
     const pointsHere = serverIp ? addresses.includes(serverIp) : null;
     res.json({ ok: true, addresses, serverIp, pointsHere });
   } catch {
-    res.json({ ok: false, addresses: [], serverIp: getServerIp() });
+    res.json({ ok: false, addresses: [], serverIp: await getPublicIp() });
   }
 });
 
@@ -294,7 +294,42 @@ app.listen(PORT, "0.0.0.0", () => {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-function getServerIp() {
+let cachedPublicIp;
+
+// The wizard runs in a container, so os.networkInterfaces() only sees the
+// container bridge IP (172.17.x), not the host's public IP — which made the DNS
+// check always report a mismatch. Resolve the real public IP instead: prefer
+// the value install.sh already detected and passes through, then a public echo
+// service (works from inside the container via NAT), then a local interface.
+async function getPublicIp() {
+  if (cachedPublicIp !== undefined) return cachedPublicIp;
+
+  if (process.env.SERVER_IP?.trim()) {
+    cachedPublicIp = process.env.SERVER_IP.trim();
+    return cachedPublicIp;
+  }
+
+  for (const url of ["https://api.ipify.org", "https://icanhazip.com"]) {
+    try {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 3000);
+      const resp = await fetch(url, { signal: ctrl.signal });
+      clearTimeout(timer);
+      if (resp.ok) {
+        const ip = (await resp.text()).trim();
+        if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) {
+          cachedPublicIp = ip;
+          return ip;
+        }
+      }
+    } catch {}
+  }
+
+  cachedPublicIp = getInterfaceIp();
+  return cachedPublicIp;
+}
+
+function getInterfaceIp() {
   try {
     const ifaces = os.networkInterfaces();
     for (const name of Object.keys(ifaces)) {

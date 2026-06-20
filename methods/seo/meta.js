@@ -35,13 +35,13 @@ export async function fetchMeta(pathname, req) {
   const siteName = profile.name || "Kowloon";
   const proto = req.headers["x-forwarded-proto"] || "https";
   const base = `${proto}://${domain}`;
-  const siteIcon  = resolveImageUrl(profile.icon,  domain, proto);
-  const siteHero  = resolveImageUrl(profile.image, domain, proto);
+  const siteIcon  = profile.icon  ? `${base}/og/icon`  : null;
+  const siteHero  = profile.image ? `${base}/og/image` : siteIcon;
 
   const defaults = {
     title: siteName,
     description: excerpt(profile.description) || `A Kowloon federated server`,
-    image: siteHero || siteHero || siteIcon,
+    image: siteHero || siteIcon,
     url: `${base}${pathname}`,
     type: "website",
     siteName,

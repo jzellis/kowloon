@@ -5,7 +5,7 @@ import route from "../utils/route.js";
 import { Circle, File } from "#schema";
 import getTimeline from "#methods/feed/getTimeline.js";
 import { getSetting } from "#methods/settings/cache.js";
-import { getStorageAdapter } from "#methods/files/index.js";
+import { buildFileUrl } from "#methods/files/signedUrl.js";
 
 const VISIBILITY_MAP = { public: 'Public', server: 'Server', audience: 'Audience' };
 
@@ -68,27 +68,35 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
 
   // Collect local file IDs from image and attachments fields
   const fileIds = new Set();
+  const restrictedFiles = new Set();
   for (const item of normalized) {
-    if (item.image?.startsWith("file:")) fileIds.add(item.image);
-    for (const id of item.attachments ?? []) {
-      if (id && typeof id === "string" && id.startsWith("file:")) fileIds.add(id);
-    }
+    const restricted = item.visibility !== "Public";
+    const add = (id) => {
+      if (!id || typeof id !== "string" || !id.startsWith("file:")) return;
+      fileIds.add(id);
+      if (restricted) restrictedFiles.add(id);
+    };
+    add(item.image);
+    for (const id of item.attachments ?? []) add(id);
   }
 
-  // Generate presigned URLs for all local files in one pass
+  // Resolve local file IDs to app-served URLs (GET /files/:id). Public files get
+  // a plain, cacheable URL; restricted files get a short-lived signed URL so
+  // authorized <img> loads work without a token.
   const presignedMap = new Map(); // fileId → { url, mediaType, name }
   if (fileIds.size > 0) {
-    const storage = await getStorageAdapter();
+    const domain = getSetting("domain");
+    const protocol = req.headers["x-forwarded-proto"] || "https";
     const files = await File.find({ id: { $in: [...fileIds] } })
-      .select("id storageKey mediaType name summary")
+      .select("id mediaType name summary")
       .lean();
-    await Promise.all(files.map(async (f) => {
-      if (!f.storageKey) return;
-      try {
-        const url = await storage.getSignedUrl(f.storageKey, 3600);
-        presignedMap.set(f.id, { url, mediaType: f.mediaType ?? "", name: f.name ?? f.summary ?? "" });
-      } catch { /* non-fatal */ }
-    }));
+    for (const f of files) {
+      presignedMap.set(f.id, {
+        url: buildFileUrl({ fileId: f.id, domain, protocol, restricted: restrictedFiles.has(f.id) }),
+        mediaType: f.mediaType ?? "",
+        name: f.name ?? f.summary ?? "",
+      });
+    }
   }
 
   const orderedItems = normalized.map((item) => {

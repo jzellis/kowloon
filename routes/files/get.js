@@ -3,9 +3,10 @@
 
 import route from '../utils/route.js';
 import File from '#schema/File.js';
-import { getStorageAdapter } from '#methods/files/index.js';
+import { buildFileUrl } from '#methods/files/signedUrl.js';
+import { getSetting } from '#methods/settings/cache.js';
 
-export default route(async ({ params, query, setStatus, set }) => {
+export default route(async ({ req, params, query, setStatus, set }) => {
   const { id } = params;
 
   if (!id) {
@@ -23,11 +24,18 @@ export default route(async ({ params, query, setStatus, set }) => {
       return;
     }
 
-    // If signed URL requested
+    // If a ready-to-use URL is requested, return an app-served signed URL
+    // (works for both public and restricted files for its TTL).
     if (query.signed === 'true' || query.signed === '1') {
       const expiresIn = parseInt(query.expiresIn || '3600', 10);
-      const storage = await getStorageAdapter();
-      const signedUrl = await storage.getSignedUrl(file.storageKey, expiresIn);
+      const protocol = req.headers['x-forwarded-proto'] || 'https';
+      const signedUrl = buildFileUrl({
+        fileId: file.id,
+        domain: getSetting('domain'),
+        protocol,
+        restricted: true,
+        ttlSeconds: expiresIn,
+      });
 
       setStatus(200);
       set('file', file.toObject());

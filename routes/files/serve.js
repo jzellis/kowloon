@@ -1,11 +1,14 @@
 // /routes/files/serve.js
 // Authenticated file proxy. Resolves visibility from the file's parent object,
-// then issues a short-lived presigned S3 redirect. The browser loads the file
-// directly from S3 — no bytes stream through Node, and no auth token appears
-// in any URL the client ever holds.
+// then streams the bytes through the app from internal object storage. Keeping
+// storage private means a file's only public URL is this endpoint
+// (https://<domain>/files/:id) — already TLS-terminated by the reverse proxy
+// and reachable by federation peers, with no presigned URLs or public storage
+// surface to provision. This is the "authenticated proxy" the architecture docs
+// describe.
 //
-// GET /files/:id          — redirect to presigned S3 URL (60s TTL)
-// GET /files/:id?size=200 — redirect to presigned thumbnail URL
+// GET /files/:id          — stream the file
+// GET /files/:id?size=200 — stream the thumbnail variant
 //
 // Auth: Bearer token in Authorization header OR ?token= query param (legacy).
 
@@ -13,6 +16,7 @@ import { jwtVerify, importSPKI } from 'jose';
 import kowloonId from '#methods/parse/kowloonId.js';
 import File from '#schema/File.js';
 import { getStorageAdapter } from '#methods/files/index.js';
+import { verifyFileSig } from '#methods/files/signedUrl.js';
 import { getViewerContext } from '#methods/visibility/context.js';
 import getSettings from '#methods/settings/get.js';
 import { Post, Reply, User, Group, Page, Bookmark, Circle } from '#schema';
@@ -88,14 +92,19 @@ export default async function serve(req, res) {
     const parentTo = file.parentObject ? await getParentTo(file.parentObject) : null;
     const effectiveTo = parentTo ?? file.to ?? '@public';
 
-    const token = extractToken(req);
-    const viewerId = await resolveViewer(token);
-    const allowed = await canAccess(effectiveTo, file, viewerId);
+    // A valid app-issued signature grants access to this one file (the API only
+    // mints them for viewers it already authorized). Otherwise fall back to the
+    // Bearer/?token JWT + parent-visibility check.
+    if (!verifyFileSig(fileId, req.query.exp, req.query.sig)) {
+      const token = extractToken(req);
+      const viewerId = await resolveViewer(token);
+      const allowed = await canAccess(effectiveTo, file, viewerId);
 
-    if (!allowed) {
-      return res.status(viewerId ? 403 : 401).json({
-        error: viewerId ? 'Access denied' : 'Authentication required',
-      });
+      if (!allowed) {
+        return res.status(viewerId ? 403 : 401).json({
+          error: viewerId ? 'Access denied' : 'Authentication required',
+        });
+      }
     }
 
     let storageKey = file.storageKey;
@@ -113,15 +122,34 @@ export default async function serve(req, res) {
     const exists = await storage.exists(storageKey);
     if (!exists) return res.status(404).json({ error: 'File not found in storage' });
 
-    // Presigned URL TTL is set longer than the redirect's cache window so the
-    // cached redirect URL is still valid when the browser re-uses it.
-    const signedUrl = await storage.getSignedUrl(storageKey, 600);
+    // Thumbnails are generated as webp; originals carry their own mediaType.
+    const isThumb = !!(sizeParam && file.thumbnails?.[sizeParam]);
+    const contentType = isThumb
+      ? 'image/webp'
+      : file.mediaType || 'application/octet-stream';
 
-    // Cache the redirect for 5 minutes so the browser can re-use the same
-    // presigned URL across page loads. `private` keeps shared caches out of it
-    // since the redirect target embeds visibility logic.
-    res.setHeader('Cache-Control', 'private, max-age=300');
-    return res.redirect(302, signedUrl);
+    res.setHeader('Content-Type', contentType);
+    // Public files are shared-cacheable (helps peers/CDNs); restricted files
+    // stay private and short-lived since the parent's visibility can change.
+    res.setHeader(
+      'Cache-Control',
+      normalizeVisibility(effectiveTo) === '@public'
+        ? 'public, max-age=300'
+        : 'private, max-age=60'
+    );
+    if (!isThumb && typeof file.size === 'number') {
+      res.setHeader('Content-Length', String(file.size));
+    }
+
+    const stream = await storage.getStream(storageKey);
+    stream.on('error', (err) => {
+      console.error('[files/serve] stream error:', err);
+      if (!res.headersSent) res.status(500).json({ error: 'Failed to read file' });
+      else res.destroy(err);
+    });
+    // If the client disconnects mid-stream, stop pulling from storage.
+    res.on('close', () => stream.destroy?.());
+    return stream.pipe(res);
   } catch (err) {
     console.error('[files/serve] Error:', err);
     if (!res.headersSent) res.status(500).json({ error: err.message || 'Failed to serve file' });

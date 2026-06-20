@@ -5,7 +5,8 @@ import {
   buildFollowerMap,
   enrichWithCapabilities,
 } from "#methods/feed/visibility.js";
-import { getStorageAdapter } from "#methods/files/index.js";
+import { buildFileUrl, isPublicVisibility } from "#methods/files/signedUrl.js";
+import { getSetting } from "#methods/settings/cache.js";
 
 export default route(async ({ req, params, set, setStatus }) => {
   const { id } = params; // e.g. "post:123@domain.com"
@@ -43,8 +44,8 @@ export default route(async ({ req, params, set, setStatus }) => {
     updatedAt: enriched.updatedAt,
   };
 
-  // Resolve local file IDs to presigned S3 URLs (1 hour TTL).
-  // Remote file: IDs would have been rewritten to HTTP URLs during federation.
+  // Resolve local file IDs to app-served URLs (GET /files/:id). Remote file:
+  // IDs would have been rewritten to HTTP URLs during federation.
   const localFileIds = new Set();
   if (response.image?.startsWith?.("file:")) localFileIds.add(response.image);
   for (const id of response.attachments ?? []) {
@@ -53,17 +54,21 @@ export default route(async ({ req, params, set, setStatus }) => {
 
   const presignedMap = new Map(); // fileId → { url, mediaType, name }
   if (localFileIds.size > 0) {
-    const storage = await getStorageAdapter();
+    // All of a post's files inherit the post's visibility. Public → plain,
+    // cacheable URL; restricted → short-lived signed URL for authorized <img>.
+    const restricted = !isPublicVisibility(response.to ?? feedCacheItem.to);
+    const domain = getSetting("domain");
+    const protocol = req.headers["x-forwarded-proto"] || "https";
     const files = await File.find({ id: { $in: [...localFileIds] } })
-      .select("id storageKey mediaType name summary")
+      .select("id mediaType name summary")
       .lean();
-    await Promise.all(files.map(async (f) => {
-      if (!f.storageKey) return;
-      try {
-        const url = await storage.getSignedUrl(f.storageKey, 3600);
-        presignedMap.set(f.id, { url, mediaType: f.mediaType ?? "", name: f.name ?? f.summary ?? "" });
-      } catch { /* non-fatal */ }
-    }));
+    for (const f of files) {
+      presignedMap.set(f.id, {
+        url: buildFileUrl({ fileId: f.id, domain, protocol, restricted }),
+        mediaType: f.mediaType ?? "",
+        name: f.name ?? f.summary ?? "",
+      });
+    }
   }
 
   if (response.image?.startsWith("file:")) {

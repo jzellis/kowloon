@@ -115,8 +115,14 @@ MONGO_URI=mongodb://mongo:27017/kowloon
 # ── Security ──────────────────────────────────────────────────────────────────
 JWT_SECRET=${jwtSecret}
 
-# ── File storage (local by default; switch to s3 for production scale) ────────
-STORAGE_ADAPTER=local
+# ── File storage ──────────────────────────────────────────────────────────────
+# Internal MinIO (S3-compatible). Files are private and stream through the app
+# at /files/:id — there is no public storage endpoint to expose or secure.
+S3_ENDPOINT=http://minio:9000
+S3_BUCKET=kowloon
+S3_REGION=us-east-1
+S3_ACCESS_KEY=${s3AccessKey}
+S3_SECRET_KEY=${s3SecretKey}
 
 # ── Email (optional — notifications won't send without this) ──────────────────
 ${smtpLines}
@@ -144,6 +150,8 @@ services:
     env_file: .env
     depends_on:
       mongo:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     volumes:
       - uploads:/app/uploads
@@ -184,6 +192,41 @@ services:
     networks:
       - internal
 
+  # ── Object storage (internal only — files stream through the app) ────────────
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: "\${S3_ACCESS_KEY}"
+      MINIO_ROOT_PASSWORD: "\${S3_SECRET_KEY}"
+    volumes:
+      - minio_data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - internal
+
+  # ── Create the storage bucket once, then exit ────────────────────────────────
+  minio-init:
+    image: minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+        mc alias set local http://minio:9000 \${S3_ACCESS_KEY} \${S3_SECRET_KEY} &&
+        mc mb --ignore-existing local/kowloon &&
+        mc anonymous set none local/kowloon &&
+        echo 'MinIO bucket ready (private; served via the app proxy).'
+      "
+    restart: on-failure
+    networks:
+      - internal
+
   # ── Database ─────────────────────────────────────────────────────────────────
   mongo:
     image: mongo:7
@@ -217,6 +260,7 @@ services:
 
 volumes:
   mongo_data:
+  minio_data:
   uploads:
   caddy_data:
   caddy_config:

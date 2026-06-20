@@ -6,6 +6,9 @@ on:
       - main
     tags:
       - "v*"
+  # Rebuild on demand — e.g. to pick up a change pushed only to the
+  # kowloon-frontend or kowloon-client repo, which don't trigger this workflow.
+  workflow_dispatch:
 
 jobs:
   build-app:

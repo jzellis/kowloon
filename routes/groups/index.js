@@ -15,7 +15,11 @@ import { toRSS } from "#methods/rss/index.js";
 const router = express.Router({ mergeParams: true });
 
 router.get("/", collection);
-router.get("/:id", id);
+router.get("/:id", (req, res, next) => {
+  const accept = req.headers.accept || ''
+  if (accept.includes('text/html') && !accept.includes('application/activity+json') && !accept.includes('application/ld+json')) return next('router')
+  id(req, res, next)
+});
 router.get("/:id/members", members);
 router.get("/:id/pending", pending);
 router.get("/:id/posts", async (req, res, next) => {

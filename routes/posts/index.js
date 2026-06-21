@@ -11,6 +11,17 @@ import { toRSS } from "#methods/rss/index.js";
 
 const router = express.Router({ mergeParams: true });
 
+// If a browser navigates directly to a post URL, serve the SPA so React Router
+// can render it. Only ActivityPub clients (application/activity+json) and
+// programmatic fetches (*/*) get the JSON API response.
+// botDetect.js already handles crawlers before we get here.
+function wantsHTML(req) {
+  const accept = req.headers.accept || ''
+  if (accept.includes('application/activity+json')) return false
+  if (accept.includes('application/ld+json')) return false
+  return accept.includes('text/html')
+}
+
 router.get("/", async (req, res, next) => {
   if (!("rss" in req.query)) return next();
   const domain = getSetting("domain");
@@ -29,7 +40,7 @@ router.get("/", async (req, res, next) => {
   res.set("Content-Type", "text/xml; charset=UTF-8").send(xml);
 }, collection);
 router.get("/server", server);
-router.get("/:id", id);
+router.get("/:id", (req, res, next) => wantsHTML(req) ? next('router') : id(req, res, next));
 router.get("/:id/replies", replies);
 router.get("/:id/reacts", reacts);
 

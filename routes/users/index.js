@@ -43,6 +43,8 @@ router.get("/lookup", lookup);
 router.get("/search", search);
 router.get("/:id", (req, res, next) => {
   if (isApRequest(req)) return actor(req, res, next);
+  const accept = req.headers.accept || ''
+  if (accept.includes('text/html')) return next('router')
   next();
 }, id);
 router.get("/:id/posts", async (req, res, next) => {

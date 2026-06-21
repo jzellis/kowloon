@@ -117,15 +117,19 @@ export default async function init(Kowloon, ctx = {}) {
     await Settings.updateOne({ name: "modCircle" }, { value: modCircle.id });
   }
 
-  // Fix profile URL if it was seeded before DOMAIN was available
-  if (ctx.domain) {
+  // Fix profile fields that were seeded with missing/undefined values
+  {
     const profileSetting = await Settings.findOne({ name: "profile" }).lean();
-    if (profileSetting?.value?.urls?.some((u) => u.includes("undefined"))) {
-      await Settings.updateOne(
-        { name: "profile" },
-        { $set: { "value.urls": [`https://${ctx.domain}`] } }
-      );
-      console.log("Fixed profile URL (was seeded with undefined domain).");
+    const updates = {};
+    if (ctx.domain && profileSetting?.value?.urls?.some((u) => u.includes("undefined"))) {
+      updates["value.urls"] = [`https://${ctx.domain}`];
+    }
+    if (!profileSetting?.value?.name && ctx.siteTitle) {
+      updates["value.name"] = ctx.siteTitle;
+    }
+    if (Object.keys(updates).length) {
+      await Settings.updateOne({ name: "profile" }, { $set: updates });
+      console.log("Fixed profile setting:", Object.keys(updates).join(", "));
     }
   }
 

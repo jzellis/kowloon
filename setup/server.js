@@ -132,8 +132,21 @@ ${smtpLines}
   const caddyContent = `# Managed by Kowloon — do not edit directly.
 # Caddy will automatically obtain a TLS certificate via Let's Encrypt.
 
+{
+    servers {
+        timeouts {
+            read_body 120s
+        }
+    }
+}
+
 ${cleanDomain} {
-    reverse_proxy app:3000
+    reverse_proxy app:3000 {
+        transport http {
+            read_timeout  120s
+            write_timeout 120s
+        }
+    }
 }
 `;
 

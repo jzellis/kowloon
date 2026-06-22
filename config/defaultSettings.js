@@ -121,22 +121,6 @@ const defaultSettings = (ctx) => {
       ui: { type: "json", label: "Default Pronouns", group: "users", order: 1 },
     },
 
-    adminUsers: {
-      value: [],
-      summary: "Legacy list of admin user IDs. Prefer using the Admin Circle instead.",
-      to: "@admin",
-      canEdit: "@admin",
-      ui: { type: "json", label: "Admin User IDs", group: "server", order: 5 },
-    },
-
-    editorUsers: {
-      value: [],
-      summary: "User IDs with permission to create and edit server Pages.",
-      to: "@admin",
-      canEdit: "@admin",
-      ui: { type: "json", label: "Editor User IDs", group: "server", order: 6 },
-    },
-
     // ── Uploads ──────────────────────────────────────────────────────────────
     maxUploadSize: {
       value: 100,

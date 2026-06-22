@@ -5,6 +5,7 @@ import { statfs } from "fs/promises";
 import mongoose from "mongoose";
 import route from "../utils/route.js";
 import { Activity, Circle, Flag, Group, Invite, Page, Post, Reply, React, User } from "#schema";
+import getSettings from "#methods/settings/get.js";
 
 const router = express.Router({ mergeParams: true });
 
@@ -92,6 +93,79 @@ router.get(
     { allowUnauth: false }
   )
 );
+
+// ── Admin / Mod circle member management ──────────────────────────────────
+// These circles are owned by the server actor, not a user, so we manage them
+// directly rather than going through the ActivityPub Add/Remove pipeline.
+
+async function getRoleCircle(role) {
+  const settings = await getSettings();
+  const id = role === "admin" ? settings.adminCircle : settings.modCircle;
+  if (!id) return null;
+  return Circle.findOne({ id });
+}
+
+function toMemberDoc(user, domain) {
+  return {
+    id: user.id,
+    name: user.profile?.name ?? user.username,
+    icon: user.profile?.icon ?? null,
+    inbox: user.inbox ?? null,
+    outbox: user.outbox ?? null,
+    url: user.url ?? null,
+    server: user.server ?? domain,
+  };
+}
+
+for (const role of ["admins", "mods"]) {
+  const circleRole = role === "admins" ? "admin" : "mod";
+
+  router.get(`/${role}`, async (req, res, next) => {
+    try {
+      const circle = await getRoleCircle(circleRole);
+      if (!circle) return res.status(500).json({ error: `${role} circle not configured` });
+      res.json({ members: circle.members ?? [] });
+    } catch (err) { next(err); }
+  });
+
+  router.post(`/${role}`, async (req, res, next) => {
+    try {
+      const { userId } = req.body;
+      if (!userId) return res.status(400).json({ error: "userId required" });
+
+      const circle = await getRoleCircle(circleRole);
+      if (!circle) return res.status(500).json({ error: `${role} circle not configured` });
+
+      if (circle.members.some((m) => m.id === userId)) {
+        return res.json({ ok: true, alreadyMember: true });
+      }
+
+      const user = await User.findOne({ id: userId, active: true, deletedAt: null }).lean();
+      if (!user) return res.status(404).json({ error: "User not found" });
+
+      const settings = await getSettings();
+      circle.members.push(toMemberDoc(user, settings.domain));
+      circle.memberCount = circle.members.length;
+      await circle.save();
+
+      res.json({ ok: true });
+    } catch (err) { next(err); }
+  });
+
+  router.delete(`/${role}/:userId`, async (req, res, next) => {
+    try {
+      const userId = decodeURIComponent(req.params.userId);
+      const circle = await getRoleCircle(circleRole);
+      if (!circle) return res.status(500).json({ error: `${role} circle not configured` });
+
+      circle.members = circle.members.filter((m) => m.id !== userId);
+      circle.memberCount = circle.members.length;
+      await circle.save();
+
+      res.json({ ok: true });
+    } catch (err) { next(err); }
+  });
+}
 
 router.get("/backup", async (req, res, next) => {
   try {

@@ -93,4 +93,23 @@ router.get(
   )
 );
 
+router.get("/backup", async (req, res, next) => {
+  try {
+    const db = mongoose.connection.db;
+    const colInfos = await db.listCollections().toArray();
+    const collections = {};
+    for (const col of colInfos) {
+      collections[col.name] = await db.collection(col.name).find({}).toArray();
+    }
+    const exportedAt = new Date().toISOString();
+    const dateStr = exportedAt.split("T")[0];
+    res
+      .setHeader("Content-Disposition", `attachment; filename="kowloon-backup-${dateStr}.json"`)
+      .setHeader("Content-Type", "application/json; charset=utf-8")
+      .json({ exportedAt, collections });
+  } catch (err) {
+    next(err);
+  }
+});
+
 export default router;

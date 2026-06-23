@@ -278,14 +278,24 @@ export default class S3Adapter extends StorageAdapter {
     };
   }
 
-  async getStream(key) {
-    const response = await this.client.send(
-      new GetObjectCommand({
+  async getStream(key, range = null) {
+    const params = { Bucket: this.bucket, Key: key };
+    if (range) params.Range = range;
+    const response = await this.client.send(new GetObjectCommand(params));
+    return response.Body;
+  }
+
+  async replace(key, buffer, options = {}) {
+    const { contentType = 'application/octet-stream', isPublic = false } = options;
+    await this.client.send(
+      new PutObjectCommand({
         Bucket: this.bucket,
         Key: key,
+        Body: buffer,
+        ContentType: contentType,
+        CacheControl: 'private, max-age=31536000, immutable',
+        ACL: isPublic ? 'public-read' : 'private',
       })
     );
-
-    return response.Body;
   }
 }

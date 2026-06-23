@@ -23,6 +23,12 @@ const FileSchema = new Schema(
     width: { type: Number }, // Image/video width in pixels
     height: { type: Number }, // Image/video height in pixels
     blurhash: { type: String }, // BlurHash string for progressive loading
+    processingStatus: {
+      type: String,
+      enum: ['pending', 'processing', 'ready', 'failed'],
+      default: 'ready',
+      index: true,
+    },
     deletedAt: { type: Date, default: null }, // If the object is deleted, when it was deleted
   },
   { timestamps: true }

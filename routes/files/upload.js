@@ -5,8 +5,13 @@ import route from '../utils/route.js';
 import { getStorageAdapter } from '#methods/files/index.js';
 import { validateUpload } from '#methods/files/validateUpload.js';
 import File from '#schema/File.js';
+import MediaJob from '#schema/MediaJob.js';
 import isServerAdmin from '#methods/auth/isServerAdmin.js';
 import getSettings from '#methods/settings/get.js';
+
+const MAX_IMAGE_DIMENSION = 2048
+// Video types that need async faststart processing
+const NEEDS_MEDIA_JOB = new Set(['video/mp4', 'video/quicktime', 'video/x-m4v'])
 
 export default route(
   async ({ req, body, user, setStatus, set }) => {
@@ -40,6 +45,26 @@ export default route(
       setStatus(415);
       set('error', err.message);
       return;
+    }
+
+    // Cap raster images to MAX_IMAGE_DIMENSION on the long edge.
+    // GIFs and SVGs are excluded — sharp doesn't preserve GIF animation,
+    // and SVGs are vector so dimension capping doesn't apply.
+    if (mimeType.startsWith('image/') && mimeType !== 'image/svg+xml' && mimeType !== 'image/gif') {
+      try {
+        const { default: sharp } = await import('sharp')
+        const meta = await sharp(buffer).metadata()
+        const longEdge = Math.max(meta.width || 0, meta.height || 0)
+        if (longEdge > MAX_IMAGE_DIMENSION) {
+          const pipeline = sharp(buffer).rotate()
+          buffer = await ((meta.width || 0) >= (meta.height || 0)
+            ? pipeline.resize(MAX_IMAGE_DIMENSION, null, { withoutEnlargement: true })
+            : pipeline.resize(null, MAX_IMAGE_DIMENSION, { withoutEnlargement: true })
+          ).toBuffer()
+        }
+      } catch (err) {
+        console.warn('[files/upload] Image resize failed, using original:', err.message)
+      }
     }
 
     // Admins may specify an explicit actorId; otherwise use auth user
@@ -82,6 +107,8 @@ export default route(
       const settings = await getSettings();
       const domain = settings?.domain || process.env.DOMAIN || 'localhost';
 
+      const needsJob = NEEDS_MEDIA_JOB.has(mimeType)
+
       const file = new File({
         actorId,
         // If parentObject is provided, visibility is inherited from it at serve time.
@@ -102,6 +129,7 @@ export default route(
         height: result.metadata.height,
         storageKey: result.key,
         thumbnails,
+        processingStatus: needsJob ? 'pending' : 'ready',
       });
 
       await file.save(); // pre-save hook sets file.id = file:<_id>@domain
@@ -125,11 +153,22 @@ export default route(
           )
         : null;
 
+      // Enqueue async processing job for video types that need faststart
+      if (needsJob) {
+        await MediaJob.create({
+          fileId: file.id,
+          storageKey: result.key,
+          mimeType,
+          nextAttemptAt: new Date(),
+        })
+      }
+
       setStatus(200);
       set('file', {
         id: file.id,
         url: file.url,
         thumbnails: thumbnailUrls,
+        processingStatus: file.processingStatus,
         metadata: result.metadata,
       });
     } catch (error) {

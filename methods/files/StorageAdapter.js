@@ -84,10 +84,25 @@ export default class StorageAdapter {
   /**
    * Get a readable stream for a file
    * @param {string} key - Storage key
+   * @param {string} [range] - Optional HTTP Range value e.g. "bytes=0-1023"
    * @returns {Promise<ReadableStream>}
    */
-  async getStream(key) {
+  async getStream(key, range = null) {
     throw new Error('getStream() must be implemented by adapter');
+  }
+
+  /**
+   * Overwrite an existing storage key with new bytes (used by the media worker
+   * to replace raw uploads with processed versions at the same key).
+   * @param {string} key - Existing storage key to overwrite
+   * @param {Buffer} buffer - New file contents
+   * @param {Object} options
+   * @param {string} options.contentType - MIME type
+   * @param {boolean} [options.isPublic=false]
+   * @returns {Promise<void>}
+   */
+  async replace(key, buffer, options) {
+    throw new Error('replace() must be implemented by adapter');
   }
 
   /**

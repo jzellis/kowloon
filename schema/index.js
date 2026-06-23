@@ -13,6 +13,7 @@ import Inbox from "./Inbox.js";
 import Invite from "./Invite.js";
 import Outbox from "./Outbox.js";
 import File from "./File.js";
+import MediaJob from "./MediaJob.js";
 import Feed from "./Feed.js";
 import FeedItems from "./FeedItems.js";
 import FeedFanOut from "./FeedFanOut.js";
@@ -45,4 +46,5 @@ export {
   FederatedServer,
   Notification,
   Theme,
+  MediaJob,
 };

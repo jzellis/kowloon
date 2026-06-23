@@ -253,6 +253,32 @@ const defaultSettings = (ctx) => {
       },
     },
 
+    // ── Media processing ─────────────────────────────────────────────────────
+    mediaProcessor: {
+      value: 'local',
+      summary: 'Media processing backend. "local" uses Sharp + FFmpeg on this server. "remote" forwards to a dedicated processor URL.',
+      to: '@admin',
+      canEdit: '@admin',
+      ui: { type: 'select', label: 'Media Processor', group: 'media', order: 1,
+            options: [{ value: 'local', label: 'Local (Sharp + FFmpeg)' }, { value: 'remote', label: 'Remote processor' }] },
+    },
+
+    mediaProcessorUrl: {
+      value: '',
+      summary: 'URL of the remote media processor endpoint. Required when mediaProcessor is "remote".',
+      to: '@admin',
+      canEdit: '@admin',
+      ui: { type: 'url', label: 'Processor URL', group: 'media', order: 2 },
+    },
+
+    mediaProcessorSecret: {
+      value: '',
+      summary: 'Shared secret for authenticating requests to the remote media processor.',
+      to: '@admin',
+      canEdit: '@admin',
+      ui: { type: 'redacted', label: 'Processor Secret', group: 'media', order: 3 },
+    },
+
     // ── Integrations ────────────────────────────────────────────────────────
     geocodingUrl: {
       value: "https://nominatim.openstreetmap.org",

@@ -128,15 +128,43 @@ export default async function serve(req, res) {
       ? 'image/webp'
       : file.mediaType || 'application/octet-stream';
 
+    const cacheControl = normalizeVisibility(effectiveTo) === '@public'
+      ? 'public, max-age=300'
+      : 'private, max-age=60'
+
+    const isMedia = !isThumb && (file.type === 'Video' || file.type === 'Audio')
+    const rangeHeader = req.headers.range
+
+    // Range requests — required for video seeking and iOS Safari playback.
+    if (isMedia && rangeHeader && typeof file.size === 'number' && file.size > 0) {
+      const match = rangeHeader.match(/^bytes=(\d*)-(\d*)$/)
+      if (match) {
+        const start = match[1] ? parseInt(match[1], 10) : 0
+        const end   = match[2] ? parseInt(match[2], 10) : file.size - 1
+        const safeEnd = Math.min(end, file.size - 1)
+        const chunkSize = safeEnd - start + 1
+
+        res.setHeader('Content-Type', contentType)
+        res.setHeader('Content-Range', `bytes ${start}-${safeEnd}/${file.size}`)
+        res.setHeader('Content-Length', String(chunkSize))
+        res.setHeader('Accept-Ranges', 'bytes')
+        res.setHeader('Cache-Control', cacheControl)
+        res.status(206)
+
+        const stream = await storage.getStream(storageKey, `bytes=${start}-${safeEnd}`)
+        stream.on('error', (err) => {
+          console.error('[files/serve] range stream error:', err)
+          if (!res.headersSent) res.status(500).json({ error: 'Failed to read file' })
+          else res.destroy(err)
+        })
+        res.on('close', () => stream.destroy?.())
+        return stream.pipe(res)
+      }
+    }
+
     res.setHeader('Content-Type', contentType);
-    // Public files are shared-cacheable (helps peers/CDNs); restricted files
-    // stay private and short-lived since the parent's visibility can change.
-    res.setHeader(
-      'Cache-Control',
-      normalizeVisibility(effectiveTo) === '@public'
-        ? 'public, max-age=300'
-        : 'private, max-age=60'
-    );
+    res.setHeader('Cache-Control', cacheControl);
+    if (isMedia) res.setHeader('Accept-Ranges', 'bytes')
     if (!isThumb && typeof file.size === 'number') {
       res.setHeader('Content-Length', String(file.size));
     }

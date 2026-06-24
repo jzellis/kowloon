@@ -61,6 +61,7 @@ const UserSchemaDef = {
       new_post: { type: Boolean, default: false }, // Opt-in: can be noisy
       join_request: { type: Boolean, default: true },
       join_approved: { type: Boolean, default: true },
+      toasts: { type: Boolean, default: true },
     },
     // Reading typography — set from the mobile app, synced per-account so the
     // reading experience follows the user across devices. Stepped string

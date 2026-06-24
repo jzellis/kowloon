@@ -158,6 +158,29 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  worker1-media:
+    build: .
+    command: node workers/mediaProcessor.js
+    env_file: .env
+    environment:
+      DOMAIN: kwln1.local
+      MONGO_URI: mongodb://mongodb:27017/kowloon1
+      NODE_ENV: development
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: kwln1
+    volumes:
+      - ./:/app
+      - node_modules:/app/node_modules
+    networks:
+      - kowloon-net
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
   # ── Server 2 (kwln2.local) ───────────────────────────────────────────────────
   kowloon2:
     build: .
@@ -206,6 +229,29 @@ services:
         condition: service_healthy
     restart: unless-stopped
 
+  worker2-media:
+    build: .
+    command: node workers/mediaProcessor.js
+    env_file: .env
+    environment:
+      DOMAIN: kwln2.local
+      MONGO_URI: mongodb://mongodb:27017/kowloon2
+      NODE_ENV: development
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: kwln2
+    volumes:
+      - ./:/app
+      - node_modules:/app/node_modules
+    networks:
+      - kowloon-net
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
   # ── Server 3 (kwln3.local) ───────────────────────────────────────────────────
   kowloon3:
     build: .
@@ -252,4 +298,27 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+    restart: unless-stopped
+
+  worker3-media:
+    build: .
+    command: node workers/mediaProcessor.js
+    env_file: .env
+    environment:
+      DOMAIN: kwln3.local
+      MONGO_URI: mongodb://mongodb:27017/kowloon3
+      NODE_ENV: development
+      NODE_TLS_REJECT_UNAUTHORIZED: "0"
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: kwln3
+    volumes:
+      - ./:/app
+      - node_modules:/app/node_modules
+    networks:
+      - kowloon-net
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
     restart: unless-stopped

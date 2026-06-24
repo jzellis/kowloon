@@ -14,6 +14,9 @@ import StorageAdapter from '../StorageAdapter.js';
 import { generateThumbnails, isImageMimeType, getImageMetadata } from '../thumbnail.js';
 import mime from 'mime-types';
 
+// S3 metadata values must be printable ASCII (0x20–0x7E). Strip anything else.
+const toAsciiMeta = (s) => (s || '').replace(/[^\x20-\x7E]/g, '').trim();
+
 export default class S3Adapter extends StorageAdapter {
   constructor(config = {}) {
     super(config);
@@ -83,10 +86,10 @@ export default class S3Adapter extends StorageAdapter {
         CacheControl: cacheControl,
         ACL: isPublic ? 'public-read' : 'private',
         Metadata: {
-          'original-filename': originalFileName,
-          'actor-id': actorId || '',
-          title: title || '',
-          summary: summary || '',
+          'original-filename': toAsciiMeta(originalFileName),
+          'actor-id': toAsciiMeta(actorId),
+          title: toAsciiMeta(title),
+          summary: toAsciiMeta(summary),
         },
       })
     );
@@ -163,10 +166,10 @@ export default class S3Adapter extends StorageAdapter {
         ContentType: mimeType,
         ACL: isPublic ? 'public-read' : 'private',
         Metadata: {
-          'original-filename': originalFileName,
-          'actor-id': actorId || '',
-          title: title || '',
-          summary: summary || '',
+          'original-filename': toAsciiMeta(originalFileName),
+          'actor-id': toAsciiMeta(actorId),
+          title: toAsciiMeta(title),
+          summary: toAsciiMeta(summary),
         },
       },
     });

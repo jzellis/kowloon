@@ -12,6 +12,7 @@
 //   - Restore reads the archive from _backups/ (or a temp-upload key).
 //   - S3Adapter internals (client, bucket) used directly for fixed-key uploads.
 
+import mongoose from 'mongoose'
 import { spawn } from 'child_process'
 import { createWriteStream, createReadStream } from 'fs'
 import { mkdir, rm, readdir, stat, readFile, writeFile } from 'fs/promises'
@@ -313,7 +314,34 @@ export async function runRestore(job, updateProgress) {
 
     logger.info('[restore] Files restored')
 
-    // 5. Delete temp upload key if this was an admin-uploaded archive ──────────
+    // 5. Ensure the user who triggered the restore still has admin access ──────
+    // mongorestore --drop replaces the settings and circles collections, so the
+    // requesting user may no longer be in the restored admin circle.
+    if (job.requestedBy && job.requestedBy !== 'unknown') {
+      try {
+        const db = mongoose.connection.db
+        const adminCircleSetting = await db.collection('settings').findOne({ name: 'adminCircle' })
+        const adminCircleId = adminCircleSetting?.value
+        if (adminCircleId) {
+          const circle = await db.collection('circles').findOne({ id: adminCircleId })
+          const alreadyMember = circle?.members?.some((m) => m.id === job.requestedBy)
+          if (!alreadyMember) {
+            const user = await db.collection('users').findOne({ id: job.requestedBy })
+            if (user) {
+              await db.collection('circles').updateOne(
+                { id: adminCircleId },
+                { $push: { members: { id: user.id, name: user.profile?.name || user.username } } }
+              )
+              logger.info(`[restore] Re-added ${job.requestedBy} to admin circle`)
+            }
+          }
+        }
+      } catch (err) {
+        logger.warn('[restore] Could not verify admin circle membership', { error: err.message })
+      }
+    }
+
+    // 6. Delete temp upload key if this was an admin-uploaded archive ──────────
     if (job.archiveKey.startsWith('_restore-tmp/')) {
       try { await storage.delete(job.archiveKey) } catch { /* best effort */ }
     }

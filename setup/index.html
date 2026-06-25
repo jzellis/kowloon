@@ -591,10 +591,14 @@
   async function waitForHealth(domain) {
     setStep("app", "running");
     const url = `https://${domain}/health`;
-    const deadline = Date.now() + 120_000; // 2 min timeout
+    // Poll for up to 40 s. The animated steps above already account for ~21 s of
+    // startup time, so the app is usually reachable by the time we get here.
+    // If it's still not up after 40 s (slow TLS cert, etc.) we mark done anyway
+    // and let the user open the server manually once the terminal confirms success.
+    const deadline = Date.now() + 40_000;
     while (Date.now() < deadline) {
       try {
-        const r = await fetch(url, { signal: AbortSignal.timeout(3000) });
+        const r = await fetch(url, { signal: AbortSignal.timeout(4000) });
         if (r.ok) {
           const d = await r.json().catch(() => ({}));
           if (d.ok || d.status === "ok") { setStep("app", "done"); return; }
@@ -602,7 +606,7 @@
       } catch { /* not ready yet */ }
       await wait(3000);
     }
-    // Timed out — mark done anyway and let the user try opening it
+    // Timed out — mark done anyway
     setStep("app", "done");
   }
 

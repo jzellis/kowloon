@@ -3,8 +3,10 @@ import mongoose from "mongoose";
 
 const router = express.Router({ mergeParams: true });
 
-// Health check endpoint
+// Health check endpoint — open to any origin so the setup wizard can poll it
+// cross-origin from http://server-ip:2999 during installation.
 router.get("/", async (req, res) => {
+  res.setHeader("Access-Control-Allow-Origin", "*");
   try {
     // Check MongoDB connection
     const mongoStatus = mongoose.connection.readyState === 1 ? "connected" : "disconnected";

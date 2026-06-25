@@ -12,6 +12,7 @@ import { dirname, join } from "path";
 import crypto from "crypto";
 import dns from "dns/promises";
 import os from "os";
+import nodemailer from "nodemailer";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
@@ -43,6 +44,43 @@ app.get("/check-dns", async (req, res) => {
     res.json({ ok: true, addresses, serverIp, pointsHere });
   } catch {
     res.json({ ok: false, addresses: [], serverIp: await getPublicIp() });
+  }
+});
+
+// SMTP test — sends a real test email using the supplied credentials
+app.post("/test-smtp", async (req, res) => {
+  const { smtpHost, smtpPort, smtpUser, smtpPass, adminEmail } = req.body;
+
+  if (!smtpHost?.trim()) {
+    return res.status(400).json({ ok: false, error: "Enter an SMTP host." });
+  }
+  if (!adminEmail?.trim()) {
+    return res.status(400).json({ ok: false, error: "Enter an admin email address first." });
+  }
+
+  const port = parseInt(smtpPort?.trim() || "587", 10);
+  const transporter = nodemailer.createTransport({
+    host: smtpHost.trim(),
+    port,
+    secure: port === 465,
+    auth: smtpUser?.trim()
+      ? { user: smtpUser.trim(), pass: smtpPass?.trim() || "" }
+      : undefined,
+    connectionTimeout: 10000,
+    greetingTimeout: 10000,
+    socketTimeout: 10000,
+  });
+
+  try {
+    await transporter.sendMail({
+      from: smtpUser?.trim() || `noreply@${smtpHost.trim()}`,
+      to: adminEmail.trim(),
+      subject: "Kowloon SMTP test",
+      text: "Your Kowloon email settings are working. You can safely ignore this message.",
+    });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(400).json({ ok: false, error: err.message });
   }
 });
 

@@ -301,6 +301,35 @@
       color: var(--blue);
       word-break: break-all;
     }
+
+    /* ── SMTP test button ── */
+    .btn-smtp-test {
+      height: 32px;
+      padding: 0 0.9rem;
+      background: none;
+      color: var(--navy);
+      border: 1px solid var(--navy);
+      font-family: var(--font-ui);
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: background 0.15s, color 0.15s;
+      margin-top: 0.85rem;
+    }
+    .btn-smtp-test:hover   { background: var(--navy); color: var(--cream); }
+    .btn-smtp-test:disabled { opacity: 0.4; cursor: not-allowed; }
+    .smtp-test-result {
+      display: none;
+      font-size: 0.75rem;
+      font-weight: 500;
+      margin-top: 0.4rem;
+      line-height: 1.4;
+    }
+    .smtp-test-result.show { display: block; }
+    .smtp-test-result.ok  { color: var(--green); }
+    .smtp-test-result.err { color: var(--red); }
   </style>
 </head>
 <body>
@@ -410,6 +439,8 @@
             <input type="password" id="smtpPass" name="smtpPass" autocomplete="off" />
           </div>
         </div>
+        <button type="button" class="btn-smtp-test" id="smtp-test-btn">Send test email</button>
+        <div class="smtp-test-result" id="smtp-test-result"></div>
       </div>
 
       <button type="submit" class="btn-install" id="submit-btn">
@@ -478,6 +509,56 @@
   const errorItems = document.getElementById("error-items");
   const submitBtn  = document.getElementById("submit-btn");
   const dnsStatus  = document.getElementById("dns-status");
+
+  // ── SMTP test ────────────────────────────────────────────────────────────
+  document.getElementById("smtp-test-btn").addEventListener("click", async function () {
+    const btn    = this;
+    const result = document.getElementById("smtp-test-result");
+
+    const smtpHost   = document.getElementById("smtpHost").value.trim();
+    const smtpPort   = document.getElementById("smtpPort").value.trim();
+    const smtpUser   = document.getElementById("smtpUser").value.trim();
+    const smtpPass   = document.getElementById("smtpPass").value.trim();
+    const adminEmail = document.getElementById("adminEmail").value.trim();
+
+    if (!smtpHost) {
+      result.className = "smtp-test-result show err";
+      result.textContent = "Enter an SMTP host first.";
+      return;
+    }
+    if (!adminEmail) {
+      result.className = "smtp-test-result show err";
+      result.textContent = "Fill in the admin email address above so we know where to send the test.";
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = "Sending…";
+    result.className = "smtp-test-result";
+    result.textContent = "";
+
+    try {
+      const r = await fetch("/test-smtp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ smtpHost, smtpPort, smtpUser, smtpPass, adminEmail }),
+      });
+      const data = await r.json();
+      if (data.ok) {
+        result.className = "smtp-test-result show ok";
+        result.textContent = "✓ Test email sent to " + adminEmail;
+      } else {
+        result.className = "smtp-test-result show err";
+        result.textContent = data.error || "Send failed.";
+      }
+    } catch {
+      result.className = "smtp-test-result show err";
+      result.textContent = "Could not reach the installer server.";
+    }
+
+    btn.disabled = false;
+    btn.textContent = "Send test email";
+  });
 
   // ── DNS check on domain blur ─────────────────────────────────────────────
   let dnsTimer = null;

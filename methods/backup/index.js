@@ -113,12 +113,20 @@ export async function runBackup(job, updateProgress) {
       dump.stderr.on('data', (d) => stderr.push(d))
       dump.stdout.pipe(out)
 
-      out.on('finish', () => {})
-      dump.on('close', (code) => {
-        if (code === 0) resolve()
-        else reject(new Error(`mongodump exited ${code}: ${Buffer.concat(stderr).toString().slice(0, 500)}`))
-      })
+      // Wait for both the process to exit AND the write stream to finish
+      // flushing — 'close' on the child can fire before 'finish' on the
+      // writable, leaving db.archive empty if we resolve on 'close' alone.
+      let exitCode = null
+      let streamDone = false
+      const maybeResolve = () => {
+        if (exitCode === null || !streamDone) return
+        if (exitCode === 0) resolve()
+        else reject(new Error(`mongodump exited ${exitCode}: ${Buffer.concat(stderr).toString().slice(0, 500)}`))
+      }
+      dump.on('close', (code) => { exitCode = code; maybeResolve() })
       dump.on('error', reject)
+      out.on('finish', () => { streamDone = true; maybeResolve() })
+      out.on('error', reject)
     })
 
     logger.info('[backup] Database dump complete')

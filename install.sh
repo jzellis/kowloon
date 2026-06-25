@@ -26,12 +26,21 @@ error()   { echo -e "${RED}==> ERROR: $*${RESET}" >&2; exit 1; }
 info "Checking requirements..."
 
 if ! command -v docker &>/dev/null; then
-  warn "Docker is not installed."
-  echo ""
-  echo "  Install Docker from: https://docs.docker.com/get-docker/"
-  echo "  Then re-run this installer."
-  echo ""
-  exit 1
+  if command -v apt-get &>/dev/null && ( [[ -f /etc/debian_version ]] || grep -qi "debian\|ubuntu" /etc/os-release 2>/dev/null ); then
+    info "Docker not found. Installing Docker..."
+    curl -fsSL https://get.docker.com | sh
+    if ! command -v docker &>/dev/null; then
+      error "Docker installation failed. Install it manually from https://docs.docker.com/get-docker/ and re-run the installer."
+    fi
+    success "Docker installed."
+  else
+    warn "Docker is not installed."
+    echo ""
+    echo "  Install Docker from: https://docs.docker.com/get-docker/"
+    echo "  Then re-run this installer."
+    echo ""
+    exit 1
+  fi
 fi
 
 if ! docker info &>/dev/null; then

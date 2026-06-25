@@ -49,7 +49,7 @@ app.get("/check-dns", async (req, res) => {
 
 // SMTP test — sends a real test email using the supplied credentials
 app.post("/test-smtp", async (req, res) => {
-  const { smtpHost, smtpPort, smtpUser, smtpPass, adminEmail } = req.body;
+  const { smtpHost, smtpPort, smtpUser, smtpPass, adminEmail, domain } = req.body;
 
   if (!smtpHost?.trim()) {
     return res.status(400).json({ ok: false, error: "Enter an SMTP host." });
@@ -71,9 +71,17 @@ app.post("/test-smtp", async (req, res) => {
     socketTimeout: 10000,
   });
 
+  // Build a valid from address. SMTP usernames (e.g. "resend", "apikey") are
+  // not email addresses, so fall back to noreply@<their domain>.
+  const cleanDomain = domain?.trim().replace(/^https?:\/\//, "") || smtpHost.trim();
+  const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+  const fromAddr = isEmail(smtpUser?.trim())
+    ? smtpUser.trim()
+    : `noreply@${cleanDomain}`;
+
   try {
     await transporter.sendMail({
-      from: smtpUser?.trim() || `noreply@${smtpHost.trim()}`,
+      from: fromAddr,
       to: adminEmail.trim(),
       subject: "Kowloon SMTP test",
       text: "Your Kowloon email settings are working. You can safely ignore this message.",

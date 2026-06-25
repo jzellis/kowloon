@@ -520,6 +520,7 @@
     const smtpUser   = document.getElementById("smtpUser").value.trim();
     const smtpPass   = document.getElementById("smtpPass").value.trim();
     const adminEmail = document.getElementById("adminEmail").value.trim();
+    const domain     = document.getElementById("domain").value.trim();
 
     if (!smtpHost) {
       result.className = "smtp-test-result show err";
@@ -541,7 +542,7 @@
       const r = await fetch("/test-smtp", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ smtpHost, smtpPort, smtpUser, smtpPass, adminEmail }),
+        body: JSON.stringify({ smtpHost, smtpPort, smtpUser, smtpPass, adminEmail, domain }),
       });
       const data = await r.json();
       if (data.ok) {

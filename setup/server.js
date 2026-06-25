@@ -218,6 +218,19 @@ services:
     networks:
       - internal
 
+  worker-backup:
+    image: ghcr.io/jzellis/kowloon:latest
+    restart: unless-stopped
+    command: node workers/backup.js
+    env_file: .env
+    depends_on:
+      mongo:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    networks:
+      - internal
+
   # ── Object storage (internal only — files stream through the app) ────────────
   minio:
     image: minio/minio:latest

@@ -15,6 +15,7 @@ import flaggedRouter from "./flagged.js";
 import settingsRouter from "./settings.js";
 import pagesRouter from "./pages.js";
 import systemRouter from "./system.js";
+import backupRouter from "./backup.js";
 
 const router = express.Router({ mergeParams: true });
 
@@ -81,5 +82,6 @@ router.use("/flagged", flaggedRouter);
 router.use("/settings", settingsRouter);
 router.use("/pages", pagesRouter);
 router.use("/system", systemRouter);
+router.use("/backup", backupRouter);
 
 export default router;

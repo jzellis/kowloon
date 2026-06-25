@@ -7,6 +7,7 @@ import {
   DeleteObjectCommand,
   HeadObjectCommand,
   GetObjectCommand,
+  ListObjectsV2Command,
 } from '@aws-sdk/client-s3';
 import { getSignedUrl as getS3SignedUrl } from '@aws-sdk/s3-request-presigner';
 import { Upload } from '@aws-sdk/lib-storage';
@@ -286,6 +287,25 @@ export default class S3Adapter extends StorageAdapter {
     if (range) params.Range = range;
     const response = await this.client.send(new GetObjectCommand(params));
     return response.Body;
+  }
+
+  async listAllObjects(prefix = '') {
+    const keys = []
+    let continuationToken
+
+    do {
+      const resp = await this.client.send(new ListObjectsV2Command({
+        Bucket: this.bucket,
+        Prefix: prefix || undefined,
+        ContinuationToken: continuationToken,
+      }))
+      for (const obj of resp.Contents ?? []) {
+        keys.push(obj.Key)
+      }
+      continuationToken = resp.IsTruncated ? resp.NextContinuationToken : undefined
+    } while (continuationToken)
+
+    return keys
   }
 
   async replace(key, buffer, options = {}) {

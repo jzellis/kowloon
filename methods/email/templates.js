@@ -72,6 +72,24 @@ export function verificationEmail({ verifyUrl }) {
   };
 }
 
+export function backupReadyEmail({ downloadUrl, expiresIn = '48 hours' }) {
+  const domain = getSetting("domain") || "localhost";
+  const siteName = getSetting("siteName") || "Kowloon";
+
+  const content = `
+    <p>Your <strong>${siteName}</strong> server backup is ready to download.</p>
+    <p>Click the button below to download your backup archive. The link expires in ${expiresIn}.</p>
+    <p><a class="btn" href="${downloadUrl}">Download Backup</a></p>
+    <p>Or copy this link:<br><code>${downloadUrl}</code></p>
+    <p>Store the archive somewhere safe — you can use it to restore the server.</p>
+  `;
+
+  return {
+    subject: `Your ${siteName} backup is ready`,
+    html: baseLayout(siteName, domain, content),
+  };
+}
+
 export function passwordResetEmail({ resetUrl }) {
   const domain = getSetting("domain") || "localhost";
   const siteName = getSetting("siteName") || "Kowloon";

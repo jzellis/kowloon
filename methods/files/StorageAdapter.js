@@ -92,6 +92,16 @@ export default class StorageAdapter {
   }
 
   /**
+   * List all object keys in the bucket, optionally under a prefix.
+   * Used by the backup worker to enumerate files to archive.
+   * @param {string} [prefix=''] - Key prefix to filter by
+   * @returns {Promise<string[]>} Array of storage keys
+   */
+  async listAllObjects(prefix = '') {
+    throw new Error('listAllObjects() must be implemented by adapter');
+  }
+
+  /**
    * Overwrite an existing storage key with new bytes (used by the media worker
    * to replace raw uploads with processed versions at the same key).
    * @param {string} key - Existing storage key to overwrite

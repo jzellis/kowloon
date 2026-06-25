@@ -1,11 +1,12 @@
 // routes/admin/system.js — Server system info
 import express from "express";
 import os from "os";
-import { statfs } from "fs/promises";
+import { statfs, open as fsOpen, stat as fsStat } from "fs/promises";
 import mongoose from "mongoose";
 import route from "../utils/route.js";
 import { Activity, Circle, Flag, Group, Invite, Page, Post, Reply, React, User } from "#schema";
 import getSettings from "#methods/settings/get.js";
+import { LOG_FILE } from "#methods/utils/logger.js";
 
 const router = express.Router({ mergeParams: true });
 
@@ -166,6 +167,47 @@ for (const role of ["admins", "mods"]) {
     } catch (err) { next(err); }
   });
 }
+
+// ── GET /system/logs — tail the app log file ──────────────────────────────
+
+router.get("/logs", async (req, res) => {
+  const tail = Math.min(parseInt(req.query.tail || "200", 10), 2000)
+  const level = req.query.level || "all"
+
+  try {
+    await fsStat(LOG_FILE)
+  } catch {
+    return res.json({ lines: [], warning: "Log file not found yet — the server may have just started." })
+  }
+
+  try {
+    // Read the last `tail` lines efficiently: seek to end, read a chunk,
+    // split on newlines. For alpha (small servers) this is plenty.
+    const CHUNK = Math.min(tail * 200, 512 * 1024) // ~200 chars/line estimate
+    const st  = await fsStat(LOG_FILE)
+    const fd  = await fsOpen(LOG_FILE, "r")
+    const buf = Buffer.alloc(Math.min(CHUNK, st.size))
+    const offset = Math.max(0, st.size - buf.length)
+    await fd.read(buf, 0, buf.length, offset)
+    await fd.close()
+
+    const raw = buf.toString("utf8")
+    const allLines = raw.split("\n").filter(Boolean)
+
+    // If we read from a non-zero offset the first line is probably partial — drop it
+    const lines = offset > 0 ? allLines.slice(1) : allLines
+
+    const filtered = level === "all"
+      ? lines
+      : lines.filter((l) => l.toUpperCase().includes(` ${level.toUpperCase()}:`))
+
+    const result = filtered.slice(-tail)
+
+    return res.json({ lines: result, total: result.length, logFile: LOG_FILE })
+  } catch (err) {
+    return res.status(500).json({ error: err.message })
+  }
+})
 
 router.get("/backup", async (req, res, next) => {
   try {

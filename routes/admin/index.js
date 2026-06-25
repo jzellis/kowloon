@@ -19,10 +19,15 @@ import backupRouter from "./backup.js";
 
 const router = express.Router({ mergeParams: true });
 
-// Browser requests to /admin/* get the SPA; the React Router handles them client-side.
-// API clients send Accept: application/json (set by HttpClient._buildHeaders) and go through.
+// Browser navigations to /admin/* get the SPA; the React Router handles them client-side.
+// Authenticated requests (Authorization header present) always go through as API calls,
+// even if their Accept header prefers HTML (e.g. binary download via fetch()).
 router.use((req, res, next) => {
-  if (req.app.locals.frontendEnabled && req.accepts(["html", "json"]) === "html") {
+  if (
+    req.app.locals.frontendEnabled &&
+    !req.headers.authorization &&
+    req.accepts(["html", "json"]) === "html"
+  ) {
     return next("router");
   }
   next();

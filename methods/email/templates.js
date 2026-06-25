@@ -32,7 +32,7 @@ function baseLayout(siteName, domain, content) {
 
 export function inviteEmail({ inviteUrl, email, welcomeMessage, note }) {
   const domain = getSetting("domain") || "localhost";
-  const siteName = getSetting("siteName") || "Kowloon";
+  const siteName = getSetting("profile")?.name || "Kowloon";
 
   const greeting = welcomeMessage
     ? `<p>${welcomeMessage}</p>`
@@ -56,7 +56,7 @@ export function inviteEmail({ inviteUrl, email, welcomeMessage, note }) {
 
 export function verificationEmail({ verifyUrl }) {
   const domain = getSetting("domain") || "localhost";
-  const siteName = getSetting("siteName") || "Kowloon";
+  const siteName = getSetting("profile")?.name || "Kowloon";
 
   const content = `
     <p>Thanks for signing up for <strong>${siteName}</strong>!</p>
@@ -74,7 +74,7 @@ export function verificationEmail({ verifyUrl }) {
 
 export function backupReadyEmail({ downloadUrl, expiresIn = '48 hours' }) {
   const domain = getSetting("domain") || "localhost";
-  const siteName = getSetting("siteName") || "Kowloon";
+  const siteName = getSetting("profile")?.name || "Kowloon";
 
   const content = `
     <p>Your <strong>${siteName}</strong> server backup is ready to download.</p>
@@ -92,7 +92,7 @@ export function backupReadyEmail({ downloadUrl, expiresIn = '48 hours' }) {
 
 export function passwordResetEmail({ resetUrl }) {
   const domain = getSetting("domain") || "localhost";
-  const siteName = getSetting("siteName") || "Kowloon";
+  const siteName = getSetting("profile")?.name || "Kowloon";
 
   const content = `
     <p>We received a request to reset your password on <strong>${siteName}</strong>.</p>

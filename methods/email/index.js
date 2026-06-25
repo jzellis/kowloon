@@ -39,7 +39,7 @@ async function getTransport() {
 export async function sendEmail({ to, subject, html, text }) {
   const domain = getSetting("domain") || "localhost";
   const adminEmail = getSetting("adminEmail") || `noreply@${domain}`;
-  const siteName = getSetting("siteName") || "Kowloon";
+  const siteName = getSetting("profile")?.name || "Kowloon";
 
   const { transport, preview } = await getTransport();
 

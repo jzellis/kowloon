@@ -25,7 +25,7 @@ function wantsHTML(req) {
 router.get("/", async (req, res, next) => {
   if (!("rss" in req.query)) return next();
   const domain = getSetting("domain");
-  const siteName = getSetting("siteName") || "Kowloon";
+  const siteName = getSetting("profile")?.name || "Kowloon";
   const docs = await FeedItems.find({ to: "public", tombstoned: { $ne: true }, objectType: "Post" })
     .sort({ publishedAt: -1 }).limit(20).lean();
   const proto = req.headers["x-forwarded-proto"] || "https";

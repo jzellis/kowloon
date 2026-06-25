@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Kowloon installer
-# Usage: curl -fsSL https://install.kwln.social | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/jzellis/kowloon/main/install.sh | bash
 # Or run directly: bash install.sh
 
 set -euo pipefail

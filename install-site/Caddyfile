@@ -1,6 +1,0 @@
-install.kwln.social {
-    root * /srv
-    rewrite / /install.sh
-    file_server
-    header Content-Type text/plain
-}

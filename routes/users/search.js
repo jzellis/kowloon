@@ -25,10 +25,14 @@ async function proxySearch(domain, q) {
       headers: { Accept: "application/json" },
       signal: ctrl.signal,
     });
-    if (!res.ok) return [];
+    if (!res.ok) {
+      console.warn(`[users/search] proxy to ${domain} returned ${res.status}`);
+      return [];
+    }
     const data = await res.json();
     return data?.orderedItems ?? data?.items ?? [];
-  } catch {
+  } catch (err) {
+    console.warn(`[users/search] proxy to ${domain} failed:`, err.message);
     return [];
   } finally {
     clearTimeout(t);

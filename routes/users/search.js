@@ -27,7 +27,7 @@ export default route(
       const normalised = `@${remoteMatch[1]}@${remoteMatch[2]}`;
       try {
         const result = await Kowloon.get.getObjectById(normalised, {
-          mode: "prefer-remote",
+          mode: "remote",
           hydrateRemoteIntoDB: true,
           maxStaleSeconds: 300,
           enforceLocalVisibility: false,

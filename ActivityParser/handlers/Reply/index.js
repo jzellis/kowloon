@@ -140,6 +140,9 @@ export default async function Reply(activity, ctx = {}) {
     const created = await ReplyModel.create(replyData);
     activity.objectId = created.id;
 
+    // Track reply count on the author's User record
+    await User.updateOne({ id: actorId }, { $inc: { replyCount: 1 } });
+
     // 4. Bump replyCount on the parent object and its FeedItems entry
     // Use raw collection driver to bypass all Mongoose middleware/hooks
     const collections = [

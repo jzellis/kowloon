@@ -175,12 +175,24 @@ async function deleteOne(activity, targetId) {
     cascadeCount = await cascadeDeleteFolder(current.id, activity.actorId);
   }
 
-  // Post: decrement postCount on the author. Only on the first tombstone.
-  if (parsed.type === "Post" && !wasAlreadyDeleted && current.actorId) {
-    await User.updateOne(
-      { id: current.actorId, postCount: { $gt: 0 } },
-      { $inc: { postCount: -1 } }
-    );
+  // Decrement the author's activity counters on first tombstone only.
+  if (!wasAlreadyDeleted && current.actorId) {
+    if (parsed.type === "Post") {
+      await User.updateOne(
+        { id: current.actorId, postCount: { $gt: 0 } },
+        { $inc: { postCount: -1 } }
+      );
+    } else if (parsed.type === "Reply") {
+      await User.updateOne(
+        { id: current.actorId, replyCount: { $gt: 0 } },
+        { $inc: { replyCount: -1 } }
+      );
+    } else if (parsed.type === "React") {
+      await User.updateOne(
+        { id: current.actorId, reactCount: { $gt: 0 } },
+        { $inc: { reactCount: -1 } }
+      );
+    }
   }
 
   // Reply: decrement replyCount on the parent (mirror of Reply handler's bump

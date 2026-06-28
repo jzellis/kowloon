@@ -145,6 +145,9 @@ export default async function React(activity, ctx = {}) {
       return { activity, result, federation: { shouldFederate: false } };
     }
 
+    // Track react count on the author's User record
+    await User.updateOne({ id: actorId }, { $inc: { reactCount: 1 } });
+
     // updateOne/upsert bypasses the pre-save hook, so set id + server manually
     if (up.upsertedCount > 0 && up.upsertedId) {
       const { domain, actorId: serverActorId } = getServerSettings();

@@ -101,6 +101,8 @@ const UserSchemaDef = {
   canReact: { type: String, default: "" },
 
   postCount: { type: Number, default: 0 },
+  replyCount: { type: Number, default: 0 },
+  reactCount: { type: Number, default: 0 },
 
   // Actor/web metadata
   url: { type: String }, // your existing profile URL

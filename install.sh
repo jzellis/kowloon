@@ -1,13 +1,17 @@
 #!/usr/bin/env bash
 # Kowloon installer
 # Usage: curl -fsSL https://raw.githubusercontent.com/jzellis/kowloon/main/install.sh | bash
-# Or run directly: bash install.sh
+# Or run directly: bash install.sh [install-dir]
+#
+# install-dir   Where Kowloon config files are written (default: ~/kowloon).
+#               Can also be set via KOWLOON_DIR env var.
+#               Example: curl ... | bash -s -- /opt/kowloon
 
 set -euo pipefail
 
 SETUP_IMAGE="ghcr.io/jzellis/kowloon-setup:latest"
 APP_IMAGE="ghcr.io/jzellis/kowloon:latest"
-INSTALL_DIR="${KOWLOON_DIR:-$HOME/kowloon}"
+INSTALL_DIR="${1:-${KOWLOON_DIR:-$HOME/kowloon}}"
 SETUP_PORT=2999
 
 # ── Colors ────────────────────────────────────────────────────────────────────

@@ -441,6 +441,22 @@
         </div>
         <button type="button" class="btn-smtp-test" id="smtp-test-btn">Send test email</button>
         <div class="smtp-test-result" id="smtp-test-result"></div>
+
+        <hr class="divider" style="margin-top:1.5rem" />
+        <div class="section-label" style="margin-top:0">Reverse Proxy &amp; SSL</div>
+        <p class="hint" style="margin-bottom:1rem">By default Kowloon uses Caddy for automatic HTTPS (recommended). Enable this only if you are running your own reverse proxy such as Nginx, Traefik, or Cloudflare Tunnel.</p>
+        <div class="field">
+          <label style="display:flex;align-items:center;gap:0.6rem;font-weight:normal;cursor:pointer;font-size:0.85rem">
+            <input type="checkbox" id="manageSsl" name="manageSsl"
+                   style="width:auto;height:auto;margin:0;accent-color:var(--navy)" />
+            I'll manage my own SSL and reverse proxy
+          </label>
+        </div>
+        <div class="field" id="port-field" style="display:none;margin-top:0.75rem">
+          <label for="appPort">Application port</label>
+          <input type="number" id="appPort" name="appPort" value="3000" min="1" max="65535" style="max-width:120px" />
+          <p class="hint">Kowloon will listen on this port. Your reverse proxy should forward HTTPS traffic here.</p>
+        </div>
       </div>
 
       <button type="submit" class="btn-install" id="submit-btn">
@@ -602,6 +618,11 @@
     chevron.classList.toggle("open");
   });
 
+  // ── SSL toggle ──────────────────────────────────────────────────────────
+  document.getElementById("manageSsl").addEventListener("change", function () {
+    document.getElementById("port-field").style.display = this.checked ? "block" : "none";
+  });
+
   // ── Form submit ──────────────────────────────────────────────────────────
   form.addEventListener("submit", async function (e) {
     e.preventDefault();
@@ -637,10 +658,17 @@
       }
 
       // Config written — show progress and begin polling
-      const domain = data.domain;
+      const domain    = data.domain;
+      const selfSsl   = data.selfManagedSsl;
+      const listenPort = data.appPort || 3000;
+      if (selfSsl) {
+        // Relabel the TLS step for self-managed mode
+        const tlsStep = document.querySelector('[data-step="tls"] .step-label');
+        if (tlsStep) tlsStep.textContent = "TLS managed by your reverse proxy";
+      }
       viewForm.style.display = "none";
       viewProg.style.display = "block";
-      runProgressSteps(domain);
+      runProgressSteps(domain, selfSsl, listenPort);
 
     } catch (err) {
       showErrors(["Could not reach the installer server. Please refresh and try again."]);
@@ -653,15 +681,21 @@
   // install.sh has already exited the setup container by the time docker compose
   // is running. We can't poll the new server until it's up. The steps below are
   // timed estimates — the final step polls the /health endpoint.
-  async function runProgressSteps(domain) {
+  async function runProgressSteps(domain, selfSsl, listenPort) {
     await step("config", 400);
     await step("pull",   12000);  // docker pull can take a while
     await step("mongo",  5000);
     await step("app",    4000);
-    // Poll for the app to be reachable
-    await waitForHealth(domain);
-    await step("tls",    2000);
-    showDone(domain);
+    if (selfSsl) {
+      // Self-managed SSL: can't poll HTTPS — just wait a moment then mark ready.
+      // The user's reverse proxy may not be configured yet; show port instead.
+      await waitForHealthHttp(domain, listenPort);
+      setStep("tls", "done");
+    } else {
+      await waitForHealth(domain);
+      await step("tls",  2000);
+    }
+    showDone(domain, selfSsl, listenPort);
   }
 
   async function step(name, delay) {
@@ -692,6 +726,23 @@
     setStep("app", "done");
   }
 
+  async function waitForHealthHttp(domain, port) {
+    setStep("app", "running");
+    const url = `http://${domain}:${port}/health`;
+    const deadline = Date.now() + 40_000;
+    while (Date.now() < deadline) {
+      try {
+        const r = await fetch(url, { signal: AbortSignal.timeout(4000) });
+        if (r.ok) {
+          const d = await r.json().catch(() => ({}));
+          if (d.ok || d.status === "ok") { setStep("app", "done"); return; }
+        }
+      } catch { /* not ready yet */ }
+      await wait(3000);
+    }
+    setStep("app", "done");
+  }
+
   function setStep(name, status) {
     const el = document.querySelector(`[data-step="${name}"]`);
     if (!el) return;
@@ -703,13 +754,20 @@
     else icon.innerHTML = "&#9675;";
   }
 
-  function showDone(domain) {
+  function showDone(domain, selfSsl, listenPort) {
     viewProg.style.display = "none";
     viewDone.style.display = "block";
-    const url = `https://${domain}`;
+    const url = selfSsl ? `http://${domain}:${listenPort}` : `https://${domain}`;
     document.getElementById("done-domain-text").textContent = url;
     document.getElementById("done-admin-path").textContent  = `${url}/admin`;
     document.getElementById("done-link").href = url;
+    if (selfSsl) {
+      const hint = document.querySelector("#view-done .hint");
+      if (hint) hint.innerHTML =
+        `Kowloon is running on port <strong>${listenPort}</strong>. ` +
+        `Configure your reverse proxy to forward HTTPS traffic to <code>localhost:${listenPort}</code> ` +
+        `and then open your server at <strong>https://${domain}</strong>.`;
+    }
   }
 
   function showErrors(errors) {

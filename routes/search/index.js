@@ -17,6 +17,27 @@ import { getViewerContext } from "#methods/visibility/context.js";
 import { buildVisibilityQuery } from "#methods/visibility/filter.js";
 import { gateUserProfile } from "#methods/sanitize/object.js";
 
+// Federated handle patterns — mirrors /users/search logic
+const REMOTE_HANDLE_RE = /^@?([^@]+)@([^@]+\.[^@]+)$/;
+const SERVER_HANDLE_RE = /^@([^@]+\.[^@]+)$/;
+const DIRECTORY_LIMIT  = 20;
+
+async function proxyUserSearch(domain, q) {
+  const url = `https://${domain}/users/search?q=${encodeURIComponent(q)}`;
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  try {
+    const res = await fetch(url, { headers: { Accept: "application/json" }, signal: ctrl.signal });
+    if (!res.ok) return [];
+    const data = await res.json();
+    return data?.orderedItems ?? data?.items ?? [];
+  } catch {
+    return [];
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 const SEARCHABLE = {
   Post: {
     model: Post,
@@ -112,9 +133,63 @@ router.get(
     const skip = (page - 1) * limit;
 
     const ctx = await getViewerContext(user?.id || null);
+    const localDomain = (getSetting("domain") || "").toLowerCase();
 
     // Collect results from all requested types
     const allResults = [];
+
+    // Federated user lookup: handle-shaped queries bypass the local text index
+    const remoteMatch = q.match(REMOTE_HANDLE_RE);
+    const serverMatch = !remoteMatch && q.match(SERVER_HANDLE_RE);
+
+    if ((remoteMatch || serverMatch) && requestedTypes.includes("User")) {
+      // Remove User from the text-search pass — we resolve it federatedly instead
+      requestedTypes = requestedTypes.filter((t) => t !== "User");
+
+      let federatedUsers = [];
+
+      if (remoteMatch) {
+        const [, username, domain] = remoteMatch;
+        if (domain.toLowerCase() === localDomain) {
+          const doc = await User.findOne({ username, active: true, deletedAt: null })
+            .select("id username profile url")
+            .lean();
+          if (doc) federatedUsers = [doc];
+        } else {
+          const items = await proxyUserSearch(domain, q);
+          // Map proxy shape { id, username, name, icon } → { id, username, profile: { name, icon } }
+          federatedUsers = items.map((u) => ({
+            id: u.id,
+            username: u.username,
+            profile: { name: u.name ?? u.username, icon: u.icon ?? null },
+            url: u.url ?? null,
+            _remote: true,
+          }));
+        }
+      } else if (serverMatch) {
+        const [, domain] = serverMatch;
+        if (domain.toLowerCase() === localDomain) {
+          federatedUsers = await User.find({ to: "@public", active: true, deletedAt: null })
+            .sort({ postCount: -1 })
+            .limit(DIRECTORY_LIMIT)
+            .select("id username profile url")
+            .lean();
+        } else {
+          const items = await proxyUserSearch(domain, q);
+          federatedUsers = items.map((u) => ({
+            id: u.id,
+            username: u.username,
+            profile: { name: u.name ?? u.username, icon: u.icon ?? null },
+            url: u.url ?? null,
+            _remote: true,
+          }));
+        }
+      }
+
+      for (const u of federatedUsers) {
+        allResults.push({ ...u, _searchType: "User", _score: 10 });
+      }
+    }
 
     await Promise.all(
       requestedTypes
@@ -155,9 +230,14 @@ router.get(
       // Gate personal-info profile fields per viewer; drop the helper fields
       // (`to`/`domain`) only selected to compute that gate.
       if (rest._searchType === "User") {
-        rest.profile = gateUserProfile(rest, ctx);
-        delete rest.to;
-        delete rest.domain;
+        if (rest._remote) {
+          // Already gated by the remote server; profile is already shaped correctly
+          delete rest._remote;
+        } else {
+          rest.profile = gateUserProfile(rest, ctx);
+          delete rest.to;
+          delete rest.domain;
+        }
       }
       return rest;
     });

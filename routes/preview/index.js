@@ -2,6 +2,8 @@ import express from "express";
 import { getLinkPreview } from "link-preview-js";
 import route from "../utils/route.js";
 import { isSafeUrl } from "#methods/utils/safeUrl.js";
+import { getSetting } from "#methods/settings/cache.js";
+import { Post } from "#schema";
 
 const router = express.Router({ mergeParams: true });
 
@@ -17,6 +19,38 @@ router.get(
         return;
       }
 
+      const qStart = Date.now();
+
+      // If the URL points to a post on this server, fetch from DB directly.
+      // The frontend is a SPA and serves no post-specific OG tags, so
+      // link-preview-js would return nothing useful for local URLs.
+      let parsed;
+      try { parsed = new URL(url); } catch { /* fall through to external path */ }
+
+      if (parsed) {
+        const domain = getSetting("domain");
+        if (domain && parsed.hostname === domain) {
+          const m = parsed.pathname.match(/^\/posts\/(post:[^/?#]+@[^/?#]+)/);
+          if (m) {
+            const postId = decodeURIComponent(m[1]);
+            const post = await Post.findOne({ id: postId })
+              .select("title source image type")
+              .lean();
+            if (post) {
+              const body = post.source?.content || "";
+              set("url", url);
+              set("title", post.title || body.slice(0, 100) || null);
+              set("summary", body.slice(0, 300) || null);
+              set("image", post.image || null);
+              set("favicon", null);
+              set("contentType", "text/html");
+              set("queryTime", Date.now() - qStart);
+              return;
+            }
+          }
+        }
+      }
+
       // SSRF guard: reject loopback/private/link-local hosts before letting
       // link-preview-js make any request. This is the workaround the v4
       // advisory recommends for users who can't upgrade — and we can't, since
@@ -27,8 +61,6 @@ router.get(
         set("error", "URL is not allowed");
         return;
       }
-
-      const qStart = Date.now();
 
       try {
         const preview = await getLinkPreview(url, { followRedirects: "follow" });

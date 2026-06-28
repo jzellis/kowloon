@@ -20,8 +20,8 @@ router.get("/", async (req, res) => {
     username = resource;
   }
 
-  // Verify the user actually exists
-  const user = await User.findOne({ username, deletedAt: null }).lean();
+  // Only expose publicly-visible users
+  const user = await User.findOne({ username, deletedAt: null, to: "@public" }).lean();
   if (!user) return res.status(404).json({ error: "User not found" });
 
   const actorUrl = user.actorId ?? `${base}/users/${encodeURIComponent(`@${username}@${domain}`)}`;

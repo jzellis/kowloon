@@ -175,6 +175,14 @@ async function deleteOne(activity, targetId) {
     cascadeCount = await cascadeDeleteFolder(current.id, activity.actorId);
   }
 
+  // Post: decrement postCount on the author. Only on the first tombstone.
+  if (parsed.type === "Post" && !wasAlreadyDeleted && current.actorId) {
+    await User.updateOne(
+      { id: current.actorId, postCount: { $gt: 0 } },
+      { $inc: { postCount: -1 } }
+    );
+  }
+
   // Reply: decrement replyCount on the parent (mirror of Reply handler's bump
   // at create time). Only on the first tombstone so repeat Deletes don't
   // double-decrement.

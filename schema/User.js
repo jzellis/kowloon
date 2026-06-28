@@ -100,6 +100,8 @@ const UserSchemaDef = {
   canReply: { type: String, default: "" },
   canReact: { type: String, default: "" },
 
+  postCount: { type: Number, default: 0 },
+
   // Actor/web metadata
   url: { type: String }, // your existing profile URL
   active: { type: Boolean, default: true },

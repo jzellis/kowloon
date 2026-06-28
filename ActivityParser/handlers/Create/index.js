@@ -451,6 +451,11 @@ export default async function Create(activity) {
     // Write to FeedItems for timeline delivery
     await writeFeedItems(created, type);
 
+    // Track post count on the author's User record for directory ranking
+    if (type === "Post" && created.actorId) {
+      await User.updateOne({ id: created.actorId }, { $inc: { postCount: 1 } });
+    }
+
     // Create notifications for relevant activities
     await createNotifications(activity, created, type);
 

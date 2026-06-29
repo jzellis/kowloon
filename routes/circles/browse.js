@@ -4,7 +4,7 @@
 
 import route from "../utils/route.js";
 import { activityStreamsCollection } from "../utils/oc.js";
-import { Circle } from "#schema";
+import { Circle, React as ReactModel } from "#schema";
 import { getSetting } from "#methods/settings/cache.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
 import kowloonId from "#methods/parse/kowloonId.js";
@@ -31,10 +31,10 @@ export default route(
       filter.to = { $in: ["@public", `@${domain}`] };
     }
 
-    // Sort: 'reacts' → reactCount desc, default → createdAt desc
+    // Sort: 'reacts' → reactCount desc (memberCount as tiebreaker), default → createdAt desc
     const sort =
       query.sort === "reacts"
-        ? { reactCount: -1, createdAt: -1 }
+        ? { reactCount: -1, memberCount: -1, createdAt: -1 }
         : { createdAt: -1 };
 
     const [docs, total] = await Promise.all([
@@ -49,7 +49,23 @@ export default route(
       Circle.countDocuments(filter),
     ]);
 
-    const sanitized = docs.map(({ _id, __v, ...rest }) => rest);
+    // Annotate with whether the authenticated viewer has reacted
+    let reactedSet = new Set();
+    if (user?.id && docs.length > 0) {
+      const circleIds = docs.map((c) => c.id).filter(Boolean);
+      const reacts = await ReactModel.find({
+        actorId: user.id,
+        target: { $in: circleIds },
+      })
+        .select("target")
+        .lean();
+      reactedSet = new Set(reacts.map((r) => r.target));
+    }
+
+    const sanitized = docs.map(({ _id, __v, ...rest }) => ({
+      ...rest,
+      userReacted: reactedSet.has(rest.id),
+    }));
 
     const base = `${protocol}://${domain}/circles/browse`;
     const collection = activityStreamsCollection({

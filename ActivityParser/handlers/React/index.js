@@ -10,6 +10,7 @@ import {
   Page,
   Bookmark,
   Group,
+  Circle,
   User,
   FeedItems,
 } from "#schema";
@@ -160,7 +161,7 @@ export default async function React(activity, ctx = {}) {
     // Try to bump reactCount on a known target collection
     // Use findOneAndUpdate (not updateOne) to avoid the broken pre("updateOne") hook on Post
     let bumped = false;
-    const models = [Post, Reply, Page, Bookmark, Group];
+    const models = [Post, Reply, Page, Bookmark, Group, Circle];
     for (const Model of models) {
       try {
         if (!Model) continue;

@@ -3,12 +3,32 @@ import express from "express";
 import route from "../utils/route.js";
 import makeCollection from "../utils/makeCollection.js";
 import { Group } from "#schema";
+import { getSetting } from "#methods/settings/cache.js";
+import { getServerActor } from "#methods/settings/schemaHelpers.js";
 
 const router = express.Router({ mergeParams: true });
 
+const ALLOWED_FIELDS = [
+  "name", "description", "icon", "rsvpPolicy",
+  "to", "canReply", "canReact", "urls", "location",
+];
+
 function sanitize(doc) {
-  const { _id, __v, ...rest } = doc;
+  const { _id, __v, signature, ...rest } = doc;
   return rest;
+}
+
+function pick(obj, fields) {
+  const result = {};
+  for (const f of fields) {
+    if (f in obj) result[f] = obj[f];
+  }
+  return result;
+}
+
+function getServerActorId() {
+  const domain = getSetting("domain");
+  return getSetting("actorId") || `@${domain}`;
 }
 
 router.get(
@@ -46,6 +66,66 @@ router.get(
         return;
       }
       set("group", sanitize(group));
+    },
+    { allowUnauth: false }
+  )
+);
+
+// POST /admin/groups — create a server-owned group
+router.post(
+  "/",
+  route(
+    async ({ body, set, setStatus }) => {
+      if (!body.name?.trim()) {
+        setStatus(400);
+        set("error", "name is required");
+        return;
+      }
+
+      const fields = pick(body, ALLOWED_FIELDS);
+      if (!fields.to) fields.to = "@public";
+
+      const group = await Group.create({
+        ...fields,
+        actorId: getServerActorId(),
+        actor: getServerActor(),
+      });
+
+      setStatus(201);
+      set("group", sanitize(group.toObject()));
+    },
+    { allowUnauth: false }
+  )
+);
+
+// PATCH /admin/groups/:id — update a server-owned group
+router.patch(
+  "/:id",
+  route(
+    async ({ params, body, set, setStatus }) => {
+      const group = await Group.findOne({
+        id: decodeURIComponent(params.id),
+        deletedAt: null,
+      });
+
+      if (!group) {
+        setStatus(404);
+        set("error", "Group not found");
+        return;
+      }
+
+      if (group.actorId !== getServerActorId()) {
+        setStatus(403);
+        set("error", "Only server-owned groups can be edited via this endpoint");
+        return;
+      }
+
+      const fields = pick(body, ALLOWED_FIELDS);
+      Object.assign(group, fields);
+      await group.save();
+
+      set("ok", true);
+      set("group", sanitize(group.toObject()));
     },
     { allowUnauth: false }
   )

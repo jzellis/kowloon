@@ -2,14 +2,34 @@
 import express from "express";
 import route from "../utils/route.js";
 import makeCollection from "../utils/makeCollection.js";
-import { Post } from "#schema";
+import { Post, FeedItems } from "#schema";
 import writeFeedItems from "#methods/feed/writeFeedItems.js";
+import { getSetting } from "#methods/settings/cache.js";
+import { getServerActor } from "#methods/settings/schemaHelpers.js";
 
 const router = express.Router({ mergeParams: true });
+
+const ALLOWED_FIELDS = [
+  "type", "title", "source", "summary", "image",
+  "attachments", "tags", "to", "canReply", "canReact", "location",
+];
 
 function sanitize(doc) {
   const { _id, __v, signature, ...rest } = doc;
   return rest;
+}
+
+function pick(obj, fields) {
+  const result = {};
+  for (const f of fields) {
+    if (f in obj) result[f] = obj[f];
+  }
+  return result;
+}
+
+function getServerActorId() {
+  const domain = getSetting("domain");
+  return getSetting("actorId") || `@${domain}`;
 }
 
 router.get(
@@ -55,6 +75,36 @@ router.get(
         return;
       }
       set("post", sanitize(post));
+    },
+    { allowUnauth: false }
+  )
+);
+
+// POST /admin/posts — create a server-owned announcement post
+router.post(
+  "/",
+  route(
+    async ({ body, set, setStatus }) => {
+      if (!body.source?.content?.trim() && !body.title?.trim()) {
+        setStatus(400);
+        set("error", "source.content or title is required");
+        return;
+      }
+
+      const fields = pick(body, ALLOWED_FIELDS);
+      if (!fields.type) fields.type = "Note";
+      if (!fields.to) fields.to = "@public";
+
+      const post = await Post.create({
+        ...fields,
+        actorId: getServerActorId(),
+        actor: getServerActor(),
+      });
+
+      await writeFeedItems(post.toObject(), "Post");
+
+      setStatus(201);
+      set("post", sanitize(post.toObject()));
     },
     { allowUnauth: false }
   )

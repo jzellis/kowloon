@@ -4,6 +4,7 @@ import route from "../utils/route.js";
 import makeCollection from "../utils/makeCollection.js";
 import { Page, FeedItems } from "#schema";
 import { getSetting } from "#methods/settings/cache.js";
+import { getServerActor } from "#methods/settings/schemaHelpers.js";
 
 const router = express.Router({ mergeParams: true });
 
@@ -94,6 +95,7 @@ router.post(
       const page = await Page.create({
         ...fields,
         actorId: serverActorId,
+        actor: getServerActor(),
       });
 
       setStatus(201);

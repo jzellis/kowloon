@@ -3,6 +3,7 @@ import { React, Reply } from "./index.js";
 const Schema = mongoose.Schema;
 import Member from "./subschema/Member.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+import { signAs, verifyAs } from "#methods/utils/signing.js";
 
 const CircleSchema = new Schema(
   {
@@ -54,12 +55,9 @@ CircleSchema.pre("save", async function (next) {
   this.replyCount = (await Reply.find({ target: this.id }).lean()).length;
 
   try {
-    const User = mongoose.model("User");
-    const actor = await User.findOne({ id: this.actorId });
-    if (actor) {
-      const memberList = (this.members || []).map(m => m.id).sort().join(",");
-      this.signature = actor.sign(`${this.id}|${this.name || ""}|${this.to}|${memberList}`);
-    }
+    const memberList = (this.members || []).map(m => m.id).sort().join(",");
+    const sig = await signAs(this.actorId, `${this.id}|${this.name || ""}|${this.to}|${memberList}`);
+    if (sig) this.signature = sig;
   } catch (e) {
     // non-fatal — circle saves without signature if actor unavailable
   }
@@ -93,11 +91,8 @@ CircleSchema.post("updateOne", async function () {
 });
 
 CircleSchema.methods.verifySignature = async function () {
-  const User = mongoose.model("User");
-  const actor = await User.findOne({ id: this.actorId });
-  if (!actor) return false;
   const memberList = (this.members || []).map(m => m.id).sort().join(",");
-  return actor.verify(`${this.id}|${this.name || ""}|${this.to}|${memberList}`, this.signature);
+  return verifyAs(this.actorId, `${this.id}|${this.name || ""}|${this.to}|${memberList}`, this.signature);
 };
 
 export default mongoose.model("Circle", CircleSchema);

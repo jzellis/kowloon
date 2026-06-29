@@ -13,7 +13,7 @@ import {
   FeedItems, // <- ensure Settings is exported from #schema/index.js
   File,
 } from "#schema";
-import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+import { getServerSettings, getServerActor } from "#methods/settings/schemaHelpers.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 import createNotification from "#methods/notifications/create.js";
@@ -243,23 +243,27 @@ export default async function Create(activity) {
       if (clientActor) {
         activity.object.actor = clientActor;
       } else if (activity.actorId) {
-        const actorDoc = await User.findOne({ id: activity.actorId })
-          .select("id username profile url inbox outbox server actorId")
-          .lean();
-        if (actorDoc) {
-          const { domain } = getServerSettings();
-          activity.object.actor = {
-            id: actorDoc.id,
-            type: actorDoc.type ?? 'Person',
-            name: actorDoc.profile?.name ?? actorDoc.username,
-            icon: actorDoc.profile?.icon ?? null,
-            url: actorDoc.url ?? `https://${domain}/users/${actorDoc.id}`,
-            inbox: actorDoc.inbox,
-            outbox: actorDoc.outbox,
-            server: actorDoc.server ?? `@${domain}`,
-          };
+        const { actorId: serverActorId, domain } = getServerSettings();
+        if (activity.actorId === serverActorId) {
+          activity.object.actor = getServerActor();
         } else {
-          activity.object.actor = {};
+          const actorDoc = await User.findOne({ id: activity.actorId })
+            .select("id username profile url inbox outbox server actorId")
+            .lean();
+          if (actorDoc) {
+            activity.object.actor = {
+              id: actorDoc.id,
+              type: actorDoc.type ?? 'Person',
+              name: actorDoc.profile?.name ?? actorDoc.username,
+              icon: actorDoc.profile?.icon ?? null,
+              url: actorDoc.url ?? `https://${domain}/users/${actorDoc.id}`,
+              inbox: actorDoc.inbox,
+              outbox: actorDoc.outbox,
+              server: actorDoc.server ?? `@${domain}`,
+            };
+          } else {
+            activity.object.actor = {};
+          }
         }
       }
     }

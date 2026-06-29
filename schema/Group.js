@@ -3,6 +3,7 @@ import mongoose from "mongoose";
 import { Circle, User, React, Reply } from "./index.js";
 import GeoPoint from "./subschema/GeoPoint.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+import { signAs, verifyAs } from "#methods/utils/signing.js";
 
 const { Schema } = mongoose;
 
@@ -55,6 +56,8 @@ const GroupSchema = new Schema(
     // Soft delete
     deletedAt: { type: Date, default: null },
     deletedBy: { type: String, default: null },
+
+    signature: { type: Buffer, default: undefined },
 
     // Links
     url: { type: String, default: undefined },
@@ -166,6 +169,13 @@ GroupSchema.pre("save", async function (next) {
         : this.memberCount ?? 0;
     }
 
+    try {
+      const sig = await signAs(this.actorId, `${this.id}|${this.name || ""}|${this.to}`);
+      if (sig) this.signature = sig;
+    } catch (e) {
+      // non-fatal
+    }
+
     next();
   } catch (err) {
     next(err);
@@ -173,5 +183,9 @@ GroupSchema.pre("save", async function (next) {
 });
 
 GroupSchema.index({ name: 'text', description: 'text' });
+
+GroupSchema.methods.verifySignature = async function () {
+  return verifyAs(this.actorId, `${this.id}|${this.name || ""}|${this.to}`, this.signature);
+};
 
 export default mongoose.model("Group", GroupSchema);

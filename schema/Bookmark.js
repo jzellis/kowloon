@@ -4,6 +4,7 @@ import Settings from "./Settings.js";
 import { marked } from "marked";
 import sanitizeHtml from "#methods/utils/sanitize.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+import { signAs, verifyAs } from "#methods/utils/signing.js";
 
 const ALLOWED_TAGS = [
   "p", "br", "strong", "em", "s", "u", "a", "ul", "ol", "li",
@@ -193,11 +194,8 @@ BookmarkSchema.pre("save", async function (next) {
       await assertFolderDepthOk(this.parentFolder, this.id);
     }
 
-    const User = mongoose.model("User");
-    const actor = await User.findOne({ id: this.actorId });
-    if (actor) {
-      this.signature = actor.sign(`${this.id}|${this.href || this.target || ""}|${this.source?.content || ""}`);
-    }
+    const sig = await signAs(this.actorId, `${this.id}|${this.href || this.target || ""}|${this.source?.content || ""}`);
+    if (sig) this.signature = sig;
 
     next();
   } catch (err) {
@@ -206,10 +204,7 @@ BookmarkSchema.pre("save", async function (next) {
 });
 
 BookmarkSchema.methods.verifySignature = async function () {
-  const User = mongoose.model("User");
-  const actor = await User.findOne({ id: this.actorId });
-  if (!actor) return false;
-  return actor.verify(`${this.id}|${this.href || this.target || ""}|${this.source?.content || ""}`, this.signature);
+  return verifyAs(this.actorId, `${this.id}|${this.href || this.target || ""}|${this.source?.content || ""}`, this.signature);
 };
 
 export default mongoose.model("Bookmark", BookmarkSchema);

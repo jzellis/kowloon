@@ -4,7 +4,7 @@ import sanitizeHtml from "#methods/utils/sanitize.js";
 import crypto from "crypto";
 import { Settings, User, Reply, React } from "./index.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
-import { type } from "os";
+import { signAs, verifyAs } from "#methods/utils/signing.js";
 
 const ALLOWED_TAGS = [
   "p", "br", "strong", "em", "s", "u", "a", "ul", "ol", "li",
@@ -142,14 +142,8 @@ PageSchema.pre("save", async function (next) {
     //     this.body.match(/(?<=<p.*?>)(.*?)(?=<\/p>)/g).length > 3 ? " ..." : ""
     //   }</p>`;
 
-    let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
-    // Sign this page using the user's private key if it's not signed
-    if (actor) {
-      let stringject = Buffer.from(`${this.id} | ${this.createdAt}`);
-      const sign = crypto.createSign("RSA-SHA256");
-      sign.update(stringject);
-      this.signature = sign.sign(actor.privateKey, "base64");
-    }
+    const sig = await signAs(this.actorId, `${this.id}|${this.createdAt}`);
+    if (sig) this.signature = sig;
 
     this.reactCount = await React.find({ target: this.id }).countDocuments();
     this.replyCount = await Reply.find({ target: this.id }).countDocuments();
@@ -179,14 +173,7 @@ PageSchema.pre("updateOne", async function (next) {
 });
 
 PageSchema.methods.verifySignature = async function () {
-  let actor = await User.findOne({ id: this.actorId }); // Retrieve the activity actor
-  let stringject = Buffer.from(JSON.stringify(this.id));
-  return crypto.verify(
-    "RSA-SHA256",
-    stringject,
-    actor.publicKey,
-    this.signature
-  );
+  return verifyAs(this.actorId, `${this.id}|${this.createdAt}`, this.signature);
 };
 
 export default mongoose.model("Page", PageSchema);

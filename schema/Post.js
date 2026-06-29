@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 import { marked } from "marked";
 import sanitizeHtml from "#methods/utils/sanitize.js";
-import { signData, verifyData } from "#methods/utils/signing.js";
+import { signData, verifyData, signAs, verifyAs } from "#methods/utils/signing.js";
 import { Settings, User, React, Reply, Circle } from "./index.js";
 import GeoPoint from "./subschema/GeoPoint.js";
 import ActorSchema from "./subschema/Actor.js";
@@ -216,10 +216,8 @@ PostSchema.pre("save", async function (next) {
     this.summary = generateSummary(this.source);
     this.textPreview = generateTextPreview(this.source);
 
-    let actor = await User.findOne({ id: this.actorId });
-    if (actor) {
-      this.signature = actor.sign(`${this.id}|${this.source.content}`);
-    }
+    const sig = await signAs(this.actorId, `${this.id}|${this.source.content}`);
+    if (sig) this.signature = sig;
 
     if (this.type === "Event") {
       if (!this.event.rsvp) {
@@ -251,10 +249,8 @@ PostSchema.pre("updateOne", async function (next) {
     update.$set.wordCount = update.$set.body.replace(/<[^>]*>/g, "").replace(/[.,\/#!$%\^&\*;:{}=\-_`~()]/g, "").split(" ").length;
     update.$set.charCount = update.$set.body.replace(/<[^>]*>/g, "").length;
 
-    const actor = await User.findOne({ id: currentDoc.actorId });
-    if (actor) {
-      update.$set.signature = actor.sign(`${currentDoc.id}|${newSource.content}`);
-    }
+    const sig = await signAs(currentDoc.actorId, `${currentDoc.id}|${newSource.content}`);
+    if (sig) update.$set.signature = sig;
   }
 
   next();
@@ -273,19 +269,15 @@ PostSchema.pre("findOneAndUpdate", async function (next) {
     update.$set.body = generateBody(newSource);
     update.$set.textPreview = generateTextPreview(newSource);
 
-    const actor = await User.findOne({ id: currentDoc.actorId });
-    if (actor) {
-      update.$set.signature = actor.sign(`${currentDoc.id}|${newSource.content}`);
-    }
+    const sig = await signAs(currentDoc.actorId, `${currentDoc.id}|${newSource.content}`);
+    if (sig) update.$set.signature = sig;
   }
 
   next();
 });
 
 PostSchema.methods.verifySignature = async function () {
-  const actor = await User.findOne({ id: this.actorId });
-  if (!actor) return false;
-  return actor.verify(`${this.id}|${this.source.content}`, this.signature);
+  return verifyAs(this.actorId, `${this.id}|${this.source.content}`, this.signature);
 };
 
 const Post = mongoose.model("Post", PostSchema);

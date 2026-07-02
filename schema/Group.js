@@ -21,6 +21,7 @@ const GroupSchema = new Schema(
     name: { type: String, default: undefined },
     description: { type: String, default: undefined },
     icon: { type: String, default: undefined }, // File ID or URL for backwards compatibility
+    image: { type: String, default: undefined }, // Hero / banner image
     urls: { type: [String], default: [] },
     location: { type: GeoPoint, default: undefined },
 

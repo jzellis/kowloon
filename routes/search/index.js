@@ -196,6 +196,33 @@ router.get(
         .filter((t) => SEARCHABLE[t])
         .map(async (typeName) => {
           const { model, select } = SEARCHABLE[typeName];
+
+          // Users: regex substring match so partial terms like "jzell" find "jzellis".
+          // $text is word-tokenised and won't match partial words.
+          if (typeName === "User") {
+            const re = new RegExp(
+              q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+              "i"
+            );
+            const filter = {
+              ...typeFilter("User", ctx),
+              $or: [{ username: re }, { "profile.name": re }],
+            };
+            try {
+              const docs = await model
+                .find(filter)
+                .select(select)
+                .limit(limit * 2)
+                .lean();
+              for (const doc of docs) {
+                allResults.push({ ...doc, _searchType: "User", _score: 5 });
+              }
+            } catch {
+              // skip
+            }
+            return;
+          }
+
           const textFilter = {
             ...typeFilter(typeName, ctx),
             $text: { $search: q },

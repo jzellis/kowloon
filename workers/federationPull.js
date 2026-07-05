@@ -28,6 +28,12 @@ function extractDomain(str) {
   }
 }
 
+// A bare-server member looks like "@kowloon.network" (one @ at start, no second @).
+// A user member looks like "@alice@kowloon.network" (two @s).
+function isServerEntry(id) {
+  return typeof id === "string" && id.startsWith("@") && !id.slice(1).includes("@");
+}
+
 /**
  * Build aggregated pull parameters for a remote server
  * Combines all local users' interests in that server
@@ -95,6 +101,102 @@ async function buildPullParamsForServer(remoteDomain) {
 }
 
 /**
+ * Pull content from servers that users have added directly to circles as bare @domain entries.
+ *
+ * This is how the "subscribe to a whole server" feature works: a user adds e.g.
+ * "@kowloon.network" (no username) to one of their circles. That tells the pull
+ * worker to fetch all public posts from that server and deliver them to that user
+ * whenever their circle timeline is loaded.
+ *
+ * Each unique domain found is pulled at most once per cycle. The FederatedServer
+ * record is upserted so we track health/rate-limiting the same as for individual
+ * user follows.
+ */
+async function processCircleServerPulls() {
+  const { domain: ourDomain } = getServerSettings();
+  const now = new Date();
+
+  // Find all non-system circles that have at least one bare @domain member
+  const circles = await Circle.find({
+    type: { $ne: "System" },
+    "members.id": { $regex: /^@[^@]+$/ },
+  })
+    .select("actorId members")
+    .lean();
+
+  if (!circles.length) return;
+
+  // Map: domain -> Set of local user actorIds who have that server in a circle
+  const domainToUsers = new Map();
+  for (const circle of circles) {
+    for (const member of circle.members) {
+      if (!isServerEntry(member.id)) continue;
+      const domain = member.id.slice(1); // "@kowloon.network" -> "kowloon.network"
+      if (domain === ourDomain) continue; // never pull from ourselves
+      if (!domainToUsers.has(domain)) domainToUsers.set(domain, new Set());
+      domainToUsers.get(domain).add(circle.actorId);
+    }
+  }
+
+  if (!domainToUsers.size) return;
+
+  logger.info(`federationPull: Circle-server pull — ${domainToUsers.size} server(s)`);
+
+  for (const [domain, userIds] of domainToUsers.entries()) {
+    // Respect blocked status and nextPullAt from any previous interaction
+    const serverRecord = await FederatedServer.findOne({ domain }).lean();
+    if (serverRecord?.status === "blocked") continue;
+    if (serverRecord?.nextPullAt && serverRecord.nextPullAt > now) continue;
+
+    logger.info(`federationPull: Pulling circle-server ${domain}`, { users: userIds.size });
+
+    try {
+      const startTime = Date.now();
+      const result = await Kowloon.federation.pullFromRemote({
+        remoteDomain: domain,
+        from: [`@${domain}`],
+        to: [...userIds],
+        since: serverRecord?.lastPulledAt ?? null,
+        limit: 100,
+      });
+      const responseTimeMs = Date.now() - startTime;
+      const itemCount = result.items?.length || 0;
+
+      if (!result.error) {
+        await FederatedServer.findOneAndUpdate(
+          { domain },
+          {
+            $set: {
+              lastPulledAt: now,
+              lastPullAttemptedAt: now,
+              pullErrorCount: 0,
+              status: "active",
+              nextPullAt: new Date(now.getTime() + POLL_INTERVAL_MS),
+            },
+            $setOnInsert: { domain },
+          },
+          { upsert: true }
+        );
+        logger.info(`federationPull: Circle-server ${domain} complete`, { items: itemCount, responseTimeMs });
+      } else {
+        await FederatedServer.findOneAndUpdate(
+          { domain },
+          {
+            $set: { lastPullAttemptedAt: now },
+            $inc: { pullErrorCount: 1 },
+            $setOnInsert: { domain, status: "active" },
+          },
+          { upsert: true }
+        );
+        logger.warn(`federationPull: Circle-server ${domain} error`, { error: result.error });
+      }
+    } catch (error) {
+      logger.error(`federationPull: Circle-server ${domain} exception`, { error: error.message });
+    }
+  }
+}
+
+/**
  * Process one batch of servers
  */
 async function processBatch() {
@@ -128,7 +230,7 @@ async function processBatch() {
         logger.info(`federationPull: No local interest in ${remoteDomain}`);
 
         // Update nextPullAt to avoid re-checking too soon
-        await Server.findOneAndUpdate(
+        await FederatedServer.findOneAndUpdate(
           { domain: remoteDomain },
           {
             $set: {
@@ -140,16 +242,16 @@ async function processBatch() {
         continue;
       }
 
-      // Pull from remote server
+      // Pull from remote server.
+      // from = individual authors + group IDs to pull content for
+      // to   = local user IDs who should receive the content
       const startTime = Date.now();
       const result = await Kowloon.federation.pullFromRemote({
         remoteDomain,
-        authors: params.authors,
-        members: params.members,
-        groups: params.groups,
-        since: server.lastPulledAt, // Only get items since last pull
+        from: [...params.authors, ...params.groups],
+        to: params.members,
+        since: server.lastPulledAt,
         limit: 100,
-        createFeedLUT: true, // Create Feed entries for all relevant members
       });
       const responseTimeMs = Date.now() - startTime;
 
@@ -194,6 +296,7 @@ async function run() {
   while (true) {
     try {
       const itemCount = await processBatch();
+      await processCircleServerPulls();
 
       if (itemCount > 0) {
         logger.info(`federationPull: Retrieved ${itemCount} items`);
@@ -259,4 +362,4 @@ if (import.meta.url === `file://${process.argv[1]}`) {
   main();
 }
 
-export default { run, processBatch, buildPullParamsForServer };
+export default { run, processBatch, buildPullParamsForServer, processCircleServerPulls };

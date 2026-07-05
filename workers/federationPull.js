@@ -143,9 +143,10 @@ async function processCircleServerPulls() {
   logger.info(`federationPull: Circle-server pull — ${domainToUsers.size} server(s)`);
 
   for (const [domain, userIds] of domainToUsers.entries()) {
-    // Respect blocked status and nextPullAt from any previous interaction
+    // Skip fully suspended servers. Blocked servers still get pulled — local
+    // users who subscribed to them can still read their public content.
     const serverRecord = await FederatedServer.findOne({ domain }).lean();
-    if (serverRecord?.status === "blocked") continue;
+    if (serverRecord?.status === "suspended") continue;
     if (serverRecord?.nextPullAt && serverRecord.nextPullAt > now) continue;
 
     logger.info(`federationPull: Pulling circle-server ${domain}`, { users: userIds.size });

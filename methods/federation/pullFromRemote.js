@@ -9,7 +9,7 @@
 // records based on the recipients map returned by the remote server.
 
 import crypto from "crypto";
-import { FeedItems, FeedFanOut } from "#schema";
+import { FeedItems, FeedFanOut, User, Circle } from "#schema";
 import logger from "#methods/utils/logger.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 
@@ -147,6 +147,33 @@ export default async function pullFromRemote({
     // Create per-user FeedFanOut records directly from the recipients map.
     // We bypass enqueueFeedFanOut/parseAudience here because the remote server
     // has already resolved exact recipients — no audience parsing needed.
+
+    // Pre-load each recipient's blocked + muted sets so we can skip FanOut
+    // rows for posts by authors they've blocked or muted. The FeedItem itself
+    // is still cached above — other local users may want it — but the blocking
+    // user simply never gets a FanOut row for that author's content.
+    const blockedByUser = new Map(); // userId -> Set<actorId>
+    if (recipients.length > 0 && to.length > 0) {
+      const users = await User.find({ id: { $in: to } }).select("circles").lean();
+      await Promise.all(
+        users.map(async (user) => {
+          const [blockedCircle, mutedCircle] = await Promise.all([
+            user.circles?.blocked
+              ? Circle.findOne({ id: user.circles.blocked }).select("members").lean()
+              : null,
+            user.circles?.muted
+              ? Circle.findOne({ id: user.circles.muted }).select("members").lean()
+              : null,
+          ]);
+          const denied = new Set([
+            ...(blockedCircle?.members || []).map((m) => m.id),
+            ...(mutedCircle?.members || []).map((m) => m.id),
+          ]);
+          blockedByUser.set(user.id, denied);
+        })
+      );
+    }
+
     let fanOutCount = 0;
     const fanOutOps = [];
 
@@ -156,6 +183,7 @@ export default async function pullFromRemote({
       if (!feedItem) continue;
 
       for (const userId of recipientIds) {
+        if (blockedByUser.get(userId)?.has(feedItem.actorId)) continue;
         const hash = dedupeHash(itemId, userId);
         fanOutOps.push({
           updateOne: {

@@ -7,6 +7,7 @@ import isGroupAdmin from "#methods/groups/isAdmin.js";
 import toMember from "#methods/parse/toMember.js";
 import createNotification from "#methods/notifications/create.js";
 import getMultiFederationTargets from "../utils/getMultiFederationTargets.js";
+import pullFromRemote from "#methods/federation/pullFromRemote.js";
 
 export default async function Add(activity) {
   try {
@@ -273,6 +274,26 @@ export default async function Add(activity) {
         remoteMembers.length === 1
           ? remoteMembers[0].id
           : remoteMembers.map((m) => m.id);
+    }
+
+    // Immediately pull recent content for newly added remote entities in
+    // user-owned circles. Fire-and-forget — the worker handles retries.
+    if (ownerType === "User" && remoteMembers.length > 0) {
+      const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      for (const member of remoteMembers) {
+        const isServer = /^@[^@]+$/.test(member.id);
+        const remoteDomain = isServer
+          ? member.id.slice(1)
+          : (member.id.match(/^@[^@]+@(.+)$/) || [])[1];
+        if (!remoteDomain) continue;
+        pullFromRemote({
+          remoteDomain,
+          from: [member.id],
+          to: [activity.actorId],
+          since,
+          limit: 100,
+        }).catch(() => {});
+      }
     }
 
     // For Group adds (join_approved being the common case), deliver the Add

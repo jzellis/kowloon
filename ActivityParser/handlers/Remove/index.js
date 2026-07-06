@@ -1,11 +1,9 @@
 // /ActivityParser/handlers/Remove/index.js
-import { Group, Circle, User } from "#schema";
-import getObjectById from "#methods/core/getObjectById.js";
+import { Group, Circle } from "#schema";
 import getSettings from "#methods/settings/get.js";
 import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import isServerMod from "#methods/auth/isServerMod.js";
 import isGroupAdmin from "#methods/groups/isAdmin.js";
-import toMember from "#methods/parse/toMember.js";
 
 export default async function Remove(activity) {
   try {
@@ -110,43 +108,26 @@ export default async function Remove(activity) {
       }
     }
 
-    // ---- Normalize subject (user to remove) into cached actor shape ----
-    // Normalize the "user to add" so we accept:
-    //  1) "@user@domain" (actorId string)
-    //  2) { actorId: "@user@domain" }
-    //  3) DB id / full object (legacy paths)
-    async function resolveActorToMember(ref) {
-      // String case
+    // ---- Resolve the subject to remove — only the id field matters for $pull ----
+    function resolveMemberId(ref) {
       if (typeof ref === "string") {
         const s = ref.trim();
-        if (/^@[^@]+@[^@]+$/.test(s)) {
-          // actorId string → try local User, else fall back to minimal actor ref
-          const u = await User.findOne({ id: s }).lean();
-          return toMember(u || { actorId: s });
-        }
-        // not an actorId string → treat as DB id / other resolvable id
-        const o = await getObjectById(s);
-        return toMember(o);
+        // @user@domain or bare @domain server entry
+        if (/^@/.test(s)) return s;
+        return s;
       }
-
-      // Object case
       if (ref && typeof ref === "object") {
-        if (
-          typeof ref.actorId === "string" &&
-          /^@[^@]+@[^@]+$/.test(ref.actorId)
-        ) {
-          const s = ref.actorId.trim();
-          const u = await User.findOne({ id: s }).lean();
-          return toMember(u || { actorId: s });
-        }
-        // If it already looks like a User/Actor object, let toMember handle it
-        return toMember(ref);
+        // Accept { id }, { actorId }, or a full member/user object
+        return ref.id || ref.actorId || "";
       }
-
-      return null;
+      return "";
     }
 
-    const member = await resolveActorToMember(activity.object);
+    const memberId = resolveMemberId(activity.object);
+    if (!memberId) {
+      return { activity, error: "Remove: could not resolve member to remove" };
+    }
+    const member = { id: memberId };
 
     activity.object = member;
 

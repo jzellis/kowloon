@@ -157,7 +157,7 @@ async function processCircleServerPulls() {
         remoteDomain: domain,
         from: [`@${domain}`],
         to: [...userIds],
-        since: serverRecord?.lastPulledAt ?? null,
+        since: serverRecord?.lastPulledAt ?? new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         limit: 100,
       });
       const responseTimeMs = Date.now() - startTime;

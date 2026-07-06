@@ -170,9 +170,17 @@ export default async function getTimeline({
       limit,
     });
 
-    // Update lastFetchedAt for each member on success
+    // Update lastFetchedAt on success, but only if this was an incremental
+    // pull (pullSince was set) or we actually got items back. If this was a
+    // first-ever fetch (pullSince=null) and returned 0 items, don't mark it
+    // as fetched — the remote may have had a temporary bug and we want to
+    // retry the full pull next time rather than locking into an empty window.
     if (!result.error) {
-      await updateMemberFetchedAt(circleId, circle, remoteAuthors);
+      const gotItems = (result.items?.length ?? 0) > 0;
+      const wasIncremental = pullSince !== null;
+      if (gotItems || wasIncremental) {
+        await updateMemberFetchedAt(circleId, circle, remoteAuthors);
+      }
     }
   }
 

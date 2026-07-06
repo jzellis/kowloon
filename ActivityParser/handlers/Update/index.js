@@ -57,7 +57,7 @@ const ALLOWED_FIELDS = {
   Reply:    new Set(["source", "body", "tags"]),
   Page:     new Set(["title", "summary", "source", "body", "slug", "tags", "to", "canReply", "canReact", "image", "attachments", "href", "parentId", "order"]),
   Bookmark: new Set(["title", "summary", "source", "body", "type", "tags", "to", "canReply", "canReact", "href", "target", "parentFolder", "image"]),
-  Circle:   new Set(["name", "description", "to", "canReply", "canReact"]),
+  Circle:   new Set(["name", "summary", "icon", "to", "canReply", "canReact"]),
   Group:    new Set(["name", "description", "icon", "image", "to", "canReply", "canReact", "rsvpPolicy", "location"]),
   React:    new Set(["emoji", "name"]),
 };

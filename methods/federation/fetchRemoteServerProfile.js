@@ -45,7 +45,7 @@ export default async function fetchRemoteServerProfile(domain, { force = false, 
 
   // Skip if cached data is fresh enough
   if (!force) {
-    const existing = await FederatedServer.findOne({ domain }).select("profileFetchedAt status").lean();
+    const existing = await FederatedServer.findOne({ domain }).lean();
     if (existing?.status === "suspended") {
       return { server: null, error: "Server is suspended" };
     }

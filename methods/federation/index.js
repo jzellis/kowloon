@@ -11,6 +11,7 @@ import {
   startOutboxWorker,
 } from "./outboxWorker.js";
 import pullFromRemote from "./pullFromRemote.js";
+import fetchRemoteServerProfile from "./fetchRemoteServerProfile.js";
 import normalizeInboundActivity from "./normalizeInboundActivity.js";
 import sendAccept from "./sendAccept.js";
 import { processPollBatch, startPollWorker } from "./pollWorker.js";
@@ -20,6 +21,7 @@ const federation = {
   shouldFederate,
   verifyHttpSignature,
   pullFromRemote,
+  fetchRemoteServerProfile,
   resolveAudience,
   enqueueOutbox,
   signHttpRequest,
@@ -41,6 +43,7 @@ export {
   shouldFederate,
   verifyHttpSignature,
   pullFromRemote,
+  fetchRemoteServerProfile,
   startChallenge,
   finishChallenge,
   resolveAudience,

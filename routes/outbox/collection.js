@@ -84,12 +84,15 @@ export default route(
 
       // 2. Public posts from bare-server from entries
       //    Recipients = all to users (kwln1 is responsible for only including
-      //    users who have the server entry in one of their circles)
+      //    users who have the server entry in one of their circles).
+      //    Query by originDomain (bare domain string, e.g. "kowloon.network") rather than
+      //    server (which stores the actorId URL "https://kowloon.network/server" for local records).
+      const serverDomains = serverFroms.map((f) => f.slice(1)); // "@domain" -> "domain"
       const serverPublicItems =
         serverFroms.length > 0
           ? await FeedItems.find({
               ...baseFilter,
-              server: { $in: serverFroms },
+              originDomain: { $in: serverDomains },
               to: "public",
             })
               .sort({ publishedAt: -1 })

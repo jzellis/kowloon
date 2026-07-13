@@ -8,6 +8,7 @@ const ProfileSchema = new mongoose.Schema(
     urls: { type: [String], default: [] }, // array of URLs
     pronouns: { type: String },
     icon: { type: String }, // File ID or URL for backwards compatibility
+    featuredImage: { type: String }, // profile hero/banner — File ID or URL
     location: { type: GeoPointSchema }, // GeoJSON Point or undefined
   },
   { _id: false }

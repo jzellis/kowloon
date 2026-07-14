@@ -6,6 +6,7 @@ import search from "./search.js";
 import actor from "./actor.js";
 import posts from "./posts.js";
 import circles from "./circles.js";
+import groups from "./groups.js";
 import bookmarks from "./bookmarks.js";
 import activities from "./activities.js";
 import notifications from "./notifications.js";
@@ -66,6 +67,7 @@ router.get("/:id/posts", async (req, res, next) => {
   res.set("Content-Type", "text/xml; charset=UTF-8").send(xml);
 }, posts);
 router.get("/:id/circles", circles);
+router.get("/:id/groups", groups);
 router.get("/:id/bookmarks", bookmarks);
 router.get("/:id/activities", activities);
 router.use("/:id/notifications", notifications);

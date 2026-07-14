@@ -56,6 +56,25 @@ async function getUserGroups(viewerId) {
 }
 
 /**
+ * Find every local user (actorId) who has any of the given remote member IDs in
+ * any of their circles. Used to build the `to` list for a batch pull so that one
+ * pull fans out to ALL subscribers, not just the requesting viewer.
+ */
+async function findAllCircleSubscribers(remoteAuthorIds) {
+  const circles = await Circle.find({
+    "members.id": { $in: remoteAuthorIds },
+  }).select("actorId").lean();
+
+  return [
+    ...new Set(
+      circles
+        .map((c) => c.actorId)
+        .filter((id) => id && id.startsWith("@") && id.slice(1).includes("@"))
+    ),
+  ];
+}
+
+/**
  * Compute the oldest lastFetchedAt across a set of member IDs within a circle.
  * Returns null if any member has never been fetched (forces full fetch).
  */
@@ -152,20 +171,25 @@ export default async function getTimeline({
     remoteGroupsByDomain.get(domain).push(g);
   });
 
-  // 4. Pull from remote servers (on-demand, cursor-based)
+  // 4. Pull from remote servers (on-demand, cursor-based).
+  //
+  // The `to` list is ALL local users who have any of these remote members in any
+  // circle — not just the current viewer. This makes one pull populate FanOut for
+  // every subscriber in a single round-trip, which is the correct model: the pull
+  // is a server-level operation whose FanOut covers all local subscribers.
   const Kowloon = (await import("#kowloon")).default;
 
   for (const [remoteDomain, remoteAuthors] of remoteMembersByDomain.entries()) {
-    const remoteGroups = remoteGroupsByDomain.get(remoteDomain) || [];
-
-    // Use oldest lastFetchedAt across these members to determine what to pull.
-    // Always based on fetch history, never on the UI pagination cursor.
     const pullSince = oldestFetchedAt(circle, remoteAuthors);
+
+    // Find everyone on this server who follows any of these remote members.
+    const allSubscribers = await findAllCircleSubscribers(remoteAuthors);
+    const pullTo = allSubscribers.length > 0 ? allSubscribers : [viewerId];
 
     const result = await Kowloon.federation.pullFromRemote({
       remoteDomain,
       from: remoteAuthors,
-      to: [viewerId],
+      to: pullTo,
       since: pullSince,
       limit,
     });
@@ -187,44 +211,54 @@ export default async function getTimeline({
   // 5. Get blocked/muted users
   const blockedMutedUsers = await getBlockedMutedUsers(viewerId);
 
-  // 6. Query FeedFanOut for feed item IDs.
-  //
-  // The selected circle defines the audience: only items from authors who are
-  // members of THIS circle should appear. We intentionally do NOT include a
-  // catch-all `{ to: viewerId }` clause — that leaked items addressed to the
-  // viewer via OTHER circles into every circle's feed.
-  const fanOutActorFilter = blockedMutedUsers.length > 0
-    ? { $in: allMembers, $nin: blockedMutedUsers }
-    : { $in: allMembers };
-
-  const fanOutOrConditions = [
-    {
-      actorId: fanOutActorFilter,
-      to: { $in: ["@public", "@server", viewerId] },
-    },
-  ];
-
-  // Server-domain members in this circle (e.g. `@kwln2.local`) — pull in items
-  // from any author whose actorId domain matches one of those servers and was
-  // delivered directly to this viewer. Covers the server-level-follow case
-  // without leaking other circles' content.
+  // Bare server entries in this circle (e.g. "@kwln2.local") are public-firehose
+  // subscriptions. Their FanOut rows are created per-subscriber by pullFromRemote
+  // (to: specificUserId). We add a server-domain regex condition to find them.
   const serverMemberDomains = (circle.members ?? [])
     .map((m) => m.id)
     .filter((id) => typeof id === "string" && id.startsWith("@") && !id.slice(1).includes("@"))
     .map((id) => id.slice(1));
 
+  // 6. Query FeedFanOut for feed item IDs visible to this viewer.
+  //
+  // Two `to` patterns coexist in the FanOut table:
+  //   - Local public/server posts: ONE row with to="@public" or to="@server" (enqueueFeedFanOut)
+  //   - Remote/circle posts: per-user rows with to=specificUserId (pullFromRemote / circle fan-out)
+  // The `to` filter must cover all three values.
+  //
+  // actorId filter: only authors who are members of THIS circle should appear.
+  // Server-domain members use a domain-regex instead of exact match.
+
+  const toFilter = { $in: ["@public", "@server", viewerId] };
+
+  // Exclude server-entry IDs from the $in list — they never appear as actorId on real posts.
+  const nonServerMembers = allMembers.filter(
+    (id) => !(typeof id === "string" && id.startsWith("@") && !id.slice(1).includes("@"))
+  );
+
+  const userActorFilter = blockedMutedUsers.length > 0
+    ? { $in: nonServerMembers, $nin: blockedMutedUsers }
+    : { $in: nonServerMembers };
+
+  const fanOutOrConditions = [
+    { actorId: userActorFilter, to: toFilter },
+  ];
+
   if (serverMemberDomains.length > 0) {
     const escaped = serverMemberDomains.map((d) => d.replace(/[.\\+*?^${}()|[\]]/g, "\\$&"));
-    fanOutOrConditions.push({
-      actorId: { $regex: `@(${escaped.join("|")})$` },
-      to: viewerId,
-    });
+    const regexStr = `@[^@]+@(${escaped.join("|")})$`;
+    // Server-domain FanOut rows always have to=specificUserId (created by pullFromRemote),
+    // so viewerId in the toFilter covers them.
+    const serverActorFilter = blockedMutedUsers.length > 0
+      ? { $regex: regexStr, $nin: blockedMutedUsers }
+      : { $regex: regexStr };
+    fanOutOrConditions.push({ actorId: serverActorFilter, to: toFilter });
   }
 
   if (localGroups.length > 0) {
     fanOutOrConditions.push({
       groupId: { $in: localGroups },
-      to: { $in: ["@public", "@server", viewerId] },
+      to: toFilter,
     });
   }
 

@@ -1,12 +1,17 @@
 // /methods/federation/pullFromRemote.js
 // Pull content from a remote server using the batch-pull protocol.
 //
-// Sends GET /outbox?from=...&to=...&since=... to the remote server.
-// Remote server returns:
-//   { items: [...FeedItems], recipients: [{ itemId, to: [...localUserIds] }] }
+// For user follows (from = individual actors):
+//   Sends GET /outbox?from=...&to=... to the remote server.
+//   Remote knows its own circle memberships, so it computes which `to` users
+//   should receive each item (public posts + circle-addressed posts).
+//   FanOut is built from the `recipients` map the remote returns.
 //
-// Upserts all items into local FeedItems, then enqueues per-user FeedFanOut
-// records based on the recipients map returned by the remote server.
+// For server follows (from = bare @domain entries only):
+//   Posts are @public — they are not addressed to any specific user.
+//   The remote cannot know who on this server subscribed; the local server does.
+//   `recipients` from the remote is ignored. FanOut is created locally for ALL
+//   users in `to` (the caller passes every local subscriber).
 
 import crypto from "crypto";
 import { FeedItems, FeedFanOut, User, Circle } from "#schema";
@@ -17,6 +22,10 @@ function dedupeHash(feedItemId, to) {
   return crypto.createHash("sha256").update(`${feedItemId}:${to}`).digest("hex");
 }
 
+function isServerEntry(id) {
+  return typeof id === "string" && id.startsWith("@") && !id.slice(1).includes("@");
+}
+
 /**
  * Pull content from a remote server on behalf of local users.
  *
@@ -24,7 +33,9 @@ function dedupeHash(feedItemId, to) {
  * @param {string}   options.remoteDomain  - Required: remote server to pull from
  * @param {string[]} options.from          - Remote users/servers to pull from
  *                                           (user: "@alice@kwln2.local", server: "@kwln2.local")
- * @param {string[]} options.to            - Local user IDs pulling on behalf of
+ * @param {string[]} options.to            - Local user IDs to fan out to.
+ *                                           For server follows: ALL local subscribers.
+ *                                           For user follows: users the remote should filter for.
  * @param {string|Date} [options.since]    - Only items after this timestamp
  * @param {number}   [options.limit=100]   - Max items to retrieve
  *
@@ -47,6 +58,11 @@ export default async function pullFromRemote({
     return { items: [], nextCursor: null, error: "to is required" };
   }
 
+  // A server-only pull is when every `from` entry is a bare @domain (no individual users).
+  // For these, posts are @public — FanOut is computed locally from `to`, not from
+  // the remote's `recipients` array.
+  const serverOnlyPull = from.every(isServerEntry);
+
   const { domain: ourDomain } = getServerSettings();
 
   try {
@@ -67,10 +83,9 @@ export default async function pullFromRemote({
       to: to.length,
       since,
       limit,
+      serverOnlyPull,
     });
 
-    // Self-signed certs in dev are handled via NODE_TLS_REJECT_UNAUTHORIZED=0
-    // (set on app containers in docker-compose.yml).
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -97,16 +112,19 @@ export default async function pullFromRemote({
 
     const data = await response.json();
     const items = data.items || data.orderedItems || [];
-    const recipients = data.recipients || []; // [{ itemId, to: [userId, ...] }]
+    const recipients = data.recipients || []; // only used for user follows
     const nextCursor = data.next || null;
 
     logger.info("pullFromRemote: Retrieved", {
       remoteDomain,
       items: items.length,
       recipientEntries: recipients.length,
+      serverOnlyPull,
     });
 
-    // Upsert all items into local FeedItems
+    // Upsert all items into local FeedItems.
+    // Strip _id and __v — MongoDB rejects $set: { _id } on existing documents even
+    // if the value is unchanged, which would silently prevent FanOut from running.
     const upsertedIds = new Set();
     for (const item of items) {
       if (!item.id) {
@@ -114,9 +132,10 @@ export default async function pullFromRemote({
         continue;
       }
       try {
+        const { _id, __v, ...itemFields } = item;
         await FeedItems.findOneAndUpdate(
           { id: item.id },
-          { $set: item },
+          { $set: itemFields },
           { upsert: true, new: true }
         );
         upsertedIds.add(item.id);
@@ -135,25 +154,19 @@ export default async function pullFromRemote({
       upserted: upsertedIds.size,
     });
 
-    // Build itemId → FeedItem map for fan-out metadata
-    const feedItemMap = new Map();
-    if (recipients.length > 0 && upsertedIds.size > 0) {
-      const feedItems = await FeedItems.find({
-        id: { $in: [...upsertedIds] },
-      }).lean();
-      for (const fi of feedItems) feedItemMap.set(fi.id, fi);
+    if (upsertedIds.size === 0) {
+      return { items, nextCursor, error: null };
     }
 
-    // Create per-user FeedFanOut records directly from the recipients map.
-    // We bypass enqueueFeedFanOut/parseAudience here because the remote server
-    // has already resolved exact recipients — no audience parsing needed.
+    // Load FeedItem metadata needed for FanOut rows
+    const feedItems = await FeedItems.find({ id: { $in: [...upsertedIds] } }).lean();
+    const feedItemMap = new Map();
+    for (const fi of feedItems) feedItemMap.set(fi.id, fi);
 
     // Pre-load each recipient's blocked + muted sets so we can skip FanOut
-    // rows for posts by authors they've blocked or muted. The FeedItem itself
-    // is still cached above — other local users may want it — but the blocking
-    // user simply never gets a FanOut row for that author's content.
-    const blockedByUser = new Map(); // userId -> Set<actorId>
-    if (recipients.length > 0 && to.length > 0) {
+    // rows for posts by authors they've blocked or muted.
+    const blockedByUser = new Map();
+    if (to.length > 0) {
       const users = await User.find({ id: { $in: to } }).select("circles").lean();
       await Promise.all(
         users.map(async (user) => {
@@ -177,33 +190,52 @@ export default async function pullFromRemote({
     let fanOutCount = 0;
     const fanOutOps = [];
 
-    for (const { itemId, to: recipientIds } of recipients) {
-      if (!upsertedIds.has(itemId)) continue;
-      const feedItem = feedItemMap.get(itemId);
-      if (!feedItem) continue;
-
-      for (const userId of recipientIds) {
-        if (blockedByUser.get(userId)?.has(feedItem.actorId)) continue;
-        const hash = dedupeHash(itemId, userId);
-        fanOutOps.push({
-          updateOne: {
-            filter: { dedupeHash: hash },
-            update: {
-              $setOnInsert: {
-                feedItemId: itemId,
-                objectType: feedItem.objectType,
-                actorId: feedItem.actorId,
-                to: userId,
-                groupId: null,
-                reason: "circle",
-                canReply: feedItem.canReply || "public",
-                canReact: feedItem.canReact || "public",
-                dedupeHash: hash,
-              },
+    function pushFanOut(itemId, feedItem, userId) {
+      if (blockedByUser.get(userId)?.has(feedItem.actorId)) return;
+      const hash = dedupeHash(itemId, userId);
+      fanOutOps.push({
+        updateOne: {
+          filter: { dedupeHash: hash },
+          update: {
+            $setOnInsert: {
+              feedItemId: itemId,
+              objectType: feedItem.objectType,
+              actorId: feedItem.actorId,
+              to: userId,
+              groupId: null,
+              reason: "circle",
+              canReply: feedItem.canReply || "public",
+              canReact: feedItem.canReact || "public",
+              dedupeHash: hash,
             },
-            upsert: true,
           },
-        });
+          upsert: true,
+        },
+      });
+    }
+
+    if (serverOnlyPull) {
+      // Posts are @public. The remote doesn't know who subscribes on our server —
+      // we do. Fan out every returned item to every user in `to` (all local
+      // subscribers for this server entry).
+      for (const itemId of upsertedIds) {
+        const feedItem = feedItemMap.get(itemId);
+        if (!feedItem) continue;
+        for (const userId of to) {
+          pushFanOut(itemId, feedItem, userId);
+        }
+      }
+    } else {
+      // User follows: the remote computed exact recipients per item (it knows
+      // its own circle memberships for circle-addressed posts, and which `to`
+      // users follow each author for public posts).
+      for (const { itemId, to: recipientIds } of recipients) {
+        if (!upsertedIds.has(itemId)) continue;
+        const feedItem = feedItemMap.get(itemId);
+        if (!feedItem) continue;
+        for (const userId of recipientIds) {
+          pushFanOut(itemId, feedItem, userId);
+        }
       }
     }
 
@@ -222,6 +254,7 @@ export default async function pullFromRemote({
     logger.info("pullFromRemote: Enqueued FeedFanOut entries", {
       remoteDomain,
       fanOutCount,
+      serverOnlyPull,
     });
 
     return { items, nextCursor, error: null };

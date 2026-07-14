@@ -52,11 +52,19 @@ router.get(
 
       const base = `${protocol}://${domain}`;
 
+      // Absolutize relative asset paths (e.g. the default "/images/icons/
+      // server.png") against this server's base so federated peers can fetch
+      // them. Custom uploaded icons are already absolute file URLs.
+      const toAbs = (v) =>
+        v && !/^https?:\/\//i.test(v)
+          ? `${base}${v.startsWith("/") ? "" : "/"}${v}`
+          : v || null;
+
       set("type", "Service");
       set("domain", domain);
       set("name", profile.name || domain);
-      set("icon", profile.icon || null);
-      set("image", profile.image || null);
+      set("icon", toAbs(profile.icon));
+      set("image", toAbs(profile.image));
       set("description", profile.description || null);
       set("language", profile.language || []);
       set("location", profile.location || null);

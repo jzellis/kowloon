@@ -78,6 +78,13 @@ export default async function fetchRemoteServerProfile(domain, { force = false, 
     const data = await response.json();
     const now = new Date();
 
+    // Defensive: absolutize relative asset paths against the source domain, in
+    // case a peer hasn't upgraded to emit absolute icon/image URLs.
+    const absAsset = (v) =>
+      v && !/^https?:\/\//i.test(v)
+        ? `https://${domain}${v.startsWith("/") ? "" : "/"}${v}`
+        : v || null;
+
     // Map circles → CachedCircle shape (cap at 20, defensive)
     const cachedCircles = (data.circles || []).slice(0, 20).map((c) => ({
       id:          c.id          || "",
@@ -111,8 +118,8 @@ export default async function fetchRemoteServerProfile(domain, { force = false, 
     const update = {
       // Profile metadata
       name:              data.name              || domain,
-      icon:              data.icon              || null,
-      image:             data.image             || null,
+      icon:              absAsset(data.icon),
+      image:             absAsset(data.image),
       description:       stripHtml(data.description),
       language:          Array.isArray(data.language) ? data.language : [],
       openRegistrations: !!data.openRegistrations,

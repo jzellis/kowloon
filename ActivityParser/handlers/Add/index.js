@@ -203,6 +203,31 @@ export default async function Add(activity) {
       );
     }
 
+    // Playlist-style icon inheritance: a user-created circle that still shows
+    // the generic default icon adopts the first added member's icon (person or
+    // server) — like a playlist taking its first track's cover. It stays the
+    // generic icon until a member with an icon exists, and we never overwrite a
+    // user-chosen icon or touch System circles.
+    if (
+      ownerType === "User" &&
+      targetCircle.type !== "System" &&
+      (res.modifiedCount || 0) > 0
+    ) {
+      const isDefaultIcon = (v) => !v || /\/images\/circle\.svg$/.test(v);
+      if (isDefaultIcon(targetCircle.icon)) {
+        const fresh = await Circle.findOne({ id: activity.target })
+          .select("members icon")
+          .lean();
+        const firstWithIcon = (fresh?.members || []).find((m) => m.icon);
+        if (isDefaultIcon(fresh?.icon) && firstWithIcon?.icon) {
+          await Circle.updateOne(
+            { id: activity.target },
+            { $set: { icon: firstWithIcon.icon } }
+          );
+        }
+      }
+    }
+
     // If adding to a Group's members circle, update each user's Groups circle,
     // remove from pending, and notify — one member at a time.
     if (ownerType === "Group" && res.modifiedCount > 0) {

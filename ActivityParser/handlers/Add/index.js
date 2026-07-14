@@ -8,6 +8,8 @@ import toMember from "#methods/parse/toMember.js";
 import createNotification from "#methods/notifications/create.js";
 import getMultiFederationTargets from "../utils/getMultiFederationTargets.js";
 import pullFromRemote from "#methods/federation/pullFromRemote.js";
+import fetchRemoteServerProfile from "#methods/federation/fetchRemoteServerProfile.js";
+import { getServerActor } from "#methods/settings/schemaHelpers.js";
 
 export default async function Add(activity) {
   try {
@@ -104,19 +106,33 @@ export default async function Add(activity) {
       if (typeof ref === "string") {
         const s = ref.trim();
 
-        // Bare server entry: "@domain" (one @ at start, no second @)
-        // Store as a lightweight member with just the server id — no inbox/outbox
+        // Bare server entry: "@domain" (one @ at start, no second @).
+        // Lightweight member (no inbox/outbox), but pull the server's profile
+        // icon + name so a circle can inherit it — local from settings, remote
+        // via fetchRemoteServerProfile (GET /profile, cached in FederatedServer).
         if (/^@[^@]+$/.test(s)) {
           const domain = s.slice(1);
-          return {
-            id: s,
-            name: domain,
-            icon: "",
-            inbox: "",
-            outbox: "",
-            url: `https://${domain}`,
-            server: s,
-          };
+          let name = domain;
+          let icon = "";
+          let url = `https://${domain}`;
+          try {
+            const ourDomain = settings?.domain || process.env.DOMAIN || "";
+            if (domain.toLowerCase() === String(ourDomain).toLowerCase()) {
+              const actor = getServerActor();
+              icon = actor?.icon || "";
+              name = actor?.name || domain;
+            } else {
+              const { server } = await fetchRemoteServerProfile(domain);
+              if (server) {
+                icon = server.icon || "";
+                name = server.name || domain;
+                url = server.url || url;
+              }
+            }
+          } catch {
+            // best-effort — fall back to the lightweight member
+          }
+          return { id: s, name, icon, inbox: "", outbox: "", url, server: s };
         }
 
         if (/^@[^@]+@[^@]+$/.test(s)) {

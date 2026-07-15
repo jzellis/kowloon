@@ -10,6 +10,8 @@ const { Schema } = mongoose;
 const GroupSchema = new Schema(
   {
     id: { type: String, key: true, index: true },
+    // Local domain on create; the source domain when hydrated from a remote server.
+    originDomain: { type: String, default: () => getServerSettings()?.domain },
     objectType: { type: String, default: "Group" },
 
     // Ownership / actor

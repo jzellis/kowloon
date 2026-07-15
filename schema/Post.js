@@ -106,6 +106,8 @@ const ObjectId = mongoose.Types.ObjectId;
 const PostSchema = new Schema(
   {
     id: { type: String, key: true },
+    // Local domain on create; the source domain when hydrated from a remote server.
+    originDomain: { type: String, default: () => getServerSettings()?.domain },
     objectType: { type: String, default: "Post" },
     type: { type: String, default: "Note" }, // The type of post this is
     url: { type: String }, // The URL of the post

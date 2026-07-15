@@ -5,7 +5,7 @@
 import express from "express";
 import id from "./id.js";
 import posts from "./posts.js";
-import browse from "./browse.js";
+import collection from "./collection.js";
 import route from "../utils/route.js";
 import { Circle } from "#schema";
 import { activityStreamsCollection } from "../utils/oc.js";
@@ -13,11 +13,9 @@ import { getSetting } from "#methods/settings/cache.js";
 
 const router = express.Router({ mergeParams: true });
 
-// GET /circles — all circles visible to the viewer (public + viewer-scoped),
-// sortable via ?sort=. "Mine" is GET /users/:my-id/circles. /circles/browse is
-// a backward-compat alias for the same discovery handler.
-router.get("/", browse);
-router.get("/browse", browse);
+// GET /circles — local circles visible to the viewer (discovery), sortable via
+// ?sort=. "Mine" is GET /users/:my-id/circles.
+router.get("/", collection);
 router.get("/:id", id);
 router.get("/:id/posts", posts);
 

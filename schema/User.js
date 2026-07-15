@@ -15,6 +15,8 @@ import {
 const UserSchemaDef = {
   // Existing fields
   id: { type: String, unique: true }, // e.g., @alice@kwln.org (your current format--kept for compatibility)
+  // Local domain on create; the source domain when hydrated from a remote server.
+  originDomain: { type: String, default: () => getServerSettings()?.domain },
   server: { type: String },
   objectType: { type: String, default: "User" },
   type: { type: String, default: "Person" },

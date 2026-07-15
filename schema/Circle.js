@@ -8,6 +8,8 @@ import { signAs, verifyAs } from "#methods/utils/signing.js";
 const CircleSchema = new Schema(
   {
     id: { type: String, key: true },
+    // Local domain on create; the source domain when hydrated from a remote server.
+    originDomain: { type: String, default: () => getServerSettings()?.domain },
     type: { type: String, enum: ["Circle", "System"], default: "Circle" },
     name: { type: String, default: undefined },
     actorId: { type: String, required: true },

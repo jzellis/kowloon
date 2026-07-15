@@ -1,6 +1,10 @@
-// routes/circles/browse.js
-// GET /circles/browse — Browse public/server-visible circles with sorting.
-// Available to all viewers (unauthenticated gets @public only; local users get @public + @server).
+// routes/circles/collection.js
+// GET /circles — List LOCAL circles visible to the viewer (discovery), sortable.
+//
+// Local-only: cached remote circles (which carry originDomain) are excluded so a
+// circle pulled in via /lookup never leaks into this server's discovery.
+// Unauthenticated / remote viewers get @public only; local authed viewers get
+// @public + @server.
 
 import route from "../utils/route.js";
 import { activityStreamsCollection } from "../utils/oc.js";
@@ -18,8 +22,13 @@ export default route(
     const limit = Math.min(Math.max(1, parseInt(query.limit, 10) || 20), 100);
     const skip = (page - 1) * limit;
 
-    // Visibility filter
-    const filter = { deletedAt: null, type: "Circle" };
+    // Local circles only — exclude cached remote objects (originDomain set to a
+    // remote domain). Local circles have no originDomain (or our own).
+    const filter = {
+      deletedAt: null,
+      type: "Circle",
+      originDomain: { $in: [null, domain] },
+    };
     let isLocal = false;
     if (user?.id) {
       const parsed = kowloonId(user.id);
@@ -31,7 +40,7 @@ export default route(
       filter.to = { $in: ["@public", `@${domain}`] };
     }
 
-    // Sort: 'reacts' → reactCount desc (memberCount as tiebreaker), default → createdAt desc
+    // Sort: 'reacts' → reactCount desc (memberCount tiebreaker), default → createdAt desc
     const sort =
       query.sort === "reacts"
         ? { reactCount: -1, memberCount: -1, createdAt: -1 }

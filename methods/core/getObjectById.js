@@ -300,9 +300,15 @@ export default async function getObjectById(
       let hydrated = payload;
       if (hydrateRemoteIntoDB) {
         const now = new Date().toISOString();
+        const patch = { ...payload, etag, originDomain: handle.server, lastFetchedAt: now };
+        // Remote AP actors send publicKey as an object { id, owner, publicKeyPem };
+        // the local User schema stores it as a PEM string. Normalize before upsert.
+        if (patch.publicKey && typeof patch.publicKey === "object") {
+          patch.publicKey = patch.publicKey.publicKeyPem || patch.publicKey.pem || undefined;
+        }
         hydrated = await Models.User.findOneAndUpdate(
           { id: payload.id || idStr },
-          { ...payload, etag, originDomain: handle.server, lastFetchedAt: now },
+          patch,
           { upsert: true, new: true, setDefaultsOnInsert: true }
         ).lean();
       }

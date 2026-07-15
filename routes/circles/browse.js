@@ -67,7 +67,7 @@ export default route(
       userReacted: reactedSet.has(rest.id),
     }));
 
-    const base = `${protocol}://${domain}/circles/browse`;
+    const base = `${protocol}://${domain}/circles`;
     const collection = activityStreamsCollection({
       id: `${base}?page=${page}`,
       orderedItems: sanitized,

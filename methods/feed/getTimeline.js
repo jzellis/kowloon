@@ -139,9 +139,15 @@ export default async function getTimeline({
     return { items: [], nextCursor: null, total: 0 };
   }
 
-  // Always include the viewer so their own posts appear even when the circle is empty
+  // Include the viewer's own posts only when they belong to this circle (its
+  // owner or a member) — so viewing your own circle is never blank. When
+  // previewing a circle you're not part of, don't inject your posts into
+  // someone else's feed.
   const memberSet = new Set(circle.members?.map((m) => m.id).filter(Boolean) ?? []);
-  memberSet.add(viewerId);
+  const viewerBelongs =
+    circle.actorId === viewerId ||
+    (circle.members ?? []).some((m) => m.id === viewerId);
+  if (viewerBelongs) memberSet.add(viewerId);
   const allMembers = Array.from(memberSet);
 
   // 2. Separate local vs remote members

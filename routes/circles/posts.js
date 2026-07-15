@@ -45,15 +45,36 @@ function normalizeFeedItem(item) {
 export default route(async ({ req, params, query, user, set, setStatus }) => {
   const circleId = decodeURIComponent(params.id);
 
-  const circle = user?.id
-    ? await Circle.findOne({ id: circleId, actorId: user.id, deletedAt: null })
-        .select("actorId")
-        .lean()
-    : null;
+  // A circle's feed is viewable by anyone allowed to see the circle — not just
+  // its owner. getTimeline is viewer-scoped (FeedFanOut only surfaces posts the
+  // viewer may see), so a public circle previews safely: you see its members'
+  // posts that are visible to you.
+  const circle = await Circle.findOne({ id: circleId, deletedAt: null })
+    .select("actorId to members")
+    .lean();
 
   if (!circle) {
     setStatus(404);
     set("error", "Not found");
+    return;
+  }
+
+  const domain = getSetting("domain");
+  const to = circle.to || "";
+  const isPublic = to === "@public" || to === "public";
+  const isServerVisible =
+    to === `@${domain}` || to === "@server" || to === "server";
+  const isOwner = !!user?.id && circle.actorId === user.id;
+  const isMember = !!user?.id && circle.members?.some((m) => m.id === user.id);
+
+  if (!user?.id) {
+    setStatus(401);
+    set("error", "Authentication required");
+    return;
+  }
+  if (!isPublic && !isServerVisible && !isOwner && !isMember) {
+    setStatus(403);
+    set("error", "Access denied");
     return;
   }
 

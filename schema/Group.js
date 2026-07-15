@@ -30,7 +30,13 @@ const GroupSchema = new Schema(
     // Membership policy
     rsvpPolicy: {
       type: String,
-      enum: ["open", "serverOpen", "serverApproval", "approvalOnly"],
+      enum: [
+        "open",
+        "serverOpen",
+        "serverApproval",
+        "approvalOnly",
+        "inviteOnly",
+      ],
       default: "open",
     },
 

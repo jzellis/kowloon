@@ -100,6 +100,12 @@ export default async function Join(activity, ctx = {}) {
     const parsed = kowloonId(actorId);
     const actorIsLocal = parsed.domain && isLocalDomain(parsed.domain);
 
+    // inviteOnly: nobody self-joins. Admins add members explicitly via an
+    // Add activity, so a Join request is never valid here.
+    if (policy === "inviteOnly") {
+      return { activity, error: "Join: this group is invite-only" };
+    }
+
     // Determine if this actor needs approval or is denied
     let needsApproval = false;
     if (policy === "approvalOnly") {

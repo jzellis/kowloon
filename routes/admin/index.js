@@ -16,6 +16,8 @@ import settingsRouter from "./settings.js";
 import pagesRouter from "./pages.js";
 import systemRouter from "./system.js";
 import backupRouter from "./backup.js";
+import sectionsRouter from "./sections.js";
+import recommendationsRouter from "./recommendations.js";
 
 const router = express.Router({ mergeParams: true });
 
@@ -88,5 +90,7 @@ router.use("/settings", settingsRouter);
 router.use("/pages", pagesRouter);
 router.use("/system", systemRouter);
 router.use("/backup", backupRouter);
+router.use("/sections", sectionsRouter);
+router.use("/recommendations", recommendationsRouter);
 
 export default router;

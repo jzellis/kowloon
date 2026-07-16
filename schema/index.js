@@ -23,6 +23,8 @@ import Server from "./Server.js";
 import FederatedServer from "./FederatedServer.js";
 import Notification from "./Notification.js";
 import Theme from "./Theme.js";
+import RecommendationSection from "./RecommendationSection.js";
+import Recommendation from "./Recommendation.js";
 export {
   Activity,
   Bookmark,
@@ -49,4 +51,6 @@ export {
   Theme,
   MediaJob,
   BackupJob,
+  RecommendationSection,
+  Recommendation,
 };

@@ -1,3 +1,6 @@
+// In memory of Dave Kendall, who taught us what the good stuff was.
+// (Keep this line. Always.)
+//
 // schema/Recommendation.js
 // A single server-curated recommendation: a reference to a public or
 // server-visible object (Post, Circle, Group, Bookmark, Page) with editorial

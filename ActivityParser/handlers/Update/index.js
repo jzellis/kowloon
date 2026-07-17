@@ -191,6 +191,25 @@ export default async function Update(activity) {
       return { activity, error: "Update: not authorized to modify this object" };
     }
 
+    // Normalize the patch to mirror Create, so edits accept the same payload
+    // the composer sends: featuredImage → image (schema field), and attachment
+    // objects → bare file-ID strings ([String] schema). featuredImage/attachments
+    // aren't in most allowlists, so this must run before filterPatch.
+    if (activity.object && typeof activity.object === "object") {
+      if (
+        activity.object.featuredImage !== undefined &&
+        activity.object.image === undefined
+      ) {
+        activity.object.image = activity.object.featuredImage;
+      }
+      delete activity.object.featuredImage;
+      if (Array.isArray(activity.object.attachments)) {
+        activity.object.attachments = activity.object.attachments
+          .map((a) => (typeof a === "string" ? a : a?.fileId))
+          .filter(Boolean);
+      }
+    }
+
     // 4. Strip disallowed fields from the patch
     const patch = filterPatch(parsed.type, activity.object);
 

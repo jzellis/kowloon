@@ -82,7 +82,9 @@ export default route(async ({ req, params, set, setStatus }) => {
       .map((id) => {
         if (!id || typeof id !== "string") return null;
         const entry = presignedMap.get(id);
-        if (entry) return entry;
+        // Include the source file ID so the owner's edit screen can preserve
+        // existing attachments (the URL alone can't be re-sent on update).
+        if (entry) return { ...entry, fileId: id };
         if (id.startsWith("http")) return { url: id, mediaType: "", name: "" };
         return null;
       })

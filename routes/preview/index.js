@@ -3,14 +3,27 @@ import { getLinkPreview } from "link-preview-js";
 import route from "../utils/route.js";
 import { isSafeUrl } from "#methods/utils/safeUrl.js";
 import { getSetting } from "#methods/settings/cache.js";
-import { Post } from "#schema";
+import { buildFileUrl } from "#methods/files/signedUrl.js";
+import { Page, Post } from "#schema";
 
 const router = express.Router({ mergeParams: true });
+
+// Resolve a stored image value (file ID, relative path, or URL) to an absolute
+// URL suitable for a link preview.
+function resolveImageUrl(img, domain, protocol) {
+  if (!img || typeof img !== "string") return null;
+  if (img.startsWith("http")) return img;
+  if (img.startsWith("file:")) {
+    return buildFileUrl({ fileId: img, domain, protocol, restricted: false });
+  }
+  if (img.startsWith("/")) return `${protocol}://${domain}${img}`;
+  return img;
+}
 
 router.get(
   "/",
   route(
-    async ({ query, set, setStatus }) => {
+    async ({ req, query, set, setStatus }) => {
       const { url } = query;
 
       if (!url) {
@@ -29,20 +42,59 @@ router.get(
 
       if (parsed) {
         const domain = getSetting("domain");
+        const protocol = req.headers["x-forwarded-proto"] || "https";
         if (domain && parsed.hostname === domain) {
-          const m = parsed.pathname.match(/^\/posts\/(post:[^/?#]+@[^/?#]+)/);
-          if (m) {
-            const postId = decodeURIComponent(m[1]);
+          // Server avatar — the image fallback for any Kowloon object without
+          // its own featured image.
+          const serverAvatar = resolveImageUrl(
+            getSetting("profile")?.icon,
+            domain,
+            protocol
+          );
+
+          // Local post
+          const mPost = parsed.pathname.match(/^\/posts\/(post:[^/?#]+@[^/?#]+)/);
+          if (mPost) {
+            const postId = decodeURIComponent(mPost[1]);
             const post = await Post.findOne({ id: postId })
-              .select("title source image type")
+              .select("title summary source image type")
               .lean();
             if (post) {
               const body = post.source?.content || "";
               set("url", url);
               set("title", post.title || body.slice(0, 100) || null);
-              set("summary", body.slice(0, 300) || null);
-              set("image", post.image || null);
-              set("favicon", null);
+              set("summary", post.summary || body.slice(0, 300) || null);
+              set(
+                "image",
+                resolveImageUrl(post.image, domain, protocol) || serverAvatar || null
+              );
+              set("favicon", serverAvatar || null);
+              set("contentType", "text/html");
+              set("queryTime", Date.now() - qStart);
+              return;
+            }
+          }
+
+          // Local page — the SPA serves no page-specific OG tags, so resolve
+          // from the DB (this is #29: shared pages get title/image/excerpt).
+          const mPage = parsed.pathname.match(/^\/pages\/([^/?#]+)/);
+          if (mPage) {
+            const slugOrId = decodeURIComponent(mPage[1]);
+            const page = await Page.findOne({
+              $or: [{ slug: slugOrId }, { id: slugOrId }],
+            })
+              .select("title summary source image")
+              .lean();
+            if (page) {
+              const body = page.source?.content || "";
+              set("url", url);
+              set("title", page.title || null);
+              set("summary", page.summary || body.slice(0, 300) || null);
+              set(
+                "image",
+                resolveImageUrl(page.image, domain, protocol) || serverAvatar || null
+              );
+              set("favicon", serverAvatar || null);
               set("contentType", "text/html");
               set("queryTime", Date.now() - qStart);
               return;

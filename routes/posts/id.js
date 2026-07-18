@@ -1,5 +1,5 @@
 import route from "../utils/route.js";
-import { FeedItems, File, Post } from "#schema";
+import { FeedItems, File, Post, React as ReactModel } from "#schema";
 import {
   canView,
   buildFollowerMap,
@@ -113,6 +113,25 @@ export default route(async ({ req, params, set, setStatus }) => {
       response.endTime   = rawPost.event?.endDate   ?? null;
     }
   }
+
+  // Reactions: the viewer's own reaction (for the react button) and the
+  // per-emoji breakdown (for the reacts bar on the post page).
+  if (viewerId) {
+    const mine = await ReactModel.findOne({ actorId: viewerId, target: id })
+      .select("emoji")
+      .lean();
+    response.myReact = mine?.emoji ?? null;
+  } else {
+    response.myReact = null;
+  }
+  const reactGroups = await ReactModel.aggregate([
+    { $match: { target: id } },
+    { $group: { _id: "$emoji", count: { $sum: 1 } } },
+    { $sort: { count: -1, _id: 1 } },
+  ]);
+  response.reactCounts = reactGroups
+    .filter((g) => g._id)
+    .map((g) => ({ emoji: g._id, count: g.count }));
 
   for (const [key, value] of Object.entries(response)) {
     set(key, value);

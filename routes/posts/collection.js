@@ -10,7 +10,7 @@
 
 import route from "../utils/route.js";
 import { activityStreamsCollection } from "../utils/oc.js";
-import { FeedItems, File } from "#schema";
+import { FeedItems, File, React as ReactModel } from "#schema";
 import feedItemToPost from "#methods/feed/feedItemToPost.js";
 import { getSetting } from "#methods/settings/cache.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
@@ -100,8 +100,24 @@ export default route(async ({ req, query, user, set, setStatus }) => {
     }
   }
 
+  // The viewer's own reaction per post (for the react button state on cards).
+  let myReactByTarget = new Map();
+  if (user?.id && docs.length) {
+    const targetIds = docs
+      .map((d) => d?.object?.id || d?.id)
+      .filter(Boolean);
+    const mine = await ReactModel.find({
+      actorId: user.id,
+      target: { $in: targetIds },
+    })
+      .select("target emoji")
+      .lean();
+    myReactByTarget = new Map(mine.map((r) => [r.target, r.emoji]));
+  }
+
   const items = docs.map((doc) => {
     const item = feedItemToPost(doc);
+    item.myReact = myReactByTarget.get(item.id) ?? null;
 
     // Resolve featured image
     if (item.image?.startsWith("file:")) {

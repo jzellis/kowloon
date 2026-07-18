@@ -36,6 +36,8 @@ function pickProfileFields(profile, includePersonal) {
   const picked = {};
   if (profile.name != null) picked.name = profile.name;
   if (profile.icon != null) picked.icon = profile.icon;
+  // featuredImage (cover banner) is public-facing like the avatar, not gated.
+  if (profile.featuredImage != null) picked.featuredImage = profile.featuredImage;
   if (includePersonal) {
     for (const k of PERSONAL_FIELDS) {
       if (profile[k] != null) picked[k] = profile[k];
@@ -122,11 +124,13 @@ function sanitizeUser(user, viewer = null) {
         pronouns: profile.pronouns ?? null,
         location: profile.location ?? null,
         icon: profile.icon ?? null,
+        featuredImage: profile.featuredImage ?? null,
       },
     } : {
       profile: {
         name: profile.name ?? null,
         icon: profile.icon ?? null,
+        featuredImage: profile.featuredImage ?? null,
       },
       audienceRestricted: true,
     }),

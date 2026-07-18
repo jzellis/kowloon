@@ -8,8 +8,8 @@ Federated social media server. Node.js, Express, MongoDB/Mongoose, ActivityPub-c
 
 Kowloon has **no follow/unfollow system**. Instead, users organize people into **Circles** (like contact lists). Adding someone to a circle IS the follow. There are no followers/following counts, no social graph edges.
 
-- **System Circles** (`type: "System"`): Auto-created per user, addressed `to` the user's own ID. All start empty.
-  - **Following**: People the user actively reads content from
+- **System Circles** (`type: "System"`): Auto-created per user, addressed `to` the user's own ID. All start empty EXCEPT Following, which the user is added to at registration (so it reads like a home feed).
+  - **Following**: People the user actively reads content from (includes the user themselves)
   - **All Following**: Superset including followed servers and groups
   - **Groups**: Tracks which Groups the user belongs to (members are Group objects, not Users)
   - **Blocked**: Blocked users
@@ -53,7 +53,7 @@ These are settled architectural decisions. Do not deviate from them.
 - **Reply.target** links to the parent object's ID (e.g., a Post ID). Replies have `to`, `canReply`, and `canReact` fields but they are always blank (`""`). Visibility is inherited from the parent object. The fields exist for future-proofing only.
 - **React is a separate model** with its own `target` field and self-contained handler. Same pattern as Reply.
 - **The pattern for target-based handlers (Reply, React)**: Client sends `to: targetId` in the activity. The handler maps `activity.to` → model's `target` field. The handler creates the document, bumps the count on the parent, creates notifications, and handles federation — all without delegating to Create.
-- **System circles always start empty.** Users are never members of their own circles (Following, Groups, All Following, Blocked, Muted).
+- **System circles start empty, except Following.** At registration the user is added to their own Following circle so it works like a home feed. Users MAY add themselves to any of their circles (this was previously disallowed — that rule is retired). A circle's feed includes the viewer's own posts only when they are a *member* of that circle, not merely its owner (see `methods/feed/getTimeline.js`).
 - **No follow/unfollow.** Circles replace the social graph. Adding to a circle IS the follow.
 
 ## Key Patterns

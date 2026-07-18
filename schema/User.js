@@ -251,7 +251,9 @@ UserSchema.pre("save", async function (next) {
     if (!this.outbox)
       this.outbox = `https://${domain}/users/${this.username}/outbox`;
 
-    // System circles — all start empty
+    // System circles start empty EXCEPT Following: the user is added to their
+    // own Following circle so it reads like a home feed (their posts + whoever
+    // they later add). This is the only automatic circle membership.
     // Initialize circles subobject
     this.circles = this.circles || {};
 
@@ -263,6 +265,18 @@ UserSchema.pre("save", async function (next) {
       to: this.id,
       canReply: this.id,
       canReact: this.id,
+      members: [
+        {
+          id: this.id,
+          name: this.profile?.name || this.username || this.id,
+          inbox: this.inbox,
+          outbox: this.outbox,
+          icon: this.profile?.icon || "",
+          url: `https://${domain}/users/${this.username}`,
+          server: `@${domain}`,
+        },
+      ],
+      memberCount: 1,
     });
     this.circles.following = followingCircle.id;
 

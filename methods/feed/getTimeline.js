@@ -139,14 +139,13 @@ export default async function getTimeline({
     return { items: [], nextCursor: null, total: 0 };
   }
 
-  // Include the viewer's own posts only when they belong to this circle (its
-  // owner or a member) — so viewing your own circle is never blank. When
-  // previewing a circle you're not part of, don't inject your posts into
-  // someone else's feed.
+  // Include the viewer's own posts only when they are a MEMBER of this circle —
+  // NOT merely its owner. A circle is the set of people whose posts you want to
+  // read; owning a circle of other people shouldn't inject your own posts into
+  // it. (The Following circle adds the user to itself at registration, so it
+  // still reads like a home feed.) Members are the authoritative set either way.
   const memberSet = new Set(circle.members?.map((m) => m.id).filter(Boolean) ?? []);
-  const viewerBelongs =
-    circle.actorId === viewerId ||
-    (circle.members ?? []).some((m) => m.id === viewerId);
+  const viewerBelongs = (circle.members ?? []).some((m) => m.id === viewerId);
   if (viewerBelongs) memberSet.add(viewerId);
   const allMembers = Array.from(memberSet);
 

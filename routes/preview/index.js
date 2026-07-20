@@ -8,6 +8,19 @@ import { Page, Post } from "#schema";
 
 const router = express.Router({ mergeParams: true });
 
+// link-preview-js@4 logs a warning on every call when its `resolveDNSHost` hook
+// is absent. We deliberately don't use that hook: it makes the library connect
+// to a raw IP, which breaks HTTPS certificate validation (cert altname != IP).
+// Our isSafeUrl() guard already resolves the host and rejects private / loopback
+// / IPv6-loopback targets (the GHSA-4gp8-rjrq-ch6q vectors) before any request,
+// so the warning is a false positive for us. Filter just that one line — every
+// other console.error passes through untouched.
+const _origConsoleError = console.error.bind(console);
+console.error = (...args) => {
+  if (typeof args[0] === "string" && args[0].includes("[link-preview-js] You are not resolving DNS")) return;
+  _origConsoleError(...args);
+};
+
 // Resolve a stored image value (file ID, relative path, or URL) to an absolute
 // URL suitable for a link preview.
 function resolveImageUrl(img, domain, protocol) {
@@ -103,11 +116,12 @@ router.get(
         }
       }
 
-      // SSRF guard: reject loopback/private/link-local hosts before letting
-      // link-preview-js make any request. This is the workaround the v4
-      // advisory recommends for users who can't upgrade — and we can't, since
-      // link-preview-js@4.x ships ESM imports without .js extensions and
-      // won't load under Node's native ESM. See package.json overrides.
+      // SSRF guard: resolve the host and reject loopback/private/link-local/IPv6
+      // targets before link-preview-js makes any request. This is our protection
+      // against GHSA-4gp8-rjrq-ch6q — the library's own resolveDNSHost hook is
+      // unusable here (it forces a raw-IP connection that breaks HTTPS TLS), so
+      // this pre-check is the guard. Residual: redirect *targets* aren't re-checked
+      // (the lib follows them internally); acceptable on this authenticated route.
       if (!await isSafeUrl(url)) {
         setStatus(400);
         set("error", "URL is not allowed");

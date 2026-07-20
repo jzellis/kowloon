@@ -145,7 +145,9 @@ const schema = {
           to: { type: "string", pattern: patterns.objectId }, // React 'to' field must be a post/page/bookmark ID
           object: {
             type: "object",
-            required: ["type"],
+            // `type` is OPTIONAL: an un-react sends an empty/omitted emoji and
+            // no object.type (so the handler doesn't read "React" as the emoji).
+            // When present it must still be "React".
             properties: {
               type: { const: "React" },
             },

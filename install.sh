@@ -69,6 +69,25 @@ info "Setting up install directory: $INSTALL_DIR"
 mkdir -p "$INSTALL_DIR"
 cd "$INSTALL_DIR"
 
+# ── Guard: never clobber an existing Kowloon stack ────────────────────────────
+# Installing into a directory that already holds a Kowloon install would
+# overwrite its config and, on `docker compose up`, could disrupt that running
+# server. A second server on the same box MUST use its own directory (that's how
+# its Mongo/MinIO volumes stay separate). Refuse and point the way out.
+if [[ -f "$INSTALL_DIR/.env" || -f "$INSTALL_DIR/docker-compose.yml" ]]; then
+  EXISTING_DOMAIN=$(grep '^DOMAIN=' "$INSTALL_DIR/.env" 2>/dev/null | cut -d= -f2 | tr -d '[:space:]')
+  echo ""
+  error "This directory already contains a Kowloon install${EXISTING_DOMAIN:+ for ${EXISTING_DOMAIN}}: $INSTALL_DIR
+  Installing here would overwrite it and could disrupt that server (and its data).
+
+  To add a SECOND server on this box, install into a NEW directory instead:
+      KOWLOON_DIR=\$HOME/kowloon-<name> bash install.sh
+    or:
+      bash install.sh \$HOME/kowloon-<name>
+
+  To intentionally reconfigure THIS install, remove its .env first:  rm $INSTALL_DIR/.env"
+fi
+
 # ── Get server IP ─────────────────────────────────────────────────────────────
 SERVER_IP=""
 # Try common sources in order
@@ -129,12 +148,49 @@ success "Configuration written to $INSTALL_DIR"
 info "Pulling Kowloon app images (this may take a minute)..."
 docker compose pull
 
+# ── Co-host: ensure the shared edge network exists ────────────────────────────
+# When this box already runs another Kowloon server, the setup wizard writes a
+# .cohost-network marker naming the external docker network both stacks share.
+# The compose file references it as external, so it must exist before `up`.
+COHOST_NET=""
+if [[ -f "$INSTALL_DIR/.cohost-network" ]]; then
+  COHOST_NET=$(tr -d '[:space:]' < "$INSTALL_DIR/.cohost-network")
+  if [[ -n "$COHOST_NET" ]]; then
+    info "Co-host mode: ensuring shared network '$COHOST_NET' exists..."
+    docker network create "$COHOST_NET" &>/dev/null || true
+  fi
+fi
+
 # ── Start the stack ───────────────────────────────────────────────────────────
 info "Starting Kowloon..."
 docker compose up -d
 
 # ── Wait for health ───────────────────────────────────────────────────────────
 DOMAIN=$(grep '^DOMAIN=' "$INSTALL_DIR/.env" | cut -d= -f2 | tr -d '[:space:]')
+
+# Co-host installs aren't reachable over HTTPS yet — the existing server's Caddy
+# has to be wired to this domain first (COHOST-SETUP.md). Skip the health poll
+# and print the hand-off instead of a false "not responding" warning.
+if [[ -n "$COHOST_NET" ]]; then
+  echo ""
+  echo -e "${GREEN}${BOLD}============================================================${RESET}"
+  echo -e "${GREEN}${BOLD}  ${DOMAIN} is running — one wiring step left${RESET}"
+  echo -e "${GREEN}${BOLD}============================================================${RESET}"
+  echo ""
+  echo "  This stack has no proxy of its own. Finish co-hosting by wiring the"
+  echo "  existing Kowloon server's Caddy to ${DOMAIN}:"
+  echo ""
+  echo -e "    ${BOLD}cat $INSTALL_DIR/COHOST-SETUP.md${RESET}"
+  echo ""
+  echo "  In short: add the block from $INSTALL_DIR/caddy-vhost.caddy to the other"
+  echo "  stack's Caddyfile, join its caddy service to the '$COHOST_NET' network,"
+  echo "  then 'docker compose up -d' that stack. TLS is then automatic."
+  echo ""
+  echo "  Logs for this stack:  (cd $INSTALL_DIR && docker compose logs -f)"
+  echo ""
+  exit 0
+fi
+
 info "Waiting for Kowloon to become available..."
 
 MAX_WAIT=120

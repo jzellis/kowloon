@@ -457,6 +457,20 @@
           <input type="number" id="appPort" name="appPort" value="3000" min="1" max="65535" style="max-width:120px" />
           <p class="hint">Kowloon will listen on this port. Your reverse proxy should forward HTTPS traffic here.</p>
         </div>
+
+        <div class="field" style="margin-top:1rem">
+          <label style="display:flex;align-items:center;gap:0.6rem;font-weight:normal;cursor:pointer;font-size:0.85rem">
+            <input type="checkbox" id="coHost" name="coHost"
+                   style="width:auto;height:auto;margin:0;accent-color:var(--navy)" />
+            This box already runs another Kowloon server (co-host behind its Caddy)
+          </label>
+          <p class="hint">No reverse proxy is bundled and no host port is published. This server joins a shared docker network so the existing server's Caddy can front it. After install you'll paste one vhost block into that server (see COHOST-SETUP.md).</p>
+        </div>
+        <div class="field" id="edge-field" style="display:none;margin-top:0.75rem">
+          <label for="edgeNetwork">Shared network name</label>
+          <input type="text" id="edgeNetwork" name="edgeNetwork" value="kowloon-edge" style="max-width:220px" />
+          <p class="hint">The external docker network both servers' containers join. Keep the default unless you already picked a different one.</p>
+        </div>
       </div>
 
       <button type="submit" class="btn-install" id="submit-btn">
@@ -619,8 +633,24 @@
   });
 
   // ── SSL toggle ──────────────────────────────────────────────────────────
-  document.getElementById("manageSsl").addEventListener("change", function () {
+  // Self-managed SSL and co-host are mutually exclusive: co-host implies no
+  // bundled proxy AND no published host port (the shared Caddy reaches it over
+  // the docker network), so the two can't both be on.
+  const manageSslEl = document.getElementById("manageSsl");
+  const coHostEl    = document.getElementById("coHost");
+  manageSslEl.addEventListener("change", function () {
     document.getElementById("port-field").style.display = this.checked ? "block" : "none";
+    if (this.checked && coHostEl.checked) {
+      coHostEl.checked = false;
+      document.getElementById("edge-field").style.display = "none";
+    }
+  });
+  coHostEl.addEventListener("change", function () {
+    document.getElementById("edge-field").style.display = this.checked ? "block" : "none";
+    if (this.checked && manageSslEl.checked) {
+      manageSslEl.checked = false;
+      document.getElementById("port-field").style.display = "none";
+    }
   });
 
   // ── Form submit ──────────────────────────────────────────────────────────
@@ -661,14 +691,20 @@
       const domain    = data.domain;
       const selfSsl   = data.selfManagedSsl;
       const listenPort = data.appPort || 3000;
-      if (selfSsl) {
+      if (data.coHost) {
+        // Co-host: the shared Caddy on the other stack isn't wired to this domain
+        // yet, so there's nothing to poll. Relabel the TLS step and hand off to
+        // the wiring guide.
+        const tlsStep = document.querySelector('[data-step="tls"] .step-label');
+        if (tlsStep) tlsStep.textContent = "TLS via the existing server's Caddy (see COHOST-SETUP.md)";
+      } else if (selfSsl) {
         // Relabel the TLS step for self-managed mode
         const tlsStep = document.querySelector('[data-step="tls"] .step-label');
         if (tlsStep) tlsStep.textContent = "TLS managed by your reverse proxy";
       }
       viewForm.style.display = "none";
       viewProg.style.display = "block";
-      runProgressSteps(domain, selfSsl, listenPort);
+      runProgressSteps(domain, selfSsl, listenPort, !!data.coHost);
 
     } catch (err) {
       showErrors(["Could not reach the installer server. Please refresh and try again."]);
@@ -681,12 +717,16 @@
   // install.sh has already exited the setup container by the time docker compose
   // is running. We can't poll the new server until it's up. The steps below are
   // timed estimates — the final step polls the /health endpoint.
-  async function runProgressSteps(domain, selfSsl, listenPort) {
+  async function runProgressSteps(domain, selfSsl, listenPort, coHost) {
     await step("config", 400);
     await step("pull",   12000);  // docker pull can take a while
     await step("mongo",  5000);
     await step("app",    4000);
-    if (selfSsl) {
+    if (coHost) {
+      // Co-host: nothing to poll — the shared Caddy isn't fronting this domain
+      // until the operator finishes the one-time wiring on the other stack.
+      setStep("tls", "done");
+    } else if (selfSsl) {
       // Self-managed SSL: can't poll HTTPS — just wait a moment then mark ready.
       // The user's reverse proxy may not be configured yet; show port instead.
       await waitForHealthHttp(domain, listenPort);
@@ -695,7 +735,7 @@
       await waitForHealth(domain);
       await step("tls",  2000);
     }
-    showDone(domain, selfSsl, listenPort);
+    showDone(domain, selfSsl, listenPort, coHost);
   }
 
   async function step(name, delay) {
@@ -754,14 +794,21 @@
     else icon.innerHTML = "&#9675;";
   }
 
-  function showDone(domain, selfSsl, listenPort) {
+  function showDone(domain, selfSsl, listenPort, coHost) {
     viewProg.style.display = "none";
     viewDone.style.display = "block";
     const url = selfSsl ? `http://${domain}:${listenPort}` : `https://${domain}`;
     document.getElementById("done-domain-text").textContent = url;
     document.getElementById("done-admin-path").textContent  = `${url}/admin`;
     document.getElementById("done-link").href = url;
-    if (selfSsl) {
+    if (coHost) {
+      const hint = document.querySelector("#view-done .hint");
+      if (hint) hint.innerHTML =
+        `One step left. This server is running but no proxy is fronting it yet. ` +
+        `Open <code>COHOST-SETUP.md</code> in the install directory and follow it to ` +
+        `wire the existing server's Caddy to <strong>${domain}</strong> — then it will ` +
+        `come up at <strong>https://${domain}</strong> with automatic TLS.`;
+    } else if (selfSsl) {
       const hint = document.querySelector("#view-done .hint");
       if (hint) hint.innerHTML =
         `Kowloon is running on port <strong>${listenPort}</strong>. ` +

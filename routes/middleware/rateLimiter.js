@@ -125,6 +125,11 @@ export function activityDeduplicator(req, res, next) {
   if (req.method !== "POST" || !req.body) return next();
 
   const body = req.body;
+  // Reactions are toggles: react -> un-react -> react the same emoji again
+  // within the window is legitimate, but hashes identically to the first react
+  // and would be rejected as a duplicate. The React handler is idempotent (one
+  // reaction per user) and the client guards double-taps, so skip dedup here.
+  if ((body.type || "") === "React") return next();
   const actorId = req.user?.id || body.actorId || "";
   const type    = body.type || "";
   const objType = body.objectType || "";

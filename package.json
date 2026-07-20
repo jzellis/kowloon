@@ -48,9 +48,9 @@
     "marked": "^12.0.2",
     "mime-types": "^2.1.35",
     "mongoose": "^8.23.1",
-    "multer": "^2.1.1",
+    "multer": "^2.2.0",
     "nocache": "^4.0.0",
-    "nodemailer": "^8.0.5",
+    "nodemailer": "^9.0.1",
     "qrcode": "^1.5.4",
     "random-words": "^2.0.1",
     "sanitize-html": "^2.17.4",
@@ -59,6 +59,7 @@
     "winston": "^3.14.2"
   },
   "overrides": {
+    "@babel/core": "^7.29.6",
     "follow-redirects": "^1.16.0",
     "brace-expansion": "^5.0.6",
     "fast-xml-parser": "^5.7.0",
@@ -68,7 +69,7 @@
     "http-proxy-agent": "^7.0.2",
     "minimatch": "^10.2.4",
     "qs": "^6.15.2",
-    "js-yaml": "^4.1.1",
+    "js-yaml": "^4.2.0",
     "path-to-regexp": "^0.1.13",
     "picomatch": "^2.3.2",
     "yauzl": "^3.2.1"

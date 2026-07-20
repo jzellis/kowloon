@@ -379,14 +379,22 @@ certificate automatically. Check with:  docker compose logs -f
 
 services:`;
 
-  // Co-host: no bundled Caddy, no host ports; app joins the shared edge network
-  // under a unique alias so the existing stack's Caddy can reach it.
+  // Co-host: no bundled Caddy, no host ports; the app joins the shared edge
+  // network so the existing stack's Caddy can reach it.
+  //
+  // The app service is named "${appAlias}", NOT "app", on purpose. Docker gives
+  // every service its name as a DNS alias on every network it joins. On the
+  // shared edge network the existing stack's Caddy resolves "app" to reach its
+  // OWN app — so a second service also named "app" would hijack that name and
+  // the primary domain would start serving this stack. A unique service name
+  // keeps "app" unambiguous for whoever owns it.
   const coHostCompose = `${composeHeader}
 
   # ── Application (includes web frontend) ─────────────────────────────────────
   # Co-host mode: fronted by the existing Kowloon stack's Caddy over "${edgeNet}".
-  # See COHOST-SETUP.md for the one-time wiring on the other stack.
-  app:
+  # Named "${appAlias}" (not "app") so it doesn't collide with the other stack's
+  # "app" on the shared network. See COHOST-SETUP.md for the one-time wiring.
+  ${appAlias}:
     image: ghcr.io/jzellis/kowloon:latest
     restart: unless-stopped
     env_file: .env
@@ -398,10 +406,8 @@ services:`;
     volumes:
       - uploads:/app/uploads
     networks:
-      internal:
-      edge:
-        aliases:
-          - ${appAlias}
+      - internal
+      - edge
 ${sharedServices}
 
 volumes:

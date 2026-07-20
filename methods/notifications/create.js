@@ -4,6 +4,7 @@
 import { Notification, User } from "#schema";
 import mongoose from "mongoose";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+import sendPush from "#methods/push/send.js";
 
 /**
  * Create a notification
@@ -92,6 +93,27 @@ export default async function createNotification(params) {
     });
 
     console.log(`Notification created: ${notifId} (${type}) for ${recipientId}`);
+
+    // Fire-and-forget push to the recipient's registered devices. Only runs for
+    // genuinely new notifications (the dedup path returns before this), so
+    // coalesced events don't re-buzz. Never blocks or breaks the write.
+    const pushBody =
+      actorName && summary.startsWith(`${actorName} `)
+        ? summary.slice(actorName.length + 1)
+        : summary;
+    sendPush(recipientId, {
+      title: actorName || "Kowloon",
+      body: pushBody,
+      // objectType + objectId are what the app's notificationRoute() uses to
+      // deep-link on tap; type/notificationId are for context.
+      data: {
+        notificationId: notifId,
+        type,
+        objectType: objectType || null,
+        objectId: objectId || null,
+        href,
+      },
+    }).catch(() => {});
 
     return notification;
   } catch (err) {

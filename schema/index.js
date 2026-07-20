@@ -25,6 +25,7 @@ import Notification from "./Notification.js";
 import Theme from "./Theme.js";
 import RecommendationSection from "./RecommendationSection.js";
 import Recommendation from "./Recommendation.js";
+import PushToken from "./PushToken.js";
 export {
   Activity,
   Bookmark,
@@ -53,4 +54,5 @@ export {
   BackupJob,
   RecommendationSection,
   Recommendation,
+  PushToken,
 };

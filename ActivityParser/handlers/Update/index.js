@@ -35,7 +35,17 @@ function getChildFederationTargets(childObj) {
 
 function stripHtmlFromMarkdown(text) {
   if (typeof text !== "string") return text;
-  return sanitizeHtml(text, { allowedTags: [], allowedAttributes: {} });
+  // Match the Create handler: keep <u>/<s> (underline/strikethrough have no
+  // Markdown equivalent); everything else is stripped. Full XSS sanitization
+  // still runs in safeMarkdown() at render time via ALLOWED_TAGS.
+  const stripped = sanitizeHtml(text, {
+    allowedTags: ["u", "s"],
+    allowedAttributes: {},
+  });
+  return stripped
+    .replace(/&gt;/g, ">")
+    .replace(/&lt;/g, "<")
+    .replace(/&amp;/g, "&");
 }
 
 const MODELS = {
@@ -302,9 +312,35 @@ export default async function Update(activity) {
     // 6. Apply patch (skip if nothing left after password-only update)
     let updated = current;
     if (Object.keys(patch).length > 0) {
-      updated =
-        (await Model.findOneAndUpdate(query, { $set: patch }, { new: true, runValidators: true }).lean?.()) ??
-        (await Model.findOneAndUpdate(query, { $set: patch }, { new: true, runValidators: true }));
+      // Content-bearing types whose editable source changed must go through
+      // .save() so the model's pre-save hook re-renders `body` (and summary /
+      // textPreview / signature) from the new source. findOneAndUpdate — used
+      // for every other case — skips that hook, which left the rendered body
+      // stale after a content edit (the feed/detail render `body`, not source).
+      const CONTENT_TYPES = new Set(["Post", "Reply", "Page"]);
+      const sourceChanged =
+        CONTENT_TYPES.has(parsed.type) &&
+        patch.source &&
+        typeof patch.source === "object" &&
+        patch.source.content !== undefined;
+
+      if (sourceChanged) {
+        const doc = await Model.findOne(query);
+        if (!doc) {
+          return { activity, error: `Update: failed to update ${activity.target}` };
+        }
+        for (const [k, v] of Object.entries(patch)) doc.set(k, v);
+        // Clear derived counts so the hook recomputes them (it keeps existing
+        // truthy values otherwise).
+        doc.wordCount = undefined;
+        doc.charCount = undefined;
+        await doc.save();
+        updated = doc.toObject();
+      } else {
+        updated =
+          (await Model.findOneAndUpdate(query, { $set: patch }, { new: true, runValidators: true }).lean?.()) ??
+          (await Model.findOneAndUpdate(query, { $set: patch }, { new: true, runValidators: true }));
+      }
 
       if (!updated) {
         return { activity, error: `Update: failed to update ${activity.target}` };

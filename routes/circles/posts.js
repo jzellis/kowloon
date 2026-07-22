@@ -6,6 +6,7 @@ import { Circle, File } from "#schema";
 import getTimeline from "#methods/feed/getTimeline.js";
 import { getSetting } from "#methods/settings/cache.js";
 import { buildFileUrl } from "#methods/files/signedUrl.js";
+import { fileIdFromValue } from "#methods/files/fileRef.js";
 
 const VISIBILITY_MAP = { public: 'Public', server: 'Server', audience: 'Audience' };
 
@@ -93,9 +94,10 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
   for (const item of normalized) {
     const restricted = item.visibility !== "Public";
     const add = (id) => {
-      if (!id || typeof id !== "string" || !id.startsWith("file:")) return;
-      fileIds.add(id);
-      if (restricted) restrictedFiles.add(id);
+      const fid = fileIdFromValue(id);
+      if (!fid) return;
+      fileIds.add(fid);
+      if (restricted) restrictedFiles.add(fid);
     };
     add(item.image);
     for (const id of item.attachments ?? []) add(id);
@@ -121,8 +123,9 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
   }
 
   const orderedItems = normalized.map((item) => {
-    if (item.image?.startsWith("file:")) {
-      item.featuredImage = presignedMap.get(item.image)?.url ?? null;
+    const imgFid = fileIdFromValue(item.image);
+    if (imgFid) {
+      item.featuredImage = presignedMap.get(imgFid)?.url ?? null;
     } else if (item.image?.startsWith("http")) {
       item.featuredImage = item.image;
     }
@@ -131,7 +134,7 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
       item.attachments = item.attachments
         .map((id) => {
           if (!id || typeof id !== "string") return null;
-          const entry = presignedMap.get(id);
+          const entry = presignedMap.get(fileIdFromValue(id));
           if (entry) return entry;
           if (id.startsWith("http")) return { url: id, mediaType: "", name: "" };
           return null;

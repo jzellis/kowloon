@@ -6,6 +6,7 @@ import {
   enrichWithCapabilities,
 } from "#methods/feed/visibility.js";
 import { buildFileUrl, isPublicVisibility } from "#methods/files/signedUrl.js";
+import { fileIdFromValue } from "#methods/files/fileRef.js";
 import { getSetting } from "#methods/settings/cache.js";
 
 export default route(async ({ req, params, set, setStatus }) => {
@@ -47,9 +48,11 @@ export default route(async ({ req, params, set, setStatus }) => {
   // Resolve local file IDs to app-served URLs (GET /files/:id). Remote file:
   // IDs would have been rewritten to HTTP URLs during federation.
   const localFileIds = new Set();
-  if (response.image?.startsWith?.("file:")) localFileIds.add(response.image);
+  const imgFid0 = fileIdFromValue(response.image);
+  if (imgFid0) localFileIds.add(imgFid0);
   for (const id of response.attachments ?? []) {
-    if (id?.startsWith?.("file:")) localFileIds.add(id);
+    const fid = fileIdFromValue(id);
+    if (fid) localFileIds.add(fid);
   }
 
   const presignedMap = new Map(); // fileId → { url, mediaType, name }
@@ -71,8 +74,9 @@ export default route(async ({ req, params, set, setStatus }) => {
     }
   }
 
-  if (response.image?.startsWith("file:")) {
-    response.featuredImage = presignedMap.get(response.image)?.url ?? null;
+  const imgFid = fileIdFromValue(response.image);
+  if (imgFid) {
+    response.featuredImage = presignedMap.get(imgFid)?.url ?? null;
   } else if (response.image?.startsWith("http")) {
     response.featuredImage = response.image;
   }
@@ -81,10 +85,11 @@ export default route(async ({ req, params, set, setStatus }) => {
     response.attachments = response.attachments
       .map((id) => {
         if (!id || typeof id !== "string") return null;
-        const entry = presignedMap.get(id);
+        const fid = fileIdFromValue(id);
+        const entry = presignedMap.get(fid);
         // Include the source file ID so the owner's edit screen can preserve
         // existing attachments (the URL alone can't be re-sent on update).
-        if (entry) return { ...entry, fileId: id };
+        if (entry) return { ...entry, fileId: fid };
         if (id.startsWith("http")) return { url: id, mediaType: "", name: "" };
         return null;
       })

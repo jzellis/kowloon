@@ -16,6 +16,7 @@ import { getSetting } from "#methods/settings/cache.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 import { buildFileUrl, isPublicVisibility } from "#methods/files/signedUrl.js";
+import { fileIdFromValue } from "#methods/files/fileRef.js";
 
 export default route(async ({ req, query, user, set, setStatus }) => {
   // Determine visibility tiers for this viewer
@@ -73,9 +74,10 @@ export default route(async ({ req, query, user, set, setStatus }) => {
     const obj = doc.object ?? {};
     const restricted = !isPublicVisibility(obj.to ?? doc.to);
     const add = (id) => {
-      if (!id?.startsWith?.("file:")) return;
-      fileIds.add(id);
-      if (restricted) restrictedFiles.add(id);
+      const fid = fileIdFromValue(id);
+      if (!fid) return;
+      fileIds.add(fid);
+      if (restricted) restrictedFiles.add(fid);
     };
     add(obj.image);
     for (const id of obj.attachments ?? []) add(id);
@@ -119,19 +121,20 @@ export default route(async ({ req, query, user, set, setStatus }) => {
     const item = feedItemToPost(doc);
     item.myReact = myReactByTarget.get(item.id) ?? null;
 
-    // Resolve featured image
-    if (item.image?.startsWith("file:")) {
-      item.featuredImage = presignedMap.get(item.image)?.url ?? null;
+    // Resolve featured image (file id or proxy URL)
+    const imgFid = fileIdFromValue(item.image);
+    if (imgFid) {
+      item.featuredImage = presignedMap.get(imgFid)?.url ?? null;
     } else if (item.image?.startsWith("http")) {
       item.featuredImage = item.image;
     }
 
-    // Resolve attachments: replace file IDs with {url, mediaType, name} objects
+    // Resolve attachments: replace file IDs / proxy URLs with {url, mediaType, name}
     if (item.attachments?.length) {
       item.attachments = item.attachments
         .map((id) => {
           if (!id || typeof id !== "string") return null;
-          const entry = presignedMap.get(id);
+          const entry = presignedMap.get(fileIdFromValue(id));
           if (entry) return entry;
           if (id.startsWith("http")) return { url: id, mediaType: "", name: "" };
           return null;

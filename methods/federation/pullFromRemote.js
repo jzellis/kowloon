@@ -17,6 +17,8 @@ import crypto from "crypto";
 import { FeedItems, FeedFanOut, User, Circle } from "#schema";
 import logger from "#methods/utils/logger.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+import { fileIdFromValue } from "#methods/files/fileRef.js";
+import { hydrateRemoteFiles } from "#methods/files/hydrateRemoteFile.js";
 
 function dedupeHash(feedItemId, to) {
   return crypto.createHash("sha256").update(`${feedItemId}:${to}`).digest("hex");
@@ -157,6 +159,24 @@ export default async function pullFromRemote({
       total: items.length,
       upserted: upsertedIds.size,
     });
+
+    // Cache metadata for any remote media these posts reference, so attachment
+    // enrichment can resolve mediaType + origin URL (otherwise cross-server
+    // images/audio/video are dropped at serve time). Public files only; the
+    // helper skips local ids and non-public files. Non-fatal.
+    try {
+      const remoteFileIds = new Set();
+      for (const item of items) {
+        const o = item?.object || {};
+        for (const v of [o.image, ...(o.attachments || [])]) {
+          const fid = fileIdFromValue(v);
+          if (fid) remoteFileIds.add(fid);
+        }
+      }
+      if (remoteFileIds.size > 0) await hydrateRemoteFiles([...remoteFileIds]);
+    } catch (err) {
+      logger.warn("pullFromRemote: remote file hydration failed", { remoteDomain, error: err.message });
+    }
 
     if (upsertedIds.size === 0) {
       return { items, nextCursor, error: null };

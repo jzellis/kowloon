@@ -10,6 +10,8 @@
 // viewer's JWT or a public storage endpoint.
 
 import crypto from "crypto";
+import kowloonId from "#methods/parse/kowloonId.js";
+import isLocalDomain from "#methods/parse/isLocalDomain.js";
 
 function secret() {
   // Same secret the app already holds; present in the app and worker envs.
@@ -59,4 +61,18 @@ export function buildFileUrl({ fileId, domain, protocol = "https", restricted = 
   let q = `exp=${exp}&sig=${sign(fileId, String(exp))}`;
   if (vParam) q += `&${vParam}`;
   return `${base}?${q}`;
+}
+
+// Resolve a File doc to a client-usable URL. Local files get a (possibly signed,
+// version-busted) /files/:id URL on THIS server; remote federated-cache files
+// (id domain != local) return their stored origin URL, because the bytes live on
+// the origin server, not here. Pairs with hydrateRemoteFile.js.
+export function fileServeUrl(file, { domain, protocol = "https", restricted = false } = {}) {
+  if (!file) return null;
+  const parsed = kowloonId(file.id);
+  if (parsed?.domain && !isLocalDomain(parsed.domain)) {
+    return file.url || null; // remote: bytes live at the origin
+  }
+  const version = file.updatedAt ? new Date(file.updatedAt).getTime() : undefined;
+  return buildFileUrl({ fileId: file.id, domain, protocol, restricted, version });
 }

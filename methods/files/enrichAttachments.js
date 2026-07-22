@@ -12,7 +12,7 @@
 // isn't pinned in client caches.
 
 import { File } from "#schema";
-import { buildFileUrl, isPublicVisibility } from "#methods/files/signedUrl.js";
+import { fileServeUrl, isPublicVisibility } from "#methods/files/signedUrl.js";
 import { fileIdFromValue } from "#methods/files/fileRef.js";
 import { getSetting } from "#methods/settings/cache.js";
 
@@ -37,17 +37,11 @@ export async function enrichAttachments(items, { protocol = "https" } = {}) {
   const map = new Map();
   if (fileIds.size > 0) {
     const files = await File.find({ id: { $in: [...fileIds] } })
-      .select("id mediaType name summary updatedAt")
+      .select("id mediaType name summary updatedAt url")
       .lean();
     for (const f of files) {
       map.set(f.id, {
-        url: buildFileUrl({
-          fileId: f.id,
-          domain,
-          protocol,
-          restricted: restrictedIds.has(f.id),
-          version: f.updatedAt ? new Date(f.updatedAt).getTime() : undefined,
-        }),
+        url: fileServeUrl(f, { domain, protocol, restricted: restrictedIds.has(f.id) }),
         mediaType: f.mediaType ?? "",
         name: f.name ?? f.summary ?? "",
       });

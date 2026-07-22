@@ -5,7 +5,7 @@ import route from "../utils/route.js";
 import { Circle, File } from "#schema";
 import getTimeline from "#methods/feed/getTimeline.js";
 import { getSetting } from "#methods/settings/cache.js";
-import { buildFileUrl } from "#methods/files/signedUrl.js";
+import { fileServeUrl } from "#methods/files/signedUrl.js";
 import { fileIdFromValue } from "#methods/files/fileRef.js";
 
 const VISIBILITY_MAP = { public: 'Public', server: 'Server', audience: 'Audience' };
@@ -111,11 +111,11 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
     const domain = getSetting("domain");
     const protocol = req.headers["x-forwarded-proto"] || "https";
     const files = await File.find({ id: { $in: [...fileIds] } })
-      .select("id mediaType name summary updatedAt")
+      .select("id mediaType name summary updatedAt url")
       .lean();
     for (const f of files) {
       presignedMap.set(f.id, {
-        url: buildFileUrl({ fileId: f.id, domain, protocol, restricted: restrictedFiles.has(f.id), version: f.updatedAt ? new Date(f.updatedAt).getTime() : undefined }),
+        url: fileServeUrl(f, { domain, protocol, restricted: restrictedFiles.has(f.id) }),
         mediaType: f.mediaType ?? "",
         name: f.name ?? f.summary ?? "",
       });

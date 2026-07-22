@@ -5,9 +5,11 @@ import {
   buildFollowerMap,
   enrichWithCapabilities,
 } from "#methods/feed/visibility.js";
-import { buildFileUrl, isPublicVisibility } from "#methods/files/signedUrl.js";
+import { fileServeUrl, isPublicVisibility } from "#methods/files/signedUrl.js";
 import { fileIdFromValue } from "#methods/files/fileRef.js";
 import { getSetting } from "#methods/settings/cache.js";
+
+const VISIBILITY_MAP = { public: "Public", server: "Server", audience: "Audience" };
 
 export default route(async ({ req, params, set, setStatus }) => {
   const { id } = params; // e.g. "post:123@domain.com"
@@ -43,6 +45,11 @@ export default route(async ({ req, params, set, setStatus }) => {
     canReact: enriched.canReact,
     publishedAt: enriched.publishedAt,
     updatedAt: enriched.updatedAt,
+    // Coarse visibility tier for ALL viewers (the sanitized object omits `to`,
+    // and `to` is only added below for the owner). Clients gate share/reshape on
+    // this; without it, non-owners can't tell a public post is public and the
+    // share button fails closed. Mirrors the feed route (circles/posts.js).
+    visibility: VISIBILITY_MAP[feedCacheItem.to] ?? "Public",
   };
 
   // Resolve local file IDs to app-served URLs (GET /files/:id). Remote file:
@@ -63,11 +70,11 @@ export default route(async ({ req, params, set, setStatus }) => {
     const domain = getSetting("domain");
     const protocol = req.headers["x-forwarded-proto"] || "https";
     const files = await File.find({ id: { $in: [...localFileIds] } })
-      .select("id mediaType name summary updatedAt")
+      .select("id mediaType name summary updatedAt url")
       .lean();
     for (const f of files) {
       presignedMap.set(f.id, {
-        url: buildFileUrl({ fileId: f.id, domain, protocol, restricted, version: f.updatedAt ? new Date(f.updatedAt).getTime() : undefined }),
+        url: fileServeUrl(f, { domain, protocol, restricted }),
         mediaType: f.mediaType ?? "",
         name: f.name ?? f.summary ?? "",
       });

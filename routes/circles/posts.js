@@ -111,11 +111,11 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
     const domain = getSetting("domain");
     const protocol = req.headers["x-forwarded-proto"] || "https";
     const files = await File.find({ id: { $in: [...fileIds] } })
-      .select("id mediaType name summary")
+      .select("id mediaType name summary updatedAt")
       .lean();
     for (const f of files) {
       presignedMap.set(f.id, {
-        url: buildFileUrl({ fileId: f.id, domain, protocol, restricted: restrictedFiles.has(f.id) }),
+        url: buildFileUrl({ fileId: f.id, domain, protocol, restricted: restrictedFiles.has(f.id), version: f.updatedAt ? new Date(f.updatedAt).getTime() : undefined }),
         mediaType: f.mediaType ?? "",
         name: f.name ?? f.summary ?? "",
       });

@@ -43,12 +43,20 @@ export function isPublicVisibility(to) {
 }
 
 // Build the public URL for a file served by GET /files/:id.
-export function buildFileUrl({ fileId, domain, protocol = "https", restricted = false, ttlSeconds = 3600 }) {
+export function buildFileUrl({ fileId, domain, protocol = "https", restricted = false, ttlSeconds = 3600, version }) {
   // Keep the file id raw (no encoding) to match the URLs the rest of the
   // codebase builds (upload.js, proxyExternalImage.js) and the frontend's
   // sizedUrl regex, which keys on a literal `file:`. File ids contain no '/'.
   const base = `${protocol}://${domain}/files/${fileId}`;
-  if (!restricted) return base;
+  // Optional content-version cache-buster. Image bytes at a key can change
+  // (e.g. an orientation fix), but the URL is stable and clients — especially
+  // expo-image on mobile — cache by URL, pinning the stale image. Threading the
+  // file's updatedAt as ?v= makes the URL change when the content does, so fixes
+  // propagate. sizedUrl (frontend) already appends &size= when a ? is present.
+  const vParam = version != null && version !== "" ? `v=${encodeURIComponent(version)}` : "";
+  if (!restricted) return vParam ? `${base}?${vParam}` : base;
   const exp = Math.floor(Date.now() / 1000) + ttlSeconds;
-  return `${base}?exp=${exp}&sig=${sign(fileId, String(exp))}`;
+  let q = `exp=${exp}&sig=${sign(fileId, String(exp))}`;
+  if (vParam) q += `&${vParam}`;
+  return `${base}?${q}`;
 }

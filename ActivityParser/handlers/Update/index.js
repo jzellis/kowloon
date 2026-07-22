@@ -112,10 +112,16 @@ async function updateFeedItems(updated, objectType, patchFields) {
     if (patchFields.type !== undefined) cacheUpdate.type = updated.type;
 
     if (patchFields.to !== undefined) {
+      // Map the raw `to` to the coarse FeedItems tier, matching the create-time
+      // mapping in enqueueFanOut.js#parseAudience. The domain form (@<domain>) is
+      // the server tier — missing it here mislabeled edited-to-community posts as
+      // "audience", which the community feed excludes, so they vanished (#46).
+      const { domain } = getServerSettings();
+      const dom = String(domain || "").toLowerCase();
       const val = String(updated.to || "").toLowerCase().trim();
       cacheUpdate.to =
         val === "@public" || val === "public" ? "public"
-        : val === "server" ? "server"
+        : val === "@server" || val === "server" || (dom && val === `@${dom}`) ? "server"
         : "audience";
     }
     if (patchFields.canReply !== undefined) {

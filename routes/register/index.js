@@ -156,6 +156,18 @@ const registerHandler = route(
       set("error", "username is required");
       return;
     }
+    // Usernames are handles — they become part of the account id (@user@domain)
+    // and actor URL, so they must be a slug. Spaces/capitals here produced
+    // malformed ids that broke profile edits and federation. Full names belong
+    // in the display name, not the username.
+    if (!/^[a-z0-9_]{2,32}$/.test(input.username)) {
+      setStatus(400);
+      set(
+        "error",
+        "Username must be 2–32 characters using only lowercase letters, numbers, or underscores (no spaces or capitals). Put your full name in the display name instead."
+      );
+      return;
+    }
     if (!isNonEmpty(input.password)) {
       setStatus(400);
       set("error", "password is required");

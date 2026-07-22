@@ -8,6 +8,7 @@ import route from "../utils/route.js";
 import { Group, FeedItems, Circle } from "#schema";
 import { activityStreamsCollection } from "../utils/oc.js";
 import feedItemToPost from "#methods/feed/feedItemToPost.js";
+import { enrichAttachments } from "#methods/files/enrichAttachments.js";
 import { getSetting } from "#methods/settings/cache.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
 import kowloonId from "#methods/parse/kowloonId.js";
@@ -78,6 +79,8 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
   const items = docs.map(feedItemToPost);
 
   const protocol = req.headers["x-forwarded-proto"] || "https";
+  // Resolve file:/proxy-URL image + attachments to client URLs + mediaType (#49).
+  await enrichAttachments(items, { protocol });
   const base     = `${protocol}://${domain}/groups/${encodeURIComponent(groupId)}/posts`;
 
   const collection = activityStreamsCollection({

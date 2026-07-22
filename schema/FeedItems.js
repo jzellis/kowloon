@@ -44,6 +44,14 @@ const FeedItemsSchema = new Schema(
     // Subtype (e.g., Post → Note/Article/Media/Link; Bookmark → Folder/Bookmark)
     type: { type: String, default: undefined },
 
+    // Author's publish time — the primary feed sort key. MUST be a typed Date:
+    // remote-pulled items arrive with publishedAt as an ISO *string*, and under
+    // this schema's `strict: false` an untyped path stores it as-is. MongoDB
+    // sorts by BSON type first, so string dates sort below all real Dates and
+    // every federated post sinks to the bottom of the feed regardless of recency.
+    // Declaring it Date makes Mongoose cast the string on write.
+    publishedAt: { type: Date, default: undefined },
+
     // Threading (optional)
     inReplyTo: { type: String, default: undefined },
     threadRoot: { type: String, default: undefined },

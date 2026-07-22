@@ -133,6 +133,10 @@ export default async function pullFromRemote({
       }
       try {
         const { _id, __v, ...itemFields } = item;
+        // Remote items carry publishedAt as an ISO string; coerce to a real Date
+        // so it doesn't sort below Date-typed local posts (see schema/FeedItems.js).
+        // The typed schema path also casts this, but be explicit at the write site.
+        if (itemFields.publishedAt) itemFields.publishedAt = new Date(itemFields.publishedAt);
         await FeedItems.findOneAndUpdate(
           { id: item.id },
           { $set: itemFields },

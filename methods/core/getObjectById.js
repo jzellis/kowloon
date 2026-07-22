@@ -300,14 +300,30 @@ export default async function getObjectById(
       let hydrated = payload;
       if (hydrateRemoteIntoDB) {
         const now = new Date().toISOString();
-        const patch = { ...payload, etag, originDomain: handle.server, lastFetchedAt: now };
+        // `payload` is a remote AP actor: its `id` is the actor URL and it uses
+        // `preferredUsername`, not Kowloon's id/username/actorId. Map it into the
+        // local User shape and key the upsert on the Kowloon handle. Without this
+        // we cache a malformed user (id = the URL, username/actorId undefined),
+        // which 404s profile views and poisons circle membership references.
+        const actorUrl = typeof payload.id === "string" ? payload.id : undefined;
+        const patch = {
+          ...payload,
+          id: idStr,
+          username:
+            payload.username || payload.preferredUsername || handle.username,
+          actorId: payload.actorId || actorUrl,
+          objectType: payload.objectType || "User",
+          etag,
+          originDomain: handle.server,
+          lastFetchedAt: now,
+        };
         // Remote AP actors send publicKey as an object { id, owner, publicKeyPem };
         // the local User schema stores it as a PEM string. Normalize before upsert.
         if (patch.publicKey && typeof patch.publicKey === "object") {
           patch.publicKey = patch.publicKey.publicKeyPem || patch.publicKey.pem || undefined;
         }
         hydrated = await Models.User.findOneAndUpdate(
-          { id: payload.id || idStr },
+          { id: idStr },
           patch,
           { upsert: true, new: true, setDefaultsOnInsert: true }
         ).lean();

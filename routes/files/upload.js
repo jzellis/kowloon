@@ -55,15 +55,26 @@ export default route(
         const { default: sharp } = await import('sharp')
         const meta = await sharp(buffer).metadata()
         const longEdge = Math.max(meta.width || 0, meta.height || 0)
-        if (longEdge > MAX_IMAGE_DIMENSION) {
-          const pipeline = sharp(buffer).rotate()
-          buffer = await ((meta.width || 0) >= (meta.height || 0)
-            ? pipeline.resize(MAX_IMAGE_DIMENSION, null, { withoutEnlargement: true })
-            : pipeline.resize(null, MAX_IMAGE_DIMENSION, { withoutEnlargement: true })
-          ).toBuffer()
+        // Bake in EXIF orientation whenever the image carries one — iPhone photos
+        // are stored sideways with an Orientation tag. Browsers usually honor it
+        // for <img>, but canvas, CSS backgrounds, the mobile app, and federated
+        // servers do not, so the image shows rotated there. Normalize the pixels
+        // and drop the tag at the source (this also strips EXIF GPS — a privacy win).
+        const needsOrient = (meta.orientation ?? 1) > 1
+        const needsResize = longEdge > MAX_IMAGE_DIMENSION
+        if (needsOrient || needsResize) {
+          let pipeline = sharp(buffer).rotate() // auto-orient from EXIF, then strip it
+          if (needsResize) {
+            // fit:'inside' caps the long edge correctly regardless of post-rotation orientation.
+            pipeline = pipeline.resize(MAX_IMAGE_DIMENSION, MAX_IMAGE_DIMENSION, {
+              fit: 'inside',
+              withoutEnlargement: true,
+            })
+          }
+          buffer = await pipeline.toBuffer()
         }
       } catch (err) {
-        console.warn('[files/upload] Image resize failed, using original:', err.message)
+        console.warn('[files/upload] Image normalize/resize failed, using original:', err.message)
       }
     }
 

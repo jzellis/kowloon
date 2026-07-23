@@ -323,8 +323,11 @@ export default async function Create(activity) {
       if (typeof loc === "string") {
         // Plain string — name only, no coordinates
         activity.object.location = { name: loc, type: "Point", coordinates: [0, 0] };
-      } else if (loc.type === "Place" && typeof loc.lat === "number" && typeof loc.lon === "number") {
-        // PostComposer sends { type: "Place", name, lat, lon } — convert to GeoJSON
+      } else if (typeof loc.lat === "number" && typeof loc.lon === "number") {
+        // { lat, lon } (+ optional name) — the web composer tags it type:"Place",
+        // mobile sends it bare. Either way, convert to GeoJSON. Requiring
+        // type==="Place" left mobile's { name, lat, lon } unnormalized, so it
+        // failed GeoPoint validation with "invalid coordinates" (#55, #53).
         activity.object.location = {
           name: loc.name || "",
           type: "Point",

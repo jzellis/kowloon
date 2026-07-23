@@ -224,6 +224,18 @@ export default async function Update(activity) {
           .map((a) => (typeof a === "string" ? a : a?.fileId))
           .filter(Boolean);
       }
+      // Location → GeoPoint, mirroring Create. Mobile sends bare { name, lat, lon }
+      // (no type:"Place"); without this it fails GeoPoint validation on edit (#55).
+      const loc = activity.object.location;
+      if (typeof loc === "string") {
+        activity.object.location = { name: loc, type: "Point", coordinates: [0, 0] };
+      } else if (loc && typeof loc.lat === "number" && typeof loc.lon === "number") {
+        activity.object.location = {
+          name: loc.name || "",
+          type: "Point",
+          coordinates: [loc.lon, loc.lat],
+        };
+      }
     }
 
     // 4. Strip disallowed fields from the patch

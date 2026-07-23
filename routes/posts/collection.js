@@ -56,7 +56,16 @@ export default route(async ({ req, query, user, set, setStatus }) => {
     filter.type = types.length > 1 ? { $in: types } : types[0];
   }
   if (query.since)    filter.publishedAt = { $gte: new Date(query.since) };
-  if (query.serverId) filter.server      = query.serverId;
+  if (query.serverId) {
+    filter.server = query.serverId;
+  } else {
+    // Community Posts = the viewer's OWN server only. Firehose posts pulled from
+    // other servers (into a Circle) keep their source originDomain, so without
+    // this they leak into Community (#64). Match own-domain items; tolerate
+    // legacy rows that predate originDomain (null) as local.
+    const localDomain = getSetting("domain");
+    if (localDomain) filter.originDomain = { $in: [localDomain, null] };
+  }
 
   const page  = Math.max(1, parseInt(query.page,  10) || 1);
   const limit = Math.min(Math.max(1, parseInt(query.limit, 10) || 20), 100);

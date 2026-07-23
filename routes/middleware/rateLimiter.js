@@ -134,6 +134,14 @@ export function activityDeduplicator(req, res, next) {
   const type    = body.type || "";
   const objType = body.objectType || "";
   const to      = body.to || "";
+  // Target/object identity. Target-based activities (Delete, Add, Remove, ...)
+  // carry no `object`, so without this every Delete hashes identically and you
+  // can't delete two posts in a row (#52). Covers `target`, a string `object`,
+  // and an object with an `id`.
+  const targetId =
+    body.target ||
+    (typeof body.object === "string" ? body.object : body.object?.id) ||
+    "";
   const content =
     body.object?.source?.content ||
     body.object?.body             ||
@@ -143,7 +151,7 @@ export function activityDeduplicator(req, res, next) {
 
   const hash = crypto
     .createHash("sha256")
-    .update(`${actorId}|${type}|${objType}|${to}|${content}`)
+    .update(`${actorId}|${type}|${objType}|${to}|${targetId}|${content}`)
     .digest("hex");
 
   const now = Date.now();
@@ -154,5 +162,12 @@ export function activityDeduplicator(req, res, next) {
   }
 
   dedupStore.set(hash, now + WINDOW);
+  // A *failed* activity must not hold the dedup slot, or a corrected retry gets
+  // wrongly rejected as a duplicate — e.g. create-group fails on bad coords, you
+  // fix the location, and the resubmit is blocked (#53). Only successful
+  // submissions should reserve the window; release the slot on any error.
+  res.on("finish", () => {
+    if (res.statusCode >= 400) dedupStore.delete(hash);
+  });
   next();
 }

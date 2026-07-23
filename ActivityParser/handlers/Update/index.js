@@ -13,6 +13,7 @@ import {
   FeedItems,
 } from "#schema";
 import kowloonId from "#methods/parse/kowloonId.js";
+import { canonicalTo } from "#methods/parse/canonicalTo.js";
 import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 import refreshActorCache from "#methods/users/refreshActorCache.js";
@@ -235,6 +236,24 @@ export default async function Update(activity) {
           type: "Point",
           coordinates: [loc.lon, loc.lat],
         };
+      }
+
+      // Normalize addressing in the patch to the canonical scheme (only fields
+      // actually being changed are present). canReply/canReact inherit the
+      // patched (or unchanged) `to` when blank isn't meaningful — but in a patch
+      // we only touch what's provided, so pass each through canonicalTo directly.
+      if (activity.object.to !== undefined) {
+        activity.object.to = canonicalTo(activity.object.to);
+      }
+      if (activity.object.canReply !== undefined) {
+        activity.object.canReply = canonicalTo(activity.object.canReply, {
+          default: activity.object.to ?? "@public",
+        });
+      }
+      if (activity.object.canReact !== undefined) {
+        activity.object.canReact = canonicalTo(activity.object.canReact, {
+          default: activity.object.to ?? "@public",
+        });
       }
     }
 

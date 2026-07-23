@@ -6,6 +6,7 @@ import { getStorageAdapter } from '#methods/files/index.js';
 import { validateUpload } from '#methods/files/validateUpload.js';
 import File from '#schema/File.js';
 import MediaJob from '#schema/MediaJob.js';
+import { canonicalTo } from '#methods/parse/canonicalTo.js';
 import isServerAdmin from '#methods/auth/isServerAdmin.js';
 import getSettings from '#methods/settings/get.js';
 
@@ -123,8 +124,9 @@ export default route(
       const file = new File({
         actorId,
         // If parentObject is provided, visibility is inherited from it at serve time.
-        // to is left as the fallback for standalone files (defaults to @public).
-        to: typeof body.to === 'string' && body.to.trim() ? body.to.trim() : '@public',
+        // Normalize to the canonical scheme so bare "public" etc. don't slip in
+        // (they broke cross-server media caching — #71). Empty → @public.
+        to: canonicalTo(body.to),
         parentObject: typeof parentObject === 'string' && parentObject.trim()
           ? parentObject.trim()
           : undefined,

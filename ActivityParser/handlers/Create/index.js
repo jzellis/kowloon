@@ -15,6 +15,7 @@ import {
 } from "#schema";
 import { getServerSettings, getServerActor } from "#methods/settings/schemaHelpers.js";
 import kowloonId from "#methods/parse/kowloonId.js";
+import { canonicalAudience } from "#methods/parse/canonicalTo.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 import createNotification from "#methods/notifications/create.js";
 import writeFeedItems from "#methods/feed/writeFeedItems.js";
@@ -315,6 +316,26 @@ export default async function Create(activity) {
     }
     if (activity.canReact !== undefined && (!activity.object.canReact || activity.object.canReact === "")) {
       activity.object.canReact = activity.canReact;
+    }
+
+    // Normalize addressing to the canonical scheme (@public, @<domain>, circle:…,
+    // group:…, @<owner>@<domain>). Coerces loose values ("public", "server", "",
+    // "true") without widening private/circle/group audiences. Owner-scoped types
+    // (Circle) default a blank `to` to the owner; the rest default to @public.
+    if (["Post", "Circle", "Group", "User"].includes(type)) {
+      const toFallback =
+        type === "Circle" && activity.actorId ? activity.actorId : "@public";
+      const norm = canonicalAudience(
+        {
+          to: activity.object.to,
+          canReply: activity.object.canReply,
+          canReact: activity.object.canReact,
+        },
+        { toFallback }
+      );
+      activity.object.to = norm.to;
+      if (norm.canReply !== undefined) activity.object.canReply = norm.canReply;
+      if (norm.canReact !== undefined) activity.object.canReact = norm.canReact;
     }
 
     // Normalize location to GeoPoint format

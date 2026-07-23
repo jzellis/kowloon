@@ -16,6 +16,7 @@
 import { File } from "#schema";
 import kowloonId from "#methods/parse/kowloonId.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
+import { isPublicVisibility } from "#methods/files/signedUrl.js";
 
 const FRESH_MS = 24 * 60 * 60 * 1000; // re-fetch a shadow's meta at most daily
 
@@ -46,7 +47,10 @@ export async function hydrateRemoteFile(fileId, { fetcher = fetch } = {}) {
   } catch {
     return existing || null;
   }
-  if (!meta || meta.to !== "@public") return existing || null; // public only
+  // Public files only. The origin reports visibility as "@public", "public", or
+  // empty depending on the code path — accept them all (a strict === "@public"
+  // check skipped bare-"public" images, so remote Media images never cached, #71).
+  if (!meta || !isPublicVisibility(meta.to)) return existing || null;
 
   const doc = {
     id: fileId,

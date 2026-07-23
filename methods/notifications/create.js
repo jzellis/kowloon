@@ -1,7 +1,7 @@
 // Helper function to create notifications
 // Notifications alert users about actions that involve them
 
-import { Notification, User } from "#schema";
+import { Notification, User, Reply } from "#schema";
 import mongoose from "mongoose";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 import sendPush from "#methods/push/send.js";
@@ -49,8 +49,24 @@ export default async function createNotification(params) {
     // Generate summary if not provided
     const summary = customSummary || generateSummary(type, actorName, objectType);
 
+    // The app opens notifications at /post/:id, but replies have no standalone
+    // page — reacting to / replying to a reply produced a notification pointing
+    // at a reply: id, which resolved to "Post Not Found" (#51). Resolve reply
+    // targets up to their ancestor post so the tap lands on the thread.
+    let navObjectId = objectId;
+    if (typeof objectId === "string" && objectId.startsWith("reply:")) {
+      let cur = objectId;
+      for (let hops = 0; cur && String(cur).startsWith("reply:") && hops < 10; hops++) {
+        const r = await Reply.findOne({ id: cur }).select("target threadRoot").lean();
+        cur = r?.threadRoot && !String(r.threadRoot).startsWith("reply:")
+          ? r.threadRoot
+          : r?.target || null;
+      }
+      if (cur && !String(cur).startsWith("reply:")) navObjectId = cur;
+    }
+
     // Generate href if not provided
-    const href = customHref || generateHref(type, objectId, objectType);
+    const href = customHref || generateHref(type, navObjectId, objectType);
 
     // Check if similar notification already exists (for deduplication)
     if (groupKey) {
@@ -80,7 +96,7 @@ export default async function createNotification(params) {
       actorId,
       actorName,
       actorIcon,
-      objectId,
+      objectId: navObjectId,
       objectType,
       activityId,
       activityType,
@@ -110,7 +126,7 @@ export default async function createNotification(params) {
         notificationId: notifId,
         type,
         objectType: objectType || null,
-        objectId: objectId || null,
+        objectId: navObjectId || null,
         href,
       },
     }).catch(() => {});

@@ -21,6 +21,24 @@ console.error = (...args) => {
   _origConsoleError(...args);
 };
 
+// Present as a real browser. link-preview-js's default User-Agent gets blocked
+// or served bot-challenge pages by many sites, so previews silently fail even
+// for URLs that preview fine elsewhere. A modern Chrome UA + Accept headers is
+// the most broadly-compatible choice.
+const PREVIEW_HEADERS = {
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+  Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+  "Accept-Language": "en-US,en;q=0.9",
+};
+
+// link-preview-js defaults to a 3s timeout (see its index.js) — too short for
+// many sites, so previews silently came back empty. Give slow servers room.
+// followRedirects:"follow" already follows all redirect hops (incl. cross-
+// domain) via native fetch; handleRedirects only applies in "manual" mode and
+// would break multi-hop shortener chains, so we don't use it.
+const PREVIEW_TIMEOUT_MS = 9000;
+
 // Resolve a stored image value (file ID, relative path, or URL) to an absolute
 // URL suitable for a link preview.
 function resolveImageUrl(img, domain, protocol) {
@@ -129,7 +147,11 @@ router.get(
       }
 
       try {
-        const preview = await getLinkPreview(url, { followRedirects: "follow" });
+        const preview = await getLinkPreview(url, {
+          followRedirects: "follow",
+          timeout: PREVIEW_TIMEOUT_MS,
+          headers: PREVIEW_HEADERS,
+        });
         set("url", preview.url);
         set("title", preview.title ?? null);
         set("summary", preview.description ?? null);

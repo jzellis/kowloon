@@ -13,10 +13,20 @@ import { getSetting } from "#methods/settings/cache.js";
 
 const router = express.Router({ mergeParams: true });
 
+// If a browser navigates directly to a circle URL, serve the SPA so React
+// Router can render it (via the app's "*" index.html fallback). ActivityPub
+// clients and programmatic fetches still get the JSON API. Mirrors routes/posts.
+function wantsHTML(req) {
+  const accept = req.headers.accept || "";
+  if (accept.includes("application/activity+json")) return false;
+  if (accept.includes("application/ld+json")) return false;
+  return accept.includes("text/html");
+}
+
 // GET /circles — local circles visible to the viewer (discovery), sortable via
 // ?sort=. "Mine" is GET /users/:my-id/circles.
 router.get("/", collection);
-router.get("/:id", id);
+router.get("/:id", (req, res, next) => (wantsHTML(req) ? next("router") : id(req, res, next)));
 router.get("/:id/posts", posts);
 
 // PATCH /circles/:id/seen — update the high-water mark for this circle's feed

@@ -1,5 +1,7 @@
 // methods/seo/shell.js
-// Render a minimal HTML shell with full <head> meta tags for bots/crawlers.
+// Build <head> meta tags for a page. `renderHeadTags` is reused both by the
+// crawler shell (renderShell) and by the SPA meta injection so a real browser
+// gets the same per-item Open Graph / Twitter / kowloon:id tags a crawler does.
 
 function esc(str) {
   if (!str) return "";
@@ -10,19 +12,17 @@ function esc(str) {
     .replace(/>/g, "&gt;");
 }
 
-export function renderShell({ title, description, image, url, type, siteName, jsonLd }) {
+// Returns the block of <head> meta tags (no wrapping <html>/<head>). `kowloonId`
+// / `kowloonType` are emitted as custom meta so any Kowloon client can read an
+// object's canonical ID straight off a shared URL — server-agnostic.
+export function renderHeadTags({ title, description, image, url, type, siteName, kowloonId, kowloonType, jsonLd }) {
   const t = esc(title);
   const d = esc(description);
   const i = esc(image || "");
   const u = esc(url);
   const s = esc(siteName);
 
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${t}</title>
+  return `  <title>${t}</title>
   <meta name="description" content="${d}">
   <link rel="canonical" href="${u}">
 
@@ -39,8 +39,17 @@ export function renderShell({ title, description, image, url, type, siteName, js
   <meta name="twitter:title" content="${t}">
   <meta name="twitter:description" content="${d}">
   ${i ? `<meta name="twitter:image" content="${i}">` : ""}
+${kowloonId ? `\n  <!-- Kowloon -->\n  <meta name="kowloon:id" content="${esc(kowloonId)}">\n  <meta name="kowloon:type" content="${esc(kowloonType || "")}">\n` : ""}
+  ${jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ""}`;
+}
 
-  ${jsonLd ? `<script type="application/ld+json">${jsonLd}</script>` : ""}
+export function renderShell(meta) {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+${renderHeadTags(meta)}
 </head>
 <body></body>
 </html>`;

@@ -7,7 +7,7 @@ import nocache from "nocache";
 import http from "http";
 
 import Kowloon, { attachMethodDomains } from "#kowloon";
-import { existsSync } from "fs";
+import { existsSync, readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -125,8 +125,42 @@ if (existsSync(join(publicDir, "index.html")) && process.env.SERVE_FRONTEND !== 
   // returning the server-info JSON (see routes/home/index.js).
   app.locals.frontendEnabled = true;
   app.use(serveStatic(publicDir, { maxAge: "1y", immutable: true, index: false }));
-  // SPA fallback — any unmatched route serves index.html
-  app.get("*", (_req, res) => res.sendFile(join(publicDir, "index.html")));
+
+  // SPA fallback. For content routes we inject per-item <head> meta (Open Graph,
+  // Twitter, and kowloon:id/type) into the served index.html, so EVERY visitor
+  // and scraper — not just the whitelisted crawlers botDetect handles — gets a
+  // proper preview card and can read the object's canonical Kowloon ID straight
+  // off the page. Everything else serves the static shell unchanged.
+  const { fetchMeta } = await import("#methods/seo/meta.js");
+  const { renderHeadTags } = await import("#methods/seo/shell.js");
+  const indexHtmlPath = join(publicDir, "index.html");
+  let indexHtmlCache = null;
+  const readIndexHtml = () => (indexHtmlCache ??= readFileSync(indexHtmlPath, "utf8"));
+  const CONTENT_ROUTE = /^\/(posts|users|groups|pages)\/.+/;
+
+  function injectHeadTags(html, tags) {
+    // Strip the build's default title/description/OG/Twitter so the per-item
+    // tags win (scrapers take the first occurrence), then insert before </head>.
+    return html
+      .replace(/<title>[\s\S]*?<\/title>/i, "")
+      .replace(/<meta\s+name=["']description["'][^>]*>/gi, "")
+      .replace(/<link\s+rel=["']canonical["'][^>]*>/gi, "")
+      .replace(/<meta\s+property=["']og:[^"']*["'][^>]*>/gi, "")
+      .replace(/<meta\s+name=["']twitter:[^"']*["'][^>]*>/gi, "")
+      .replace(/<\/head>/i, `${tags}\n</head>`);
+  }
+
+  app.get("*", async (req, res) => {
+    try {
+      if (CONTENT_ROUTE.test(req.path)) {
+        const meta = await fetchMeta(req.path, req);
+        return res.type("html").send(injectHeadTags(readIndexHtml(), renderHeadTags(meta)));
+      }
+    } catch {
+      // Any failure → serve the static shell so navigation never breaks.
+    }
+    res.sendFile(indexHtmlPath);
+  });
 }
 
 // Health (both paths — /health is conventional, /__health kept for compat)

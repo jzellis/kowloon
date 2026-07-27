@@ -45,6 +45,8 @@ export async function fetchMeta(pathname, req) {
     url: `${base}${pathname}`,
     type: "website",
     siteName,
+    kowloonId: null,
+    kowloonType: null,
     jsonLd: null,
   };
 
@@ -79,6 +81,8 @@ export async function fetchMeta(pathname, req) {
       description,
       image,
       type: "article",
+      kowloonId: item.id,
+      kowloonType: "Post",
       jsonLd: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Article",
@@ -106,6 +110,8 @@ export async function fetchMeta(pathname, req) {
       description: excerpt(user.profile?.description || `${name} on ${siteName}`),
       image,
       type: "profile",
+      kowloonId: user.id,
+      kowloonType: "User",
       jsonLd: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Person",
@@ -130,6 +136,8 @@ export async function fetchMeta(pathname, req) {
       description: excerpt(group.description || `${group.name} group on ${siteName}`),
       image,
       type: "website",
+      kowloonId: group.id,
+      kowloonType: "Group",
       jsonLd: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Organization",
@@ -156,6 +164,8 @@ export async function fetchMeta(pathname, req) {
       description: excerpt(page.body || page.source?.content || ""),
       image,
       type: "article",
+      kowloonId: page.id,
+      kowloonType: "Page",
       jsonLd: JSON.stringify({
         "@context": "https://schema.org",
         "@type": "Article",

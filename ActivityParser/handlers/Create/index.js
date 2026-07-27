@@ -18,6 +18,7 @@ import kowloonId from "#methods/parse/kowloonId.js";
 import { canonicalAudience } from "#methods/parse/canonicalTo.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 import createNotification from "#methods/notifications/create.js";
+import notifyFeedActivity from "#methods/notifications/notifyFeedActivity.js";
 import writeFeedItems from "#methods/feed/writeFeedItems.js";
 import sanitizeHtml from "#methods/utils/sanitize.js";
 
@@ -59,6 +60,11 @@ async function createNotifications(activity, created, objectType) {
   try {
     // Only create notifications for Post types (Reply handles its own notifications)
     if (objectType !== "Post") return;
+
+    // Feed / group "new posts" nudges — throttled (12h) + opt-in. Fire-and-
+    // forget so it never blocks or breaks the post. Covers local posts; remote
+    // followed-user posts (federation pull) are a follow-on.
+    notifyFeedActivity(created).catch(() => {});
 
     // Check if this Post has inReplyTo (shouldn't happen now that Reply is separate)
     if (created.inReplyTo) {

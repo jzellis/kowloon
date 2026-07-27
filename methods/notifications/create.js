@@ -19,6 +19,11 @@ import sendPush from "#methods/push/send.js";
  * @param {string} [params.summary] - Custom summary text (auto-generated if not provided)
  * @param {string} [params.href] - Custom href (auto-generated if not provided)
  * @param {string} [params.groupKey] - Key for aggregating notifications
+ * @param {number} [params.cooldownMs] - When set with groupKey, makes this a
+ *   "schedulable" notification: it fires only if the most recent one with this
+ *   (recipient, groupKey) has been READ *and* is older than cooldownMs. Lets a
+ *   type (e.g. new_post) nudge at most once per window, and never pile up while
+ *   an earlier one sits unread. Without it, groupKey keeps its legacy dedup.
  * @returns {Promise<Object>} Created notification or null if preferences prevent creation
  */
 export default async function createNotification(params) {
@@ -34,6 +39,7 @@ export default async function createNotification(params) {
       summary: customSummary,
       href: customHref,
       groupKey,
+      cooldownMs,
     } = params;
 
     // Don't create notification if actor is the recipient (no self-notifications)
@@ -68,19 +74,29 @@ export default async function createNotification(params) {
     // Generate href if not provided
     const href = customHref || generateHref(type, navObjectId, objectType);
 
-    // Check if similar notification already exists (for deduplication)
-    if (groupKey) {
+    // Schedulable notifications (cooldownMs set): fire only if the most recent
+    // one with this key has been READ *and* is older than the cooldown. So an
+    // unread nudge never multiplies, and someone away for days comes back to a
+    // single waiting notification, not a stack.
+    if (groupKey && cooldownMs != null) {
+      const latest = await Notification.findOne({ recipientId, groupKey })
+        .sort({ createdAt: -1 })
+        .select("read createdAt");
+      if (latest) {
+        const withinCooldown = latest.createdAt > new Date(Date.now() - cooldownMs);
+        if (!latest.read || withinCooldown) return latest; // suppressed
+      }
+    }
+    // Legacy dedup (groupKey without cooldownMs): skip if an unread one exists
+    // within the last 24h. Unchanged for existing callers (reply/react/etc.).
+    else if (groupKey) {
       const existing = await Notification.findOne({
         recipientId,
         groupKey,
         read: false,
-        createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // Within last 24 hours
+        createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
       });
-
-      if (existing) {
-        // Don't create duplicate notification
-        return existing;
-      }
+      if (existing) return existing;
     }
 
     // Create notification ID using MongoDB ObjectId (same pattern as everything else)

@@ -19,6 +19,7 @@ import { canonicalAudience } from "#methods/parse/canonicalTo.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 import createNotification from "#methods/notifications/create.js";
 import notifyFeedActivity from "#methods/notifications/notifyFeedActivity.js";
+import notifyMentions from "#methods/mentions/notify.js";
 import writeFeedItems from "#methods/feed/writeFeedItems.js";
 import sanitizeHtml from "#methods/utils/sanitize.js";
 
@@ -65,6 +66,16 @@ async function createNotifications(activity, created, objectType) {
     // forget so it never blocks or breaks the post. Covers local posts; remote
     // followed-user posts (federation pull) are a follow-on.
     notifyFeedActivity(created).catch(() => {});
+
+    // Mentions — notify any LOCAL users tagged @user@domain in the body. Remote
+    // handles are linked but not notified. Fire-and-forget, opt-out via prefs.
+    notifyMentions({
+      content: created.source?.content,
+      actorId: activity.actorId,
+      actorName: created.actor?.name,
+      objectId: created.id,
+      objectType: "Post",
+    }).catch(() => {});
 
     // Check if this Post has inReplyTo (shouldn't happen now that Reply is separate)
     if (created.inReplyTo) {

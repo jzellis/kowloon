@@ -4,6 +4,7 @@ import sanitizeHtml from "#methods/utils/sanitize.js";
 import crypto from "crypto";
 import { Settings, User, React } from "./index.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+import { linkifyMentions } from "#methods/mentions/linkify.js";
 
 const ALLOWED_TAGS = [
   "p", "br", "strong", "em", "s", "u", "a", "ul", "ol", "li",
@@ -71,7 +72,7 @@ ReplySchema.pre("save", async function (next) {
   this.url = this.url || `https://${domain}/posts/${this.id}`;
   this.server = this.server || actorId;
   this.source.mediaType = "text/markdown";
-  this.body = safeMarkdown(this.source.content);
+  this.body = safeMarkdown(linkifyMentions(this.source.content));
 
   if (!this.parent) this.parent = this.target;
   // let stringject = Buffer.from(this.id);
@@ -92,7 +93,7 @@ ReplySchema.pre("findOneAndUpdate", async function (next) {
       ...(current?.source || {}),
       ...update.$set.source,
     };
-    update.$set.body = safeMarkdown(newSource.content);
+    update.$set.body = safeMarkdown(linkifyMentions(newSource.content));
   }
   next();
 });

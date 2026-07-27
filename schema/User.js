@@ -61,6 +61,7 @@ const UserSchemaDef = {
       react: { type: Boolean, default: true },
       follow: { type: Boolean, default: true },
       new_post: { type: Boolean, default: true }, // On by default; throttled 12h + read-gated so it stays non-noisy
+      mention: { type: Boolean, default: true }, // Someone tagged you (@handle) in a post/reply
       join_request: { type: Boolean, default: true },
       join_approved: { type: Boolean, default: true },
       toasts: { type: Boolean, default: true },

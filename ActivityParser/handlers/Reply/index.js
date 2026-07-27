@@ -14,6 +14,7 @@ import {
   FeedItems,
 } from "#schema";
 import createNotification from "#methods/notifications/create.js";
+import notifyMentions from "#methods/mentions/notify.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 import getMultiFederationTargets from "../utils/getMultiFederationTargets.js";
@@ -211,6 +212,16 @@ export default async function Reply(activity, ctx = {}) {
       console.error("Failed to create notification for Reply:", err.message);
       // Non-fatal
     }
+
+    // Mentions in the reply body — notify local users tagged @user@domain
+    // (this is the more common case: tagging someone into a thread).
+    notifyMentions({
+      content: created.source?.content,
+      actorId,
+      actorName: created.actor?.name,
+      objectId: created.id,
+      objectType: "Reply",
+    }).catch(() => {});
 
     // 6. Federation — parent host (canonical aggregate), parent author's home
     // (notification side-effect), and (for threaded replies) the grandparent

@@ -6,6 +6,7 @@ import { Settings, User, React, Reply, Circle } from "./index.js";
 import GeoPoint from "./subschema/GeoPoint.js";
 import ActorSchema from "./subschema/Actor.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+import { linkifyMentions } from "#methods/mentions/linkify.js";
 
 // Tags and attributes allowed in rendered post bodies.
 // Matches what the TipTap editor can produce; no scripts, iframes, or event handlers.
@@ -206,8 +207,17 @@ PostSchema.pre("save", async function (next) {
     this.server = this.server || actorId;
     this.source.mediaType = this.source.mediaType || "text/markdown";
 
-    // Generate body from source
-    this.body = generateBody(this.source);
+    // Generate body from source. Linkify @user@domain mentions into profile
+    // links first (markdown only) — the stored source.content stays raw so the
+    // post remains cleanly editable.
+    const isMarkdown =
+      (this.source.mediaType ?? "text/markdown") === "text/markdown";
+    this.body = generateBody({
+      content: isMarkdown
+        ? linkifyMentions(this.source.content)
+        : this.source.content,
+      mediaType: this.source.mediaType,
+    });
     this.wordCount =
       this.wordCount ||
       this.body

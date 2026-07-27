@@ -117,7 +117,9 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
       presignedMap.set(f.id, {
         url: fileServeUrl(f, { domain, protocol, restricted: restrictedFiles.has(f.id) }),
         mediaType: f.mediaType ?? "",
-        name: f.name ?? f.summary ?? "",
+        name: f.name ?? "",
+        // Alt text (File.summary) — for the mobile viewer caption + a11y labels.
+        alt: f.summary ?? "",
       });
     }
   }
@@ -136,7 +138,7 @@ export default route(async ({ req, params, query, user, set, setStatus }) => {
           if (!id || typeof id !== "string") return null;
           const entry = presignedMap.get(fileIdFromValue(id));
           if (entry) return entry;
-          if (id.startsWith("http")) return { url: id, mediaType: "", name: "" };
+          if (id.startsWith("http")) return { url: id, mediaType: "", name: "", alt: "" };
           return null;
         })
         .filter(Boolean);

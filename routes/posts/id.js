@@ -76,7 +76,9 @@ export default route(async ({ req, params, set, setStatus }) => {
       presignedMap.set(f.id, {
         url: fileServeUrl(f, { domain, protocol, restricted }),
         mediaType: f.mediaType ?? "",
-        name: f.name ?? f.summary ?? "",
+        name: f.name ?? "",
+        // Alt text (File.summary) — for the mobile viewer caption + a11y labels.
+        alt: f.summary ?? "",
       });
     }
   }
@@ -97,7 +99,7 @@ export default route(async ({ req, params, set, setStatus }) => {
         // Include the source file ID so the owner's edit screen can preserve
         // existing attachments (the URL alone can't be re-sent on update).
         if (entry) return { ...entry, fileId: fid };
-        if (id.startsWith("http")) return { url: id, mediaType: "", name: "" };
+        if (id.startsWith("http")) return { url: id, mediaType: "", name: "", alt: "" };
         return null;
       })
       .filter(Boolean);

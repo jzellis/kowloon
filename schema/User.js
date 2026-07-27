@@ -56,6 +56,9 @@ const UserSchemaDef = {
     defaultEditorType: { type: String, default: "html" },
     lang: { type: String, default: "en" },
     theme: { type: String, default: "system" },
+    // IANA time zone (e.g. "Europe/London"). Empty = follow the device's zone.
+    // Set from the preferences screen; consumed for event/post time display.
+    timezone: { type: String, default: "" },
     notifications: {
       reply: { type: Boolean, default: true },
       react: { type: Boolean, default: true },

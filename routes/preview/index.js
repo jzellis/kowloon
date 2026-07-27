@@ -4,6 +4,7 @@ import route from "../utils/route.js";
 import { isSafeUrl } from "#methods/utils/safeUrl.js";
 import { getSetting } from "#methods/settings/cache.js";
 import { buildFileUrl } from "#methods/files/signedUrl.js";
+import fetchRemoteServerProfile from "#methods/federation/fetchRemoteServerProfile.js";
 import { Page, Post } from "#schema";
 
 const router = express.Router({ mergeParams: true });
@@ -39,6 +40,33 @@ const PREVIEW_HEADERS = {
 // would break multi-hop shortener chains, so we don't use it.
 const PREVIEW_TIMEOUT_MS = 9000;
 
+// Recognize a Kowloon object URL by the prefixed, server-qualified ID in its
+// path (works for any server). Returns { kowloonId, kowloonType, domain } or
+// null. Pages use slugs (no ID in the path), so they're not matched here.
+const KOWLOON_URL_TYPES = [
+  [/^\/posts\/(post:[^/?#]+@[^/?#]+)/, "Post"],
+  [/^\/groups\/(group:[^/?#]+@[^/?#]+)/, "Group"],
+  [/^\/circles\/(circle:[^/?#]+@[^/?#]+)/, "Circle"],
+  [/^\/bookmarks\/(bookmark:[^/?#]+@[^/?#]+)/, "Bookmark"],
+  [/^\/users\/(@[^/?#]+@[^/?#]+)/, "User"],
+];
+function kowloonRefFromUrl(rawUrl) {
+  let u;
+  try {
+    u = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+  for (const [re, type] of KOWLOON_URL_TYPES) {
+    const m = u.pathname.match(re);
+    if (m) {
+      const kowloonId = decodeURIComponent(m[1]);
+      return { kowloonId, kowloonType: type, domain: kowloonId.split("@").pop() };
+    }
+  }
+  return null;
+}
+
 // Resolve a stored image value (file ID, relative path, or URL) to an absolute
 // URL suitable for a link preview.
 function resolveImageUrl(img, domain, protocol) {
@@ -64,6 +92,20 @@ router.get(
       }
 
       const qStart = Date.now();
+
+      // If the link points at a Kowloon object, hand back its canonical ID (so a
+      // Link post can store it in `target`) and passively grow our known-servers
+      // cache — every shared Kowloon link becomes a server-discovery event, the
+      // same way a manual server search does. Fire-and-forget; never blocks the
+      // preview. fetchRemoteServerProfile no-ops on our own domain + fresh cache.
+      const kref = kowloonRefFromUrl(url);
+      if (kref) {
+        set("kowloonId", kref.kowloonId);
+        set("kowloonType", kref.kowloonType);
+        if (kref.domain && kref.domain !== getSetting("domain")) {
+          fetchRemoteServerProfile(kref.domain).catch(() => {});
+        }
+      }
 
       // If the URL points to a post on this server, fetch from DB directly.
       // The frontend is a SPA and serves no post-specific OG tags, so

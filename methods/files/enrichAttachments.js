@@ -43,7 +43,10 @@ export async function enrichAttachments(items, { protocol = "https" } = {}) {
       map.set(f.id, {
         url: fileServeUrl(f, { domain, protocol, restricted: restrictedIds.has(f.id) }),
         mediaType: f.mediaType ?? "",
-        name: f.name ?? f.summary ?? "",
+        name: f.name ?? "",
+        // Alt text (File.summary) — for the full-screen viewer's caption overlay
+        // and image accessibility labels.
+        alt: f.summary ?? "",
       });
     }
   }
@@ -60,7 +63,7 @@ export async function enrichAttachments(items, { protocol = "https" } = {}) {
           const entry = map.get(fileIdFromValue(v));
           if (entry) return entry;
           if (typeof v === "string" && v.startsWith("http"))
-            return { url: v, mediaType: "", name: "" };
+            return { url: v, mediaType: "", name: "", alt: "" };
           return null;
         })
         .filter(Boolean);

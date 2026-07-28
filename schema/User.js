@@ -53,7 +53,6 @@ const UserSchemaDef = {
     // "public" | "server" | a circle ID. Empty = no preference (client falls
     // back to its own default).
     defaultFeedView: { type: String, default: "" },
-    defaultEditorType: { type: String, default: "html" },
     lang: { type: String, default: "en" },
     theme: { type: String, default: "system" },
     // IANA time zone (e.g. "Europe/London"). Empty = follow the device's zone.

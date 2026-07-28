@@ -30,6 +30,34 @@ async function optedIn(ids, excludeId) {
   return users.map((u) => u.id);
 }
 
+// Fire the generic feed nudge for users who just received NEW feed content via
+// fan-out — the remote half of #75 (a federation pull landing a followed remote
+// user's post). `pairs` = [{ userId, actorId }] where actorId is a triggering
+// post's author (needed for createNotification's non-self guard). Opt-in
+// filtered; throttled/read-gated to one per 12h per user, same as the local nudge.
+export async function notifyFeedFanOut(pairs) {
+  try {
+    const list = (pairs || []).filter(
+      (p) => p?.userId && p?.actorId && p.userId !== p.actorId
+    );
+    if (!list.length) return;
+    const opted = new Set(await optedIn(list.map((p) => p.userId), null));
+    for (const { userId, actorId } of list) {
+      if (!opted.has(userId)) continue;
+      await createNotification({
+        type: "new_post",
+        recipientId: userId,
+        actorId,
+        summary: "Your feeds have new posts",
+        groupKey: "feed",
+        cooldownMs: COOLDOWN_MS,
+      });
+    }
+  } catch (err) {
+    console.error("notifyFeedFanOut failed:", err?.message);
+  }
+}
+
 export default async function notifyFeedActivity(post) {
   try {
     if (!post?.id || !post?.actorId) return;

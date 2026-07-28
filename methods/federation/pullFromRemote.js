@@ -15,6 +15,7 @@
 
 import crypto from "crypto";
 import { FeedItems, FeedFanOut, User, Circle } from "#schema";
+import { notifyFeedFanOut } from "#methods/notifications/notifyFeedActivity.js";
 import logger from "#methods/utils/logger.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
 import { fileIdFromValue } from "#methods/files/fileRef.js";
@@ -267,6 +268,22 @@ export default async function pullFromRemote({
       try {
         const result = await FeedFanOut.bulkWrite(fanOutOps);
         fanOutCount = result.upsertedCount || 0;
+
+        // Feed nudge (#75): a pull that landed NEW feed content is a fan-out
+        // event, so fire "Your feeds have new posts" for the users who got new
+        // rows (the remote half — local posts nudge via the Create handler).
+        // Keyed off the bulk-write's newly-inserted ops so re-pulls don't
+        // re-nudge; one pair per user; throttled/opt-in inside notifyFeedFanOut.
+        const seen = new Set();
+        const pairs = [];
+        for (const idxStr of Object.keys(result.upsertedIds || {})) {
+          const set = fanOutOps[Number(idxStr)]?.updateOne?.update?.$setOnInsert;
+          if (set?.to && !set.groupId && !seen.has(set.to)) {
+            seen.add(set.to);
+            pairs.push({ userId: set.to, actorId: set.actorId });
+          }
+        }
+        if (pairs.length) notifyFeedFanOut(pairs).catch(() => {});
       } catch (err) {
         logger.error("pullFromRemote: FeedFanOut bulkWrite failed", {
           remoteDomain,

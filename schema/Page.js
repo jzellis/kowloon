@@ -52,6 +52,9 @@ const slugify = function (str) {
 const PageSchema = new Schema(
   {
     id: { type: String, key: true },
+    // Local domain on create; the source domain when hydrated from a remote
+    // server (a cached shadow of a remote page). Matches Post/Circle/Group/etc.
+    originDomain: { type: String, default: () => getServerSettings()?.domain },
     objectType: { type: String, default: "Page" },
     type: { type: String, default: "Page", enum: ["Page", "Folder"] }, // The type of page this is
     parentId: { type: String, default: null }, // Kowloon ID of parent Page or Folder (null = top-level)

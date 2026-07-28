@@ -14,7 +14,7 @@
 //   users in `to` (the caller passes every local subscriber).
 
 import crypto from "crypto";
-import { FeedItems, FeedFanOut, User, Circle } from "#schema";
+import { FeedItems, FeedFanOut, User, Circle, Post } from "#schema";
 import { notifyFeedFanOut } from "#methods/notifications/notifyFeedActivity.js";
 import logger from "#methods/utils/logger.js";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
@@ -116,14 +116,39 @@ export default async function pullFromRemote({
     const data = await response.json();
     const items = data.items || data.orderedItems || [];
     const recipients = data.recipients || []; // only used for user follows
+    const tombstones = Array.isArray(data.tombstones) ? data.tombstones : [];
     const nextCursor = data.next || null;
 
     logger.info("pullFromRemote: Retrieved", {
       remoteDomain,
       items: items.length,
       recipientEntries: recipients.length,
+      tombstones: tombstones.length,
       serverOnlyPull,
     });
+
+    // Self-heal deletions: the origin told us which of its items were deleted
+    // since our last pull. Purge our cached copies (feed presence + any Post
+    // shadow) so a deleted post disappears from our users' feeds too.
+    if (tombstones.length) {
+      try {
+        await FeedItems.deleteMany({ id: { $in: tombstones } });
+        await FeedFanOut.deleteMany({ feedItemId: { $in: tombstones } });
+        await Post.updateMany(
+          { id: { $in: tombstones }, deletedAt: null },
+          { $set: { deletedAt: new Date(), type: "Tombstone" } }
+        );
+        logger.info("pullFromRemote: Purged remote tombstones", {
+          remoteDomain,
+          count: tombstones.length,
+        });
+      } catch (err) {
+        logger.error("pullFromRemote: tombstone purge failed", {
+          remoteDomain,
+          error: err.message,
+        });
+      }
+    }
 
     // Upsert all items into local FeedItems.
     // Strip _id and __v — MongoDB rejects $set: { _id } on existing documents even

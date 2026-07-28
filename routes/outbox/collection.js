@@ -165,12 +165,38 @@ export default route(
         to: [...recipients],
       }));
 
+      // Recently-DELETED items so the puller can purge its cached copies —
+      // the other half of "what changed since your last pull". Only meaningful
+      // on an incremental (since) pull; a first pull has nothing cached to
+      // remove. Bounded by the same GC retention window: tombstones older than
+      // gcRetentionDays are already hard-purged, so a puller absent longer than
+      // that just won't hear about those deletions (acceptable edge).
+      let tombstones = [];
+      if (since) {
+        const tombOr = [];
+        if (userFroms.length) tombOr.push({ actorId: { $in: userFroms } });
+        for (const s of serverFroms) {
+          const dom = s.slice(1).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          tombOr.push({ actorId: { $regex: `@${dom}$`, $options: "i" } });
+        }
+        if (tombOr.length) {
+          const deleted = await Post.find({
+            deletedAt: { $gte: since },
+            $or: tombOr,
+          })
+            .select("id")
+            .lean();
+          tombstones = deleted.map((d) => d.id);
+        }
+      }
+
       set("@context", "https://www.w3.org/ns/activitystreams");
       set("type", "OrderedCollection");
       set("id", base);
       set("totalItems", items.length);
       set("items", items);
       set("recipients", recipients);
+      set("tombstones", tombstones);
       if (items.length > 0) {
         set("next", new Date(items[items.length - 1].publishedAt).toISOString());
       }

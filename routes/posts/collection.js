@@ -100,7 +100,7 @@ export default route(async ({ req, query, user, set, setStatus }) => {
     const domain = getSetting("domain");
     const protocol = req.headers["x-forwarded-proto"] || "https";
     const files = await File.find({ id: { $in: [...fileIds] } })
-      .select("id mediaType name summary updatedAt")
+      .select("id mediaType name summary updatedAt width height")
       .lean();
     for (const f of files) {
       presignedMap.set(f.id, {
@@ -109,6 +109,9 @@ export default route(async ({ req, query, user, set, setStatus }) => {
         name: f.name ?? "",
         // Alt text (File.summary) — for the mobile viewer caption + a11y labels.
         alt: f.summary ?? "",
+        // Pixel dimensions for aspect-ratio layout (no reflow on load).
+        width: f.width ?? null,
+        height: f.height ?? null,
       });
     }
   }

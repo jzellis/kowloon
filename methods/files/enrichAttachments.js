@@ -37,7 +37,7 @@ export async function enrichAttachments(items, { protocol = "https" } = {}) {
   const map = new Map();
   if (fileIds.size > 0) {
     const files = await File.find({ id: { $in: [...fileIds] } })
-      .select("id mediaType name summary updatedAt url")
+      .select("id mediaType name summary updatedAt url width height")
       .lean();
     for (const f of files) {
       map.set(f.id, {
@@ -47,6 +47,10 @@ export async function enrichAttachments(items, { protocol = "https" } = {}) {
         // Alt text (File.summary) — for the full-screen viewer's caption overlay
         // and image accessibility labels.
         alt: f.summary ?? "",
+        // Pixel dimensions (post-orientation) so clients can lay out images at
+        // the right aspect ratio without a layout shift.
+        width: f.width ?? null,
+        height: f.height ?? null,
       });
     }
   }

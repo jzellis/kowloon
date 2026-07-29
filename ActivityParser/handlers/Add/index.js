@@ -10,6 +10,7 @@ import getMultiFederationTargets from "../utils/getMultiFederationTargets.js";
 import pullFromRemote from "#methods/federation/pullFromRemote.js";
 import fetchRemoteServerProfile from "#methods/federation/fetchRemoteServerProfile.js";
 import { getServerActor } from "#methods/settings/schemaHelpers.js";
+import regenerateCircleIcon from "#methods/circles/regenerateCircleIcon.js";
 
 export default async function Add(activity) {
   try {
@@ -335,6 +336,13 @@ export default async function Add(activity) {
           limit: 100,
         }).catch(() => {});
       }
+    }
+
+    // Refresh the auto-generated mosaic icon for user Circles whose membership
+    // just changed. Fire-and-forget; self-guards on eligibility (skips custom
+    // icons, System circles, remote shadows).
+    if (ownerType === "User" && (res.modifiedCount || 0) > 0) {
+      regenerateCircleIcon(activity.target).catch(() => {});
     }
 
     // For Group adds (join_approved being the common case), deliver the Add

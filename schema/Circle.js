@@ -17,6 +17,11 @@ const CircleSchema = new Schema(
     server: { type: String, default: undefined },
     summary: { type: String, default: undefined },
     icon: { type: String, default: undefined }, // File ID or URL for backwards compatibility
+    // True when `icon` is the auto-composited member-avatar mosaic (not a
+    // creator-supplied icon). Regeneration only ever replaces a generated icon,
+    // never a custom one. Reset to false in the Update handler when a user sets
+    // their own icon. See methods/circles/regenerateCircleIcon.js.
+    iconGenerated: { type: Boolean, default: false },
     members: { type: [Member], default: [] },
     memberCount: { type: Number, default: 0 },
     to: { type: String, default: "" },

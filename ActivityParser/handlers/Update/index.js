@@ -341,6 +341,12 @@ export default async function Update(activity) {
     // Remove password from the regular $set patch regardless
     delete patch.password;
 
+    // A creator-supplied Circle icon must never be overwritten by the auto
+    // mosaic generator — clear the generated flag so regeneration skips it.
+    if (parsed.type === "Circle" && Object.prototype.hasOwnProperty.call(patch, "icon")) {
+      patch.iconGenerated = false;
+    }
+
     // If nothing left to patch (e.g. only password was sent), return early
     if (Object.keys(patch).length === 0 && !("password" in activity.object)) {
       return { activity, error: "Update: no updatable fields provided" };

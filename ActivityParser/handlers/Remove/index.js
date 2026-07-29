@@ -4,6 +4,7 @@ import getSettings from "#methods/settings/get.js";
 import isServerAdmin from "#methods/auth/isServerAdmin.js";
 import isServerMod from "#methods/auth/isServerMod.js";
 import isGroupAdmin from "#methods/groups/isAdmin.js";
+import regenerateCircleIcon from "#methods/circles/regenerateCircleIcon.js";
 
 export default async function Remove(activity) {
   try {
@@ -155,6 +156,12 @@ export default async function Remove(activity) {
         );
         removed = (pendingRes.modifiedCount || 0) > 0;
       }
+    }
+
+    // Refresh the auto-generated mosaic icon for user Circles (not Group circles)
+    // when a member was actually removed. Fire-and-forget; self-guards.
+    if (ownerType === "User" && removed) {
+      regenerateCircleIcon(activity.target).catch(() => {});
     }
 
     return {

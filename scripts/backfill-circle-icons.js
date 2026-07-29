@@ -11,7 +11,7 @@
 
 import "dotenv/config";
 import mongoose from "mongoose";
-import { Circle } from "#schema";
+import { Circle, Settings } from "#schema";
 import { loadSettings } from "#methods/settings/cache.js";
 import regenerateCircleIcon from "#methods/circles/regenerateCircleIcon.js";
 
@@ -25,7 +25,7 @@ async function main() {
   const mongoUrl =
     process.env.MONGO_URI || process.env.MONGO_URL || "mongodb://localhost:27017/kowloon";
   await mongoose.connect(mongoUrl);
-  await loadSettings();
+  await loadSettings(Settings);
   console.log(`Connected: ${mongoUrl}`);
   console.log(DRY_RUN ? "DRY RUN — pass --write to apply" : "WRITE MODE");
 

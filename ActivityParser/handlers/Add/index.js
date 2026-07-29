@@ -311,12 +311,11 @@ export default async function Add(activity) {
       return m?.id && domain && domain !== localDomain;
     });
 
-    if (remoteMembers.length > 0) {
-      activity.to =
-        remoteMembers.length === 1
-          ? remoteMembers[0].id
-          : remoteMembers.map((m) => m.id);
-    }
+    // NOTE: federation recipients for remote members are carried in the
+    // `federation` target below (getMultiFederationTargets) — NOT by overwriting
+    // `activity.to`. `to` is a String on the Activity schema, so assigning an
+    // array of member IDs (adding 2+ remote members at once) failed to persist
+    // with "Cast to string failed ... at path to".
 
     // Immediately pull recent content for newly added remote entities in
     // user-owned circles. Fire-and-forget — the worker handles retries.
@@ -351,8 +350,11 @@ export default async function Add(activity) {
     // recorded on the group's host and the approved user sees nothing when
     // they log into their own server. Personal/server-admin circles keep the
     // legacy resolveAudience path via `federate: true`.
+    // Deliver the Add to the home server(s) of any remote members — one or many.
+    // Domain-scoped target; enqueueOutbox delivers to those servers' shared
+    // inboxes without touching `activity.to`. Covers both Group and user Circles.
     let federation;
-    if (ownerType === "Group" && remoteMembers.length > 0) {
+    if (remoteMembers.length > 0) {
       federation = getMultiFederationTargets(
         ...remoteMembers.map((m) => m.id),
       );

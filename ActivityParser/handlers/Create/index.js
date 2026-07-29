@@ -18,6 +18,7 @@ import kowloonId from "#methods/parse/kowloonId.js";
 import { canonicalAudience } from "#methods/parse/canonicalTo.js";
 import getFederationTargetsHelper from "../utils/getFederationTargets.js";
 import createNotification from "#methods/notifications/create.js";
+import regenerateCircleIcon from "#methods/circles/regenerateCircleIcon.js";
 import notifyFeedActivity from "#methods/notifications/notifyFeedActivity.js";
 import notifyMentions from "#methods/mentions/notify.js";
 import writeFeedItems from "#methods/feed/writeFeedItems.js";
@@ -495,6 +496,13 @@ export default async function Create(activity) {
 
     // Write to FeedItems for timeline delivery
     await writeFeedItems(created, type);
+
+    // User Circles: (re)generate the auto member-avatar mosaic icon now that
+    // the circle and its members exist. Fire-and-forget; self-guards on
+    // eligibility (skips creator-supplied icons, System circles, remotes).
+    if (type === "Circle") {
+      regenerateCircleIcon(created.id).catch(() => {});
+    }
 
     // Track post count on the author's User record for directory ranking
     if (type === "Post" && created.actorId) {

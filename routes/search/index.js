@@ -208,7 +208,9 @@ router.get(
       if (term) {
         const rx = new RegExp(escapeRegex(term), "i");
         const servers = await FederatedServer.find({
-          status: { $ne: "suspended" },
+          // Hide admin-suppressed servers; unreachable/slow are still real
+          // known servers worth surfacing in discovery.
+          status: { $nin: ["suspended", "blocked"] },
           $or: [{ domain: rx }, { name: rx }],
         })
           .select(

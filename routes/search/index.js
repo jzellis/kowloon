@@ -10,7 +10,7 @@
 
 import express from "express";
 import route from "../utils/route.js";
-import { Post, Page, User, Group, Bookmark } from "#schema";
+import { Post, Page, User, Group, Bookmark, FederatedServer } from "#schema";
 import { activityStreamsCollection } from "../utils/oc.js";
 import { getSetting } from "#methods/settings/cache.js";
 import { getViewerContext } from "#methods/visibility/context.js";
@@ -21,6 +21,10 @@ import { gateUserProfile } from "#methods/sanitize/object.js";
 const REMOTE_HANDLE_RE = /^@?([^@]+)@([^@]+\.[^@]+)$/;
 const SERVER_HANDLE_RE = /^@([^@]+\.[^@]+)$/;
 const DIRECTORY_LIMIT  = 20;
+
+function escapeRegex(s) {
+  return String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 async function proxyUserSearch(domain, q) {
   const url = `https://${domain}/users/search?q=${encodeURIComponent(q)}`;
@@ -114,7 +118,12 @@ router.get(
       users: "User",
       groups: "Group",
       bookmarks: "Bookmark",
+      servers: "Server",
     };
+    // "Server" isn't a SEARCHABLE model (it's the FederatedServer cache, handled
+    // by its own pass); include it in the default set so a bare search surfaces
+    // known servers alongside everything else.
+    const ALL_TYPES = [...Object.keys(SEARCHABLE), "Server"];
 
     let requestedTypes;
     if (query.searchIn) {
@@ -122,11 +131,11 @@ router.get(
         .split(",")
         .map((s) => SEARCH_IN_MAP[s.trim()])
         .filter(Boolean);
-      if (requestedTypes.length === 0) requestedTypes = Object.keys(SEARCHABLE);
+      if (requestedTypes.length === 0) requestedTypes = ALL_TYPES;
     } else if (query.type) {
       requestedTypes = [query.type];
     } else {
-      requestedTypes = Object.keys(SEARCHABLE);
+      requestedTypes = ALL_TYPES;
     }
     const page = Math.max(1, parseInt(query.page, 10) || 1);
     const limit = Math.min(Math.max(1, parseInt(query.limit, 10) || 20), 50);
@@ -188,6 +197,34 @@ router.get(
 
       for (const u of federatedUsers) {
         allResults.push({ ...u, _searchType: "User", _score: 10 });
+      }
+    }
+
+    // ── Server discovery: match the FederatedServer cache by partial domain or
+    // name, so "@kwln" (or plain "kwln") returns known servers whose id contains
+    // it — the atomic building block of remote-server discovery.
+    if (requestedTypes.includes("Server")) {
+      const term = q.replace(/^@/, "").trim();
+      if (term) {
+        const rx = new RegExp(escapeRegex(term), "i");
+        const servers = await FederatedServer.find({
+          status: { $ne: "suspended" },
+          $or: [{ domain: rx }, { name: rx }],
+        })
+          .select(
+            "domain name icon image description language location userCount postCount openRegistrations status discoveredAt"
+          )
+          .limit(DIRECTORY_LIMIT)
+          .lean();
+        for (const s of servers) {
+          allResults.push({
+            ...s,
+            id: s.domain,
+            _searchType: "Server",
+            // Rank explicit "@"-prefixed server searches above plain text hits.
+            _score: q.startsWith("@") ? 12 : 6,
+          });
+        }
       }
     }
 

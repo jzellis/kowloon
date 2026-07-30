@@ -56,12 +56,12 @@ function gradientOverlay() {
     `<svg width="${W}" height="${H}">
       <defs>
         <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stop-color="#000" stop-opacity="0.30"/>
-          <stop offset="0.45" stop-color="#000" stop-opacity="0.40"/>
-          <stop offset="1" stop-color="#000" stop-opacity="0.66"/>
+          <stop offset="0" stop-color="#000" stop-opacity="0.14"/>
+          <stop offset="0.45" stop-color="#000" stop-opacity="0.24"/>
+          <stop offset="1" stop-color="#000" stop-opacity="0.46"/>
         </linearGradient>
       </defs>
-      <rect width="${W}" height="${H}" fill="#000" opacity="0.28"/>
+      <rect width="${W}" height="${H}" fill="#000" opacity="0.14"/>
       <rect width="${W}" height="${H}" fill="url(#g)"/>
     </svg>`
   );
@@ -92,7 +92,7 @@ export default async function generateDiscoverBackground(opts = {}) {
       base = sharp(src)
         .rotate()
         .resize(W, H, { fit: "cover", position: "attention" })
-        .blur(28);
+        .blur(6);
     } else {
       // Solid Klein-blue canvas (blur is moot; the gradient adds depth).
       base = sharp({ create: { width: W, height: H, channels: 4, background: { ...KLEIN, alpha: 1 } } });

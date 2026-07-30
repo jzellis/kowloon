@@ -81,6 +81,18 @@ const defaultSettings = (ctx) => {
       ui: { type: "json", label: "Server Profile", group: "appearance", order: 1 },
     },
 
+    // Blurred + darkened background image for the Discover screen. Auto-generated
+    // from the server hero image (profile.image), or a solid Klein-blue fallback
+    // when no hero is set. Later an admin can upload a dedicated image; the same
+    // generator bakes in blur + a legibility gradient and stores the file URL here.
+    discoverBackground: {
+      value: "",
+      summary: "Background image for the Discover screen (auto-generated: blurred + darkened).",
+      to: "@public",
+      canEdit: "@admin",
+      ui: { type: "image", label: "Discover Background", group: "appearance", order: 2 },
+    },
+
     reactEmojis: {
       value: [
         { name: "Like",    emoji: "👍" },

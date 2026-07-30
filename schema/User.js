@@ -53,6 +53,10 @@ const UserSchemaDef = {
     // "public" | "server" | a circle ID. Empty = no preference (client falls
     // back to its own default).
     defaultFeedView: { type: String, default: "" },
+    // Which screen the mobile app opens to on launch. Values are tab route
+    // slugs (discover | feed | search | circles | groups | notifications) plus
+    // "admin" for server admins. String so new screens can be added later.
+    defaultHomeScreen: { type: String, default: "discover" },
     lang: { type: String, default: "en" },
     theme: { type: String, default: "system" },
     notifications: {

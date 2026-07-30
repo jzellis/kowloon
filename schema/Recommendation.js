@@ -27,6 +27,9 @@ export function refTypeOf(id) {
   if (id.startsWith("group:")) return "Group";
   if (id.startsWith("bookmark:")) return "Bookmark";
   if (id.startsWith("page:")) return "Page";
+  // A bare "@domain" (single @, no user part) is a federated server ref —
+  // resolved from the FederatedServer cache at read time, not a Kowloon model.
+  if (/^@[^@]+\.[^@]+$/.test(id)) return "Server";
   return null;
 }
 
@@ -53,7 +56,7 @@ const RecommendationSchema = new Schema(
     // The recommended object's Kowloon ID + its denormalized type (indexed for
     // by-type queries; derived from the ref prefix on save).
     ref: { type: String, required: true },
-    refType: { type: String, index: true }, // Post | Circle | Group | Bookmark | Page
+    refType: { type: String, index: true }, // Post | Circle | Group | Bookmark | Page | Server
 
     // Editorial metadata
     note: { type: String, default: undefined }, // "why we picked this" blurb

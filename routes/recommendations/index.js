@@ -19,6 +19,7 @@ import {
   Group,
   Bookmark,
   Page,
+  FederatedServer,
 } from "#schema";
 import { getSetting } from "#methods/settings/cache.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
@@ -98,6 +99,20 @@ function shapeCard(refType, doc, note, { domain, protocol, restricted }) {
         featuredImage: resolveImg(doc.image, domain, protocol, restricted),
         url: doc.url || null,
       };
+    case "Server":
+      // Resolved from the FederatedServer cache; keyed by domain, always public.
+      return {
+        id: `@${doc.domain}`,
+        refType: "Server",
+        note: note || null,
+        domain: doc.domain,
+        name: doc.name || doc.domain,
+        description: doc.description || null,
+        icon: doc.icon || null, // remote absolute URL
+        image: doc.image || null,
+        userCount: doc.userCount ?? null,
+        url: doc.url || `https://${doc.domain}`,
+      };
     default:
       return null;
   }
@@ -163,6 +178,22 @@ router.get(
         })
       );
 
+      // Resolve Server refs (@domain) from the FederatedServer cache, keyed by
+      // the "@domain" ref so the assembly loop finds them the same way.
+      const serverRefs = recs.filter((r) => r.refType === "Server").map((r) => r.ref);
+      if (serverRefs.length) {
+        const domains = serverRefs.map((r) => r.replace(/^@/, "").toLowerCase());
+        const servers = await FederatedServer.find({
+          domain: { $in: domains },
+          status: { $nin: ["suspended", "blocked"] },
+        }).lean();
+        const byDomain = new Map(servers.map((s) => [s.domain.toLowerCase(), s]));
+        for (const ref of serverRefs) {
+          const s = byDomain.get(ref.replace(/^@/, "").toLowerCase());
+          if (s) resolved.set(ref, s);
+        }
+      }
+
       // Assemble each section's visible items.
       const out = [];
       for (const s of visibleSections) {
@@ -171,6 +202,12 @@ router.get(
           if (r.section !== s.id) continue;
           const doc = resolved.get(r.ref);
           if (!doc) continue; // deleted or never resolvable
+          if (r.refType === "Server") {
+            // Servers are public discovery items — no `to`-tier gate.
+            const card = shapeCard("Server", doc, r.note, { domain, protocol, restricted: false });
+            if (card) items.push(card);
+            continue;
+          }
           const tier = tierOf(doc.to, domain);
           if (!visibleToViewer(tier, isLocal)) continue; // narrowed since curated
           const card = shapeCard(r.refType, doc, r.note, {
@@ -186,6 +223,9 @@ router.get(
           name: s.name,
           slug: s.slug,
           summary: s.summary || null,
+          contentType: s.contentType || null,
+          source: s.source || "hybrid",
+          targetCount: s.targetCount ?? null,
           order: s.order,
           items,
         });

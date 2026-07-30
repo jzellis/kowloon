@@ -42,6 +42,22 @@ const RecommendationSectionSchema = new Schema(
     slug: { type: String, default: undefined },
     summary: { type: String, default: undefined }, // optional shelf blurb
 
+    // The row's content type — one row per type (Media/Posts/Circles/Groups/
+    // Servers). Drives the card layout on the client and the heuristic query.
+    contentType: {
+      type: String,
+      enum: ["media", "posts", "circles", "groups", "servers"],
+      index: true,
+    },
+    // Where the row's items come from: curated picks only, the heuristic query
+    // only, or curated-first with heuristic backfilling to targetCount.
+    source: {
+      type: String,
+      enum: ["curated", "heuristic", "hybrid"],
+      default: "hybrid",
+    },
+    targetCount: { type: Number, default: 12 }, // fill goal for heuristic/hybrid
+
     order: { type: Number, default: 0 }, // shelf ordering on Discover
     active: { type: Boolean, default: true }, // hide without deleting
 

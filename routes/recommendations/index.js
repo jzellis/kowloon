@@ -52,18 +52,24 @@ function resolveImg(img, domain, protocol, restricted) {
 function shapeCard(refType, doc, note, { domain, protocol, restricted }) {
   const base = { id: doc.id, refType, to: doc.to, note: note || null };
   switch (refType) {
-    case "Post":
+    case "Post": {
+      // Media posts keep their images in `attachments` (File IDs), not `image`;
+      // expose a best-effort thumbnail for the media row (featured, else first
+      // attachment).
+      const firstAtt = Array.isArray(doc.attachments) ? doc.attachments[0] : null;
       return {
         ...base,
         type: doc.type,
         title: doc.title || null,
         summary: doc.summary || null,
         featuredImage: resolveImg(doc.image, domain, protocol, restricted),
+        mediaImage: resolveImg(doc.image || firstAtt, domain, protocol, restricted),
         actor: doc.actor
           ? { id: doc.actorId, name: doc.actor.name, icon: doc.actor.icon }
           : { id: doc.actorId },
         url: doc.url || null,
       };
+    }
     case "Circle":
       return {
         ...base,

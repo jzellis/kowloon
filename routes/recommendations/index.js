@@ -63,6 +63,9 @@ function shapeCard(refType, doc, note, { domain, protocol, restricted }) {
         type: doc.type,
         title: doc.title || null,
         summary: doc.summary || null,
+        // Plain-text body preview so Note cards (which have no title) still show
+        // content. Same field the feed card falls back to.
+        preview: doc.textPreview || null,
         featuredImage: resolveImg(doc.image, domain, protocol, restricted),
         mediaImage: resolveImg(doc.image || firstAtt, domain, protocol, restricted),
         actor: doc.actor

@@ -25,6 +25,7 @@ import { getSetting } from "#methods/settings/cache.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 import { buildFileUrl } from "#methods/files/signedUrl.js";
+import getHeuristicPicks from "#methods/discover/heuristic.js";
 
 const router = express.Router({ mergeParams: true });
 
@@ -204,6 +205,7 @@ router.get(
       const out = [];
       for (const s of visibleSections) {
         const items = [];
+        const curatedRefs = new Set();
         for (const r of recs) {
           if (r.section !== s.id) continue;
           const doc = resolved.get(r.ref);
@@ -211,7 +213,7 @@ router.get(
           if (r.refType === "Server") {
             // Servers are public discovery items — no `to`-tier gate.
             const card = shapeCard("Server", doc, r.note, { domain, protocol, restricted: false });
-            if (card) items.push(card);
+            if (card) { items.push(card); curatedRefs.add(r.ref); }
             continue;
           }
           const tier = tierOf(doc.to, domain);
@@ -221,8 +223,31 @@ router.get(
             protocol,
             restricted: tier !== "public",
           });
-          if (card) items.push(card);
+          if (card) { items.push(card); curatedRefs.add(r.ref); }
         }
+
+        // Heuristic backfill for hybrid/heuristic rows. Curated picks come first
+        // and bypass the completeness boost (decision 4); the heuristic fills the
+        // remainder up to targetCount, excluding anything already curated.
+        if ((s.source === "hybrid" || s.source === "heuristic") && s.contentType) {
+          const need = (s.targetCount || 12) - items.length;
+          if (need > 0) {
+            const picks = await getHeuristicPicks({
+              contentType: s.contentType,
+              isLocal,
+              localDomain: domain,
+              excludeRefs: curatedRefs,
+              limit: need,
+            });
+            for (const p of picks) {
+              const restricted =
+                p.refType === "Server" ? false : tierOf(p.doc.to, domain) !== "public";
+              const card = shapeCard(p.refType, p.doc, null, { domain, protocol, restricted });
+              if (card) items.push(card);
+            }
+          }
+        }
+
         if (items.length === 0) continue; // hide empty shelves
         out.push({
           id: s.id,

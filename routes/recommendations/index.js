@@ -21,6 +21,7 @@ import {
   Page,
   FederatedServer,
   Settings,
+  File,
 } from "#schema";
 import { getSetting } from "#methods/settings/cache.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
@@ -69,6 +70,9 @@ function shapeCard(refType, doc, note, { domain, protocol, restricted }) {
         preview: doc.textPreview || null,
         featuredImage: resolveImg(doc.image, domain, protocol, restricted),
         mediaImage: resolveImg(doc.image || firstAtt, domain, protocol, restricted),
+        // Raw first-attachment id (only when there's no featured image) so the
+        // media enrichment pass can resolve its kind (image/video/audio).
+        _firstAtt: doc.image ? null : firstAtt || null,
         actor: doc.actor
           ? { id: doc.actorId, name: doc.actor.name, icon: doc.actor.icon }
           : { id: doc.actorId },
@@ -273,6 +277,37 @@ router.get(
           items,
         });
       }
+
+      // Enrich media-row items with their first attachment's kind (image/video/
+      // audio) + playable URL, so the client can render a video/audio player
+      // instead of a broken image tile.
+      const attIds = [];
+      for (const s of out) {
+        if (s.contentType !== "media") continue;
+        for (const it of s.items) if (it._firstAtt) attIds.push(it._firstAtt);
+      }
+      if (attIds.length) {
+        const files = await File.find({ id: { $in: attIds } })
+          .select("id mediaType name")
+          .lean();
+        const fmap = new Map(files.map((f) => [f.id, f]));
+        for (const s of out) {
+          if (s.contentType !== "media") continue;
+          for (const it of s.items) {
+            const mt = (it._firstAtt && fmap.get(it._firstAtt)?.mediaType) || "";
+            it.mediaKind = mt.startsWith("video/") ? "video" : mt.startsWith("audio/") ? "audio" : "image";
+            it.mediaName = fmap.get(it._firstAtt)?.name || it.title || null;
+            // For video/audio, mediaImage is the playable file URL — expose it as
+            // mediaUrl and clear mediaImage so the client draws a player tile.
+            if (it.mediaKind !== "image") {
+              it.mediaUrl = it.mediaImage;
+              it.mediaImage = null;
+            }
+          }
+        }
+      }
+      // Drop the internal helper before serializing.
+      for (const s of out) for (const it of s.items) delete it._firstAtt;
 
       set("@context", "https://www.w3.org/ns/activitystreams");
       set("type", "Collection");

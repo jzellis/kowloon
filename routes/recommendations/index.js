@@ -20,6 +20,7 @@ import {
   Bookmark,
   Page,
   FederatedServer,
+  Settings,
 } from "#schema";
 import { getSetting } from "#methods/settings/cache.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
@@ -137,6 +138,13 @@ router.get(
       const domain = getSetting("domain");
       const protocol = req.headers["x-forwarded-proto"] || "https";
 
+      // The blurred/darkened Discover background so a single fetch gives clients
+      // both the shelves and the backdrop (used by the remote-server Discover).
+      const bgDoc = await Settings.findOne({ name: "discoverBackground", deletedAt: null })
+        .select("value")
+        .lean();
+      const background = bgDoc?.value || null;
+
       let isLocal = false;
       if (user?.id) {
         const parsed = kowloonId(user.id);
@@ -157,6 +165,7 @@ router.get(
       if (visibleSections.length === 0) {
         set("@context", "https://www.w3.org/ns/activitystreams");
         set("type", "Collection");
+        set("background", background);
         set("sections", []);
         return;
       }
@@ -267,6 +276,7 @@ router.get(
 
       set("@context", "https://www.w3.org/ns/activitystreams");
       set("type", "Collection");
+      set("background", background);
       set("sections", out);
     },
     { allowUnauth: true }

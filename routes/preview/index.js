@@ -40,6 +40,62 @@ const PREVIEW_HEADERS = {
 // would break multi-hop shortener chains, so we don't use it.
 const PREVIEW_TIMEOUT_MS = 9000;
 
+// Many bot-protection services (PerimeterX/px-captcha, Cloudflare, DataDome,
+// Akamai) serve a block/captcha interstitial with a 200 status. Its OG title
+// then becomes the "preview" ("Access to this page has been denied", site
+// "px-captcha", etc.). Detect those so we never surface them as the link title.
+const BLOCK_RE =
+  /access (to this page )?(has been )?denied|access denied|attention required|just a moment|are you (a )?human|are you a robot|verify (that )?you.?re (a )?human|captcha|bot (detection|verification|check|challenge)|px-captcha|enable javascript|checking your browser|ddos protection|cf-browser-verification|request unsuccessful|forbidden/i;
+
+function looksBlocked(preview) {
+  if (!preview) return true;
+  const hay = [preview.title, preview.siteName, preview.description].filter(Boolean).join(" ");
+  if (BLOCK_RE.test(hay)) return true;
+  // Nothing usable at all is as good as blocked.
+  return !preview.title && !preview.description && !(preview.images && preview.images.length);
+}
+
+// A readable title from the URL when there's no usable preview: humanize the
+// last path segment, else the host.
+function fallbackTitle(url) {
+  try {
+    const u = new URL(url);
+    const seg = u.pathname.split("/").filter(Boolean).pop() || "";
+    const slug = decodeURIComponent(seg).replace(/\.\w+$/, "").replace(/[-_]+/g, " ").trim();
+    if (slug) return slug.replace(/\b\w/g, (c) => c.toUpperCase());
+    return u.hostname.replace(/^www\./i, "");
+  } catch {
+    return null;
+  }
+}
+
+// Bot-protection commonly whitelists known social crawlers; retry as one when
+// the browser-UA fetch is blocked.
+const FB_HEADERS = {
+  "User-Agent": "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)",
+  Accept: PREVIEW_HEADERS.Accept,
+  "Accept-Language": PREVIEW_HEADERS["Accept-Language"],
+};
+
+async function fetchPreview(url) {
+  const opts = { followRedirects: "follow", timeout: PREVIEW_TIMEOUT_MS };
+  let preview = null;
+  try {
+    preview = await getLinkPreview(url, { ...opts, headers: PREVIEW_HEADERS });
+  } catch {
+    preview = null;
+  }
+  if (looksBlocked(preview)) {
+    try {
+      const alt = await getLinkPreview(url, { ...opts, headers: FB_HEADERS });
+      if (!looksBlocked(alt)) return alt;
+    } catch {
+      /* keep the original */
+    }
+  }
+  return preview;
+}
+
 // Recognize a Kowloon object URL by the prefixed, server-qualified ID in its
 // path (works for any server). Returns { kowloonId, kowloonType, domain } or
 // null. Pages use slugs (no ID in the path), so they're not matched here.
@@ -188,26 +244,23 @@ router.get(
         return;
       }
 
-      try {
-        const preview = await getLinkPreview(url, {
-          followRedirects: "follow",
-          timeout: PREVIEW_TIMEOUT_MS,
-          headers: PREVIEW_HEADERS,
-        });
-        set("url", preview.url);
-        set("title", preview.title ?? null);
-        set("summary", preview.description ?? null);
-        set("contentType", preview.contentType ?? null);
-        set("image", preview.images?.[0] ?? null);
-        set("favicon", preview.favicons?.[0] ?? null);
-      } catch {
-        // Return an empty preview rather than an error — caller decides what to do
+      const preview = await fetchPreview(url);
+      if (looksBlocked(preview)) {
+        // Bot-blocked or empty: return a clean URL-derived title instead of the
+        // captcha/denial page's title, and no bogus image/description.
         set("url", url);
-        set("title", null);
+        set("title", fallbackTitle(url));
         set("summary", null);
         set("contentType", null);
         set("image", null);
         set("favicon", null);
+      } else {
+        set("url", preview.url ?? url);
+        set("title", preview.title ?? fallbackTitle(url));
+        set("summary", preview.description ?? null);
+        set("contentType", preview.contentType ?? null);
+        set("image", preview.images?.[0] ?? null);
+        set("favicon", preview.favicons?.[0] ?? null);
       }
 
       set("queryTime", Date.now() - qStart);

@@ -1,0 +1,63 @@
+name: 🐛 Bug report
+description: Something's broken or behaving wrong in Kowloon
+title: "[Bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping make Kowloon better — specifics make bugs far easier to fix.
+        Not sure it's actually a bug? Ask in [Discussions](https://github.com/orgs/kowloon-network/discussions) first and we'll sort it out together.
+  - type: dropdown
+    id: area
+    attributes:
+      label: Which part of Kowloon?
+      description: Pick the closest — we'll move it if it belongs somewhere else.
+      options:
+        - Web app (kwln.social / kwln.city in a browser)
+        - Mobile app (Android / iOS)
+        - Server / federation
+        - Client library
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, and what went wrong?
+      placeholder: I tapped X, and instead of Y, Z happened.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: If you can, list the steps so we can see it too.
+      placeholder: |
+        1. Go to…
+        2. Tap…
+        3. See…
+    validations:
+      required: false
+  - type: textarea
+    id: screenshots
+    attributes:
+      label: Screenshots
+      description: Drag images in here — a screenshot is worth a thousand bug reports.
+    validations:
+      required: false
+  - type: input
+    id: env
+    attributes:
+      label: Where were you?
+      description: Which server, and your device/browser or app version if you know it.
+      placeholder: kwln.social · iPhone 14 · app build 1.2.3 (or Chrome on Android)
+    validations:
+      required: false

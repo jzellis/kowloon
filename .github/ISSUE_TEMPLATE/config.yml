@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Questions & discussion
+    url: https://github.com/orgs/kowloon-network/discussions
+    about: Not sure it's a bug, or just want to talk it through? Start here.
+  - name: 📋 Code of Conduct
+    url: https://github.com/kowloon-network/kowloon/blob/main/CODE_OF_CONDUCT.md
+    about: How we treat each other around here.

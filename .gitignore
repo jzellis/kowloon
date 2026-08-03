@@ -170,4 +170,6 @@ instances/instances.json
 # Ad-hoc test and scratch scripts
 test-*.js
 scratch.js
+_*.mjs
+scripts/_*.mjs
 scripts/fed-test/state.json

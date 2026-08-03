@@ -27,13 +27,13 @@ jobs:
       - name: Check out frontend
         uses: actions/checkout@v4
         with:
-          repository: jzellis/kowloon-frontend
+          repository: ${{ github.repository_owner }}/kowloon-frontend
           path: kowloon-frontend
 
       - name: Check out client library
         uses: actions/checkout@v4
         with:
-          repository: jzellis/kowloon-client
+          repository: ${{ github.repository_owner }}/kowloon-client
           path: kowloon-client
 
       - name: Set up Docker Buildx

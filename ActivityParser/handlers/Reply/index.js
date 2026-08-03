@@ -53,7 +53,9 @@ export function validate(activity) {
  * Replies federate to the domain of the parent object if it's remote.
  */
 export async function getFederationTargets(activity, created) {
-  const targetId = activity.to; // parent post/page/etc ID
+  // Route by the ROOT post (created.target), which holds the canonical thread —
+  // for a second-level reply that's the post, not the reply that was answered.
+  const targetId = created?.target || activity.to;
   if (!targetId) return { shouldFederate: false };
 
   const parsed = kowloonId(targetId);
@@ -83,20 +85,42 @@ export default async function Reply(activity, ctx = {}) {
     }
 
     const actorId = activity.actorId;
-    const targetId = activity.to;
+    const repliedToId = activity.to; // what the user replied to — a post OR a reply
 
-    // 1b. Content-based dedup — same actor sending the same content to the same
-    // target within the window is treated as a duplicate. Returns the existing
-    // reply rather than creating a new one. Prevents spam-clicking the submit
-    // button (client-side network-retry idempotency is handled separately via
-    // `dedupeKey` in methods/activities/create.js).
+    // 1b. Resolve two-level threading (Facebook-style: replies to a post, and
+    // replies to those, but no deeper).
+    //   target = the ROOT post — so GET /posts/:id/replies returns the whole
+    //            thread in one query, and federation routes to the post's host.
+    //   parent = the immediate parent, but never deeper than a first-level reply:
+    //            a reply to a second-level reply flattens onto its level-1
+    //            ancestor (so the tree can never exceed depth 2).
+    let rootId = repliedToId; // default: replying to a top-level object (a Post)
+    let parentId = repliedToId; // default: first-level reply (parent === root)
+    let repliedToAuthorId;
+
+    const parentReply = await ReplyModel.findOne({ id: repliedToId })
+      .select("actorId target parent")
+      .lean();
+    if (parentReply) {
+      repliedToAuthorId = parentReply.actorId;
+      rootId = parentReply.target; // the post the whole thread hangs off
+      // If the parent is itself a second-level reply (its parent !== its target),
+      // attach the new reply to the level-1 ancestor instead — depth cap at 2.
+      const parentIsTopLevel = parentReply.parent === parentReply.target;
+      parentId = parentIsTopLevel ? repliedToId : parentReply.parent;
+    }
+
+    // 1c. Content-based dedup — same actor, same content, same immediate parent
+    // within the window is a duplicate. Returns the existing reply rather than
+    // creating a new one. Prevents spam-clicking the submit button (network-retry
+    // idempotency is handled separately via `dedupeKey`).
     const submittedContent =
       activity.object?.source?.content ?? activity.object?.content;
     if (typeof submittedContent === "string" && submittedContent.trim()) {
       const since = new Date(Date.now() - CONTENT_DEDUPE_WINDOW_MS);
       const existing = await ReplyModel.findOne({
         actorId,
-        target: targetId,
+        parent: parentId,
         "source.content": submittedContent,
         createdAt: { $gte: since },
       }).lean();
@@ -115,7 +139,8 @@ export default async function Reply(activity, ctx = {}) {
     const replyData = {
       actorId,
       actor: activity.actor || {},
-      target: targetId,
+      target: rootId,
+      parent: parentId,
       to: "",
       canReply: "",
       canReact: "",
@@ -144,8 +169,8 @@ export default async function Reply(activity, ctx = {}) {
     // Track reply count on the author's User record
     await User.updateOne({ id: actorId }, { $inc: { replyCount: 1 } });
 
-    // 4. Bump replyCount on the parent object and its FeedItems entry
-    // Use raw collection driver to bypass all Mongoose middleware/hooks
+    // 4. Bump replyCount on the ROOT post (total thread size) + its FeedItems.
+    // Use raw collection driver to bypass all Mongoose middleware/hooks.
     const collections = [
       Post?.collection,
       Page?.collection,
@@ -156,40 +181,48 @@ export default async function Reply(activity, ctx = {}) {
     for (const col of collections) {
       try {
         if (!col) continue;
-        const r = await col.updateOne({ id: targetId }, { $inc: { replyCount: 1 } });
+        const r = await col.updateOne({ id: rootId }, { $inc: { replyCount: 1 } });
         if (r?.modifiedCount > 0) break;
       } catch (e) {
         // ignore model mismatches
       }
     }
     // Keep FeedItems in sync so getPost returns the updated count immediately
-    await FeedItems.updateOne({ id: targetId }, { $inc: { "object.replyCount": 1 } });
-
-    // 5. Look up the parent object once for BOTH notification and federation.
-    // Reply included so threaded replies (Reply targeting Reply) resolve their
-    // author and grandparent for fan-out.
-    let parentAuthorId;
-    let grandparentId;
-    for (const Model of [Post, Reply, Page, Bookmark, Group]) {
+    await FeedItems.updateOne({ id: rootId }, { $inc: { "object.replyCount": 1 } });
+    // For a second-level reply, also bump the first-level parent reply's own
+    // replyCount (drives its "N replies" affordance).
+    if (parentId !== rootId) {
       try {
-        if (!Model) continue;
-        const parent = await Model.findOne({ id: targetId })
-          .select("actorId target")
-          .lean();
-        if (parent?.actorId) {
-          parentAuthorId = parent.actorId;
-          grandparentId = parent.target;
-          break;
-        }
+        await ReplyModel.collection.updateOne(
+          { id: parentId },
+          { $inc: { replyCount: 1 } }
+        );
       } catch (e) {
-        // Continue to next model
+        // ignore
       }
     }
 
-    // Create notification for the parent object's author
+    // 5. Notify the author of the thing that was actually replied to (the
+    // immediate parent — post or first-level reply), routing to the root post.
+    let notifyAuthorId = repliedToAuthorId;
+    if (!notifyAuthorId) {
+      for (const Model of [Post, Page, Bookmark, Group]) {
+        try {
+          if (!Model) continue;
+          const p = await Model.findOne({ id: repliedToId }).select("actorId").lean();
+          if (p?.actorId) {
+            notifyAuthorId = p.actorId;
+            break;
+          }
+        } catch (e) {
+          // Continue to next model
+        }
+      }
+    }
+
     try {
-      if (parentAuthorId && parentAuthorId !== actorId) {
-        const recipient = await User.findOne({ id: parentAuthorId })
+      if (notifyAuthorId && notifyAuthorId !== actorId) {
+        const recipient = await User.findOne({ id: notifyAuthorId })
           .select("prefs")
           .lean();
         const wantsNotification =
@@ -198,13 +231,13 @@ export default async function Reply(activity, ctx = {}) {
         if (wantsNotification) {
           await createNotification({
             type: "reply",
-            recipientId: parentAuthorId,
+            recipientId: notifyAuthorId,
             actorId,
-            objectId: targetId,
+            objectId: rootId,
             objectType: "Post",
             activityId: activity.id,
             activityType: "Reply",
-            groupKey: `reply:${targetId}`,
+            groupKey: `reply:${rootId}`,
           });
         }
       }
@@ -223,11 +256,10 @@ export default async function Reply(activity, ctx = {}) {
       objectType: "Reply",
     }).catch(() => {});
 
-    // 6. Federation — parent host (canonical aggregate), parent author's home
-    // (notification side-effect), and (for threaded replies) the grandparent
-    // host (canonical view of the chain).
+    // 6. Federation — the root post's host holds the canonical aggregate; also
+    // the replied-to author's home for the notification side-effect.
     const createdObj = created.toObject ? created.toObject() : created;
-    const federation = getMultiFederationTargets(targetId, parentAuthorId, grandparentId);
+    const federation = getMultiFederationTargets(rootId, notifyAuthorId);
 
     return {
       activity,

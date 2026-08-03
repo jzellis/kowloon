@@ -52,6 +52,7 @@ const ReplySchema = new Schema(
 
     reactCount: { type: Number, default: 0 }, // The number of likes to this post
     reactPreview: { type: String, default: null }, // Most-used emoji react
+    replyCount: { type: Number, default: 0 }, // Second-level replies to this reply (threading is capped at 2 levels)
     shareCount: { type: Number, default: 0 }, // The number of shares of this post
     deletedAt: { type: Date, default: null },
     deletedBy: { type: String, default: null },

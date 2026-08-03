@@ -14,12 +14,25 @@ import { fetchRemoteServerProfile } from "#methods/federation/index.js";
 
 const router = express.Router({ mergeParams: true });
 
+// A browser navigating to /servers or /servers/:domain wants the SPA (the web
+// browse page), not this JSON API. Hand those off to the SPA catch-all so deep
+// links / refreshes render, mirroring the guard on posts/pages/circles/users.
+// ActivityPub (application/activity+json) and programmatic (*/*) callers still
+// get JSON. botDetect.js handles crawlers before this.
+function wantsHTML(req) {
+  const accept = req.headers.accept || "";
+  if (accept.includes("application/activity+json")) return false;
+  if (accept.includes("application/ld+json")) return false;
+  return accept.includes("text/html");
+}
+
 // ── GET /servers ──────────────────────────────────────────────────────────────
 // Paginated list of servers this server knows about.
 // Excludes suspended servers by default.
 
 router.get(
   "/",
+  (req, res, next) => (wantsHTML(req) ? next("router") : next()),
   route(async ({ query, user, set, setStatus }) => {
     if (!user?.id) {
       setStatus(401);
@@ -66,6 +79,7 @@ router.get(
 
 router.get(
   "/:domain",
+  (req, res, next) => (wantsHTML(req) ? next("router") : next()),
   route(async ({ params, query, user, set, setStatus }) => {
     if (!user?.id) {
       setStatus(401);

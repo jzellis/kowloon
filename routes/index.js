@@ -51,6 +51,38 @@ router.use((req, _res, next) => {
   next();
 });
 
+// --- SPA deep-link guard -----------------------------------------------------
+// A browser navigating directly to — or hard-refreshing — a frontend route whose
+// path is ALSO an API endpoint (/circles, /groups, /profile, /users/:id/posts,
+// /admin/*, …) must get the SPA shell, not raw API JSON. These path segments are
+// shared between the SPA (browser) and the API (programmatic); we split on the
+// Accept header, exactly as the per-route wantsHTML guards on posts/users/etc do,
+// but centralized so EVERY SPA route (incl. sub-routes) is deep-linkable.
+//
+// Only browser navigations (Accept: text/html) under a known SPA segment defer to
+// the SPA fallback (app.get('*') in index.js) via next('router'). ActivityPub and
+// programmatic callers (application/activity+json, application/ld+json, or */*
+// without text/html) fall through to the API unchanged, and ?rss is never
+// hijacked so feeds keep working. botDetect.js still handles crawlers upstream.
+const SPA_SEGMENTS = new Set([
+  "circles", "groups", "users", "posts", "pages",
+  "profile", "search", "notifications", "servers", "discover", "admin",
+]);
+function navWantsHTML(req) {
+  const accept = req.headers.accept || "";
+  if (accept.includes("application/activity+json")) return false;
+  if (accept.includes("application/ld+json")) return false;
+  return accept.includes("text/html");
+}
+router.use((req, _res, next) => {
+  if (req.method !== "GET") return next();
+  if ("rss" in req.query) return next();
+  if (!navWantsHTML(req)) return next();
+  const seg = req.path.split("/")[1] || "";
+  if (SPA_SEGMENTS.has(seg)) return next("router");
+  next();
+});
+
 // ---------------------------------------------------------------------------
 // dynamic route mounting
 function isFile(p) {

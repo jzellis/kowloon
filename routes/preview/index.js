@@ -77,6 +77,50 @@ const FB_HEADERS = {
   "Accept-Language": PREVIEW_HEADERS["Accept-Language"],
 };
 
+// oEmbed enrichment for rich-media hosts. Sites like YouTube serve bot-generic
+// OpenGraph data (title "YouTube", no thumbnail), so link-preview-js can't get
+// the real per-video title/thumbnail. Their oEmbed endpoints can — no API key.
+// Add a provider by dropping an entry here (mirrors the render-side embed
+// registry in @kowloon/client, which the server image can't import).
+const OEMBED_PROVIDERS = [
+  {
+    name: "youtube",
+    test: (u) => /(^|\.)(youtube\.com|youtu\.be|youtube-nocookie\.com)$/.test(
+      u.hostname.replace(/^www\./, "")
+    ),
+    endpoint: (url) =>
+      `https://www.youtube.com/oembed?url=${encodeURIComponent(url)}&format=json`,
+  },
+];
+
+async function fetchOEmbed(rawUrl) {
+  let u;
+  try {
+    u = new URL(rawUrl);
+  } catch {
+    return null;
+  }
+  const provider = OEMBED_PROVIDERS.find((p) => p.test(u));
+  if (!provider) return null;
+  try {
+    const res = await fetch(provider.endpoint(rawUrl), {
+      signal: AbortSignal.timeout(6000),
+      headers: { Accept: "application/json" },
+    });
+    if (!res.ok) return null;
+    const j = await res.json();
+    if (!j?.title && !j?.thumbnail_url) return null;
+    return {
+      provider: provider.name,
+      title: j.title || null,
+      thumbnail: j.thumbnail_url || null,
+      author: j.author_name || null,
+    };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchPreview(url) {
   const opts = { followRedirects: "follow", timeout: PREVIEW_TIMEOUT_MS };
   let preview = null;
@@ -241,6 +285,22 @@ router.get(
       if (!await isSafeUrl(url)) {
         setStatus(400);
         set("error", "URL is not allowed");
+        return;
+      }
+
+      // Rich-media hosts (YouTube, …) serve bot-generic OG data; their oEmbed
+      // endpoint has the real title + thumbnail. Try it first; fall through to
+      // the normal scrape if it's not a known provider or the call fails.
+      const oe = await fetchOEmbed(url);
+      if (oe && (oe.title || oe.thumbnail)) {
+        set("url", url);
+        set("title", oe.title || fallbackTitle(url));
+        set("summary", oe.author ? `by ${oe.author}` : null);
+        set("image", oe.thumbnail || null);
+        set("favicon", null);
+        set("contentType", "text/html");
+        set("provider", oe.provider);
+        set("queryTime", Date.now() - qStart);
         return;
       }
 

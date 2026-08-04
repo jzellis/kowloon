@@ -38,6 +38,22 @@ export default route(async ({ req, params, query, user, set }) => {
     Circle.countDocuments(filter),
   ]);
 
+  // Owner-only: annotate which of these circles already contain a given member,
+  // so the client's "Add to circle" control can pre-mark existing membership.
+  // Cheap — a single query over the members.id index.
+  if (isOwner && query.contains) {
+    const memberId = decodeURIComponent(query.contains);
+    const withMember = await Circle.find({
+      actorId: userId,
+      "members.id": memberId,
+      deletedAt: null,
+    })
+      .select("id")
+      .lean();
+    const has = new Set(withMember.map((c) => c.id));
+    for (const d of docs) d.contains = has.has(d.id);
+  }
+
   const domain = getSetting("domain");
   const protocol = req.headers["x-forwarded-proto"] || "https";
   const base = `${protocol}://${domain}/users/${encodeURIComponent(userId)}/circles`;

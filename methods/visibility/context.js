@@ -27,8 +27,12 @@ export async function getViewerContext(viewerId) {
     .lean();
   const memberCircleIds = memberCircles.map((c) => c.id);
 
+  // A Group's members-circle id lives at `circles.members` (there is no
+  // top-level `members` field) — querying `members` matched nothing, so
+  // groupIds was always empty and group-addressed posts fetched by id 403'd
+  // even for members.
   const groups = memberCircleIds.length
-    ? await Group.find({ members: { $in: memberCircleIds }, deletedAt: null })
+    ? await Group.find({ "circles.members": { $in: memberCircleIds }, deletedAt: null })
         .select("id")
         .lean()
     : [];

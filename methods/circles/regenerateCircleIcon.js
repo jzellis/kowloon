@@ -156,7 +156,12 @@ export default async function regenerateCircleIcon(circleId) {
     const file = new File({
       actorId: circle.actorId,
       to: "@public",
-      parentObject: circle.id,
+      // Deliberately NO parentObject: a circle icon is public branding (a
+      // composite of already-public member avatars, reachable only via the
+      // circle object itself). Inheriting the circle's `to` breaks the icon for
+      // self-addressed/private circles like Following — the file serves 401 and
+      // the client's plain <img> URL can't load it. Keep the icon standalone
+      // @public regardless of the circle's audience.
       originalFileName: "circle-icon.png",
       name: `${circle.name || "Circle"} icon`,
       type: "Image",

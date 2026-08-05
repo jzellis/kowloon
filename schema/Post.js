@@ -47,14 +47,22 @@ export function generateSummary(source) {
     }
   }
 
-  // Sentence-level truncation to ~1000 chars
-  const fullText = paragraphs.join(' ');
-  const sentences = fullText.split(/(?<=[.!?])\s+/);
-  let result = '';
-  for (const sentence of sentences) {
-    if (result.length + sentence.length > 1000) break;
-    result += (result ? ' ' : '') + sentence;
+  // Sentence-level truncation to ~1000 chars. Slice the ORIGINAL text at a
+  // sentence boundary rather than joining paragraphs with spaces — flattening
+  // to one line turns block markers into inline text ("> " / "- "), which marked
+  // then escapes and mangles (a multi-paragraph blockquote collapsed into one
+  // block with literal ">" between paragraphs).
+  const full = paragraphs.join('\n\n');
+  const boundary = /[.!?](?=\s|$)/g;
+  let cut = 0;
+  let m;
+  while ((m = boundary.exec(full)) !== null) {
+    const end = m.index + 1;
+    if (end > 1000) break;
+    cut = end;
   }
+  if (cut === 0) cut = Math.min(full.length, 1000); // no sentence break in range
+  const result = full.slice(0, cut).trim();
 
   return result ? safeMarkdown(result) : undefined;
 }

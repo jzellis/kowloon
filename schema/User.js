@@ -49,6 +49,14 @@ const UserSchemaDef = {
       default: ["Note", "Article", "Media", "Link"],
     },
     defaultCircleView: { type: String, default: "" },
+    // Feed-selector pins — ordered lists of Kowloon IDs (circle:…@domain /
+    // group:…@domain, NOT Mongo _ids) the user pinned to the top of the Circles
+    // and Groups sections. First = topmost. Following is seeded into
+    // pinnedCircles at registration (and backfilled for existing users) so it
+    // pins by default; the user can unpin it like any other. Per-viewer prefs,
+    // not federated.
+    pinnedCircles: { type: [String], default: [] },
+    pinnedGroups: { type: [String], default: [] },
     // Default feed view for the mobile timeline picker:
     // "public" | "server" | a circle ID. Empty = no preference (client falls
     // back to its own default).
@@ -283,6 +291,11 @@ UserSchema.pre("save", async function (next) {
       memberCount: 1,
     });
     this.circles.following = followingCircle.id;
+    // Pin Following to the top of the feed selector's Circles section by default.
+    if (!this.prefs) this.prefs = {};
+    if (!Array.isArray(this.prefs.pinnedCircles) || this.prefs.pinnedCircles.length === 0) {
+      this.prefs.pinnedCircles = [followingCircle.id];
+    }
 
     const groupsCircle = await Circle.create({
       type: "System",

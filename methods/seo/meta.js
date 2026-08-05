@@ -75,6 +75,48 @@ export async function fetchMeta(pathname, req) {
     const description = excerpt(obj.source?.content || obj.body || obj.content || "");
     const image = resolveImageUrl(obj.image, domain, proto) || siteHero || siteIcon;
     const authorName = obj.actor?.name || obj.actor?.preferredUsername || item.actorId;
+    const url = `${base}${pathname}`;
+
+    // Event posts get schema.org Event structured data (start/end/location) so
+    // they're eligible for event rich results; everything else is an Article.
+    let jsonLd;
+    if (item.type === "Event") {
+      const toIso = (d) => {
+        try {
+          const x = new Date(d);
+          return Number.isNaN(x.getTime()) ? null : x.toISOString();
+        } catch {
+          return null;
+        }
+      };
+      const ev = {
+        "@context": "https://schema.org",
+        "@type": "Event",
+        name: title,
+        description,
+        image,
+        organizer: { "@type": "Person", name: authorName },
+        url,
+      };
+      const start = toIso(obj.event?.startDate);
+      const end = toIso(obj.event?.endDate);
+      if (start) ev.startDate = start;
+      if (end) ev.endDate = end;
+      if (obj.location?.name) ev.location = { "@type": "Place", name: obj.location.name };
+      jsonLd = JSON.stringify(ev);
+    } else {
+      jsonLd = JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "Article",
+        headline: title,
+        description,
+        image,
+        author: { "@type": "Person", name: authorName },
+        datePublished: item.publishedAt,
+        url,
+      });
+    }
+
     return {
       ...defaults,
       title: `${title} — ${siteName}`,
@@ -83,16 +125,7 @@ export async function fetchMeta(pathname, req) {
       type: "article",
       kowloonId: item.id,
       kowloonType: "Post",
-      jsonLd: JSON.stringify({
-        "@context": "https://schema.org",
-        "@type": "Article",
-        headline: title,
-        description,
-        image,
-        author: { "@type": "Person", name: authorName },
-        datePublished: item.publishedAt,
-        url: `${base}${pathname}`,
-      }),
+      jsonLd,
     };
   }
 

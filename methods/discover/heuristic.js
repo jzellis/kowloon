@@ -76,7 +76,16 @@ async function buildPool(contentType, isLocal, localDomain) {
       return { ref: doc.id, refType: "Post", doc, score: decayedEngagement(doc, now) * (complete ? BOOST : 1) };
     });
   } else if (contentType === "circles") {
-    const docs = await Circle.find({ type: "Circle", deletedAt: null, ...vis })
+    // Exclude server-owned circles (actorId === the bare server, e.g. the
+    // "KWLN Admins" admin roster and any curated-people circles). Those are
+    // admin-managed / internal and must never be auto-surfaced — they appear in
+    // Discover only when EXPLICITLY curated via a Recommendation.
+    const docs = await Circle.find({
+      type: "Circle",
+      deletedAt: null,
+      actorId: { $ne: `@${localDomain}` },
+      ...vis,
+    })
       .sort({ memberCount: -1 })
       .limit(CANDIDATES)
       .lean();

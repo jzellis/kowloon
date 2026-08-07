@@ -55,8 +55,15 @@ export default route(async ({ req, params, query, user, set }) => {
   const limit = Math.min(Math.max(1, parseInt(query.limit, 10) || 20), 100);
   const skip  = (page - 1) * limit;
 
+  // sort=top ranks by engagement (for the "More Posts" strip on post pages);
+  // default is reverse-chronological.
+  const sortSpec =
+    query.sort === "top"
+      ? { "object.reactCount": -1, publishedAt: -1 }
+      : { publishedAt: -1 };
+
   const [docs, total] = await Promise.all([
-    FeedItems.find(filter).sort({ publishedAt: -1 }).skip(skip).limit(limit).lean(),
+    FeedItems.find(filter).sort(sortSpec).skip(skip).limit(limit).lean(),
     FeedItems.countDocuments(filter),
   ]);
 

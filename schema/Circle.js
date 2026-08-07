@@ -7,7 +7,7 @@ import { signAs, verifyAs } from "#methods/utils/signing.js";
 
 const CircleSchema = new Schema(
   {
-    id: { type: String, key: true },
+    id: { type: String, key: true, unique: true }, // reject duplicate Kowloon ids (#30)
     // Local domain on create; the source domain when hydrated from a remote server.
     originDomain: { type: String, default: () => getServerSettings()?.domain },
     type: { type: String, enum: ["Circle", "System"], default: "Circle" },

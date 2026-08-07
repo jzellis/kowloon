@@ -431,7 +431,21 @@ export default async function Create(activity) {
 
     // If object.actorId is missing, many models will tolerate it, but your
     // outbox added a fallback already. We leave it as-is here.
-    let created = await Model.create(activity.object);
+    let created;
+    try {
+      created = await Model.create(activity.object);
+    } catch (err) {
+      // Idempotency backstop (#30): the unique index on `id` rejects a
+      // double-write of the same object. Treat that as "already created" and
+      // return the existing doc rather than surfacing a duplicate-key error.
+      if (err?.code === 11000 && err?.keyValue?.id) {
+        const existing = await Model.findOne({ id: err.keyValue.id });
+        if (existing) created = existing;
+        else throw err;
+      } else {
+        throw err;
+      }
+    }
 
     activity.objectId = created.id;
 

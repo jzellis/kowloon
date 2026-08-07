@@ -10,6 +10,8 @@
 import route from "../utils/route.js";
 import { Circle } from "#schema";
 import { getServerSettings } from "#methods/settings/schemaHelpers.js";
+import { getSetting } from "#methods/settings/cache.js";
+import isServerAdmin from "#methods/auth/isServerAdmin.js";
 
 export default route(async ({ req, params, user, set, setStatus }) => {
   const id = decodeURIComponent(params.id);
@@ -29,6 +31,23 @@ export default route(async ({ req, params, user, set, setStatus }) => {
   const isOwner = user?.id && circle.actorId === user?.id;
   const isMember =
     user?.id && circle.members?.some((m) => m.id === user?.id);
+
+  // Hardening (#31): the server's admin/mod rosters are internal. They are
+  // server-tier (to: @<domain>), so the isServerVisible gate below would leak
+  // their metadata (and members) to any local user who has the id. Gate them to
+  // owner/server-admin only, and 404 (not 403) so their existence isn't
+  // confirmed. Identify precisely via settings — NOT actorId === @<domain>,
+  // which would also hide legit curated-people circles.
+  const adminCircle = getSetting("adminCircle");
+  const modCircle = getSetting("modCircle");
+  if (id === adminCircle || id === modCircle) {
+    const admin = user?.id ? await isServerAdmin(user.id) : false;
+    if (!isOwner && !admin) {
+      setStatus(404);
+      set("error", "Circle not found");
+      return;
+    }
+  }
 
   if (!isPublic) {
     if (!user?.id) {

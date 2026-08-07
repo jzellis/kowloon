@@ -22,12 +22,13 @@ import {
   FederatedServer,
   Settings,
   File,
+  FeedItems,
 } from "#schema";
 import { getSetting } from "#methods/settings/cache.js";
 import isLocalDomain from "#methods/parse/isLocalDomain.js";
 import kowloonId from "#methods/parse/kowloonId.js";
 import { buildFileUrl } from "#methods/files/signedUrl.js";
-import getHeuristicPicks from "#methods/discover/heuristic.js";
+import getHeuristicPicks, { fiToPostDoc } from "#methods/discover/heuristic.js";
 
 const router = express.Router({ mergeParams: true });
 
@@ -194,6 +195,19 @@ router.get(
       const resolved = new Map(); // ref -> raw doc
       await Promise.all(
         [...byType.entries()].map(async ([refType, refs]) => {
+          // Curated Posts resolve from FeedItems (the unified local+remote public
+          // store), not the local Post model — so a curated *remote* post
+          // resolves too, and Discover matches what the feed shows. Same adapter
+          // the heuristic uses.
+          if (refType === "Post") {
+            const fis = await FeedItems.find({
+              id: { $in: [...refs] },
+              objectType: "Post",
+              tombstoned: { $ne: true },
+            }).lean();
+            for (const fi of fis) resolved.set(fi.id, fiToPostDoc(fi, domain));
+            return;
+          }
           const docs = await MODELS[refType]
             .find({ id: { $in: [...refs] }, deletedAt: null })
             .lean();

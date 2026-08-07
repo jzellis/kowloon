@@ -7,7 +7,7 @@
 // Returns raw { ref, refType, doc } so the read route shapes them with its one
 // shapeCard(). Viewer-tier aware; pools cached ~5 min per (type, tier, day).
 
-import { Post, Circle, Group, FederatedServer } from "#schema";
+import { FeedItems, Circle, Group, FederatedServer } from "#schema";
 
 const CACHE = new Map(); // `${contentType}:${isLocal}:${daySeed}` -> { at, pool }
 const TTL_MS = 5 * 60 * 1000;
@@ -19,6 +19,7 @@ const W_REPLY = 2; // a reply is a stronger signal than a react
 const BOOST = 1.5; // completeness multiplier (soft — never a filter)
 const POOL = 40; // shuffle pool size (>= any targetCount)
 const CANDIDATES = 120; // rows scanned before scoring
+const REMOTE_FRAC = 0.35; // cap on cached-remote posts in the pool (stay home-anchored)
 const PLACEHOLDER_RE = /\/images\/(circle|group|user)\.svg/i;
 
 // Daily seed (UTC): stable within a day, rotates at midnight.
@@ -51,6 +52,34 @@ function toFilter(isLocal, localDomain) {
   return isLocal ? { to: { $in: ["@public", `@${localDomain}`] } } : { to: "@public" };
 }
 
+// Coarse-`to` filter for the FeedItems store (enum: public/server/audience).
+// Local viewers get server-tier too; anon/remote get public only.
+function feedVisFilter(isLocal) {
+  return isLocal ? { to: { $in: ["public", "server"] } } : { to: "public" };
+}
+
+// Adapt a FeedItem into the Post-shaped doc shapeCard()/scoring expect. The
+// `object` subdoc already carries the content fields (type/title/textPreview/
+// image/attachments/actor); we layer on the canonical id, a *fine* `to`
+// (FeedItems store the coarse enum, but tierOf/shapeCard want @public/@domain)
+// and the feed sort time as createdAt. Exported so the read route resolves
+// curated Post refs the same way — from the FeedItem, not the local Post record
+// (which lets curated *remote* posts resolve too).
+export function fiToPostDoc(fi, localDomain) {
+  const o = fi.object || {};
+  const to =
+    fi.to === "server" ? `@${localDomain}` : "@public"; // audience never surfaces here
+  return {
+    ...o,
+    id: fi.id,
+    to,
+    type: fi.type || o.type,
+    actorId: fi.actorId || o.actorId,
+    url: fi.url || o.url,
+    createdAt: fi.publishedAt || o.createdAt,
+  };
+}
+
 const hasIcon = (v) => !!v && !PLACEHOLDER_RE.test(v);
 
 function decayedEngagement(doc, now) {
@@ -66,15 +95,31 @@ async function buildPool(contentType, isLocal, localDomain) {
 
   if (contentType === "media" || contentType === "posts") {
     const typeQ = contentType === "media" ? { type: "Media" } : { type: { $ne: "Media" } };
-    const docs = await Post.find({ ...typeQ, deletedAt: null, ...vis })
-      .sort({ reactCount: -1, createdAt: -1 })
+    // Pull from FeedItems — the unified local+remote public store the feed itself
+    // reads — rather than the local Post model, so Discover surfaces cached
+    // remote content too. Each item's `object` is already post-shaped.
+    const items = await FeedItems.find({
+      objectType: "Post",
+      tombstoned: { $ne: true },
+      ...typeQ,
+      ...feedVisFilter(isLocal),
+    })
+      .sort({ "object.reactCount": -1, publishedAt: -1 })
       .limit(CANDIDATES)
       .lean();
-    scored = docs.map((doc) => {
+    scored = items.map((fi) => {
+      const doc = fiToPostDoc(fi, localDomain);
       const hasImg = !!doc.image || (Array.isArray(doc.attachments) && doc.attachments.length > 0);
       const complete = contentType === "media" ? hasImg : !!doc.image;
-      return { ref: doc.id, refType: "Post", doc, score: decayedEngagement(doc, now) * (complete ? BOOST : 1) };
+      const isRemote = !!fi.originDomain && fi.originDomain !== localDomain;
+      return { ref: doc.id, refType: "Post", doc, isRemote, score: decayedEngagement(doc, now) * (complete ? BOOST : 1) };
     });
+    // Soft cap on cached-remote posts so Discover stays mostly home content.
+    scored.sort((a, b) => b.score - a.score);
+    const maxRemote = Math.round(POOL * REMOTE_FRAC);
+    const local = scored.filter((s) => !s.isRemote);
+    const remote = scored.filter((s) => s.isRemote).slice(0, maxRemote);
+    scored = [...local.slice(0, POOL - remote.length), ...remote];
   } else if (contentType === "circles") {
     // Exclude server-owned circles (actorId === the bare server, e.g. the
     // "KWLN Admins" admin roster and any curated-people circles). Those are

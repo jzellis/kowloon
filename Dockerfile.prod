@@ -1,8 +1,10 @@
 # Stage 1: Build the frontend
 FROM node:22-alpine AS frontend-builder
 WORKDIR /workspace
-# Copy client lib so frontend's file:../client reference resolves
+# Copy client + design libs so frontend's file:../client and file:../design
+# references resolve
 COPY kowloon-client/ ./client/
+COPY kowloon-design/ ./design/
 WORKDIR /workspace/frontend
 COPY kowloon-frontend/package*.json ./
 RUN npm install

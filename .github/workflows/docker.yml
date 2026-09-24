@@ -7,7 +7,8 @@ on:
     tags:
       - "v*"
   # Rebuild on demand — e.g. to pick up a change pushed only to the
-  # kowloon-frontend or kowloon-client repo, which don't trigger this workflow.
+  # kowloon-frontend, kowloon-client, or kowloon-design repo, which don't
+  # trigger this workflow.
   workflow_dispatch:
 
 jobs:
@@ -35,6 +36,12 @@ jobs:
         with:
           repository: ${{ github.repository_owner }}/kowloon-client
           path: kowloon-client
+
+      - name: Check out design library
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/kowloon-design
+          path: kowloon-design
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3

@@ -154,7 +154,53 @@ const defaultSettings = (ctx) => {
     },
 
     rules: {
-      value: [],
+      value: [
+        {
+          id: "treat-people-well",
+          text: "**Treat people like people.** Disagree with ideas as hard as you want. Don't dehumanize, insult, or pile on the person holding them.",
+          html: "<p><strong>Treat people like people.</strong> Disagree with ideas as hard as you want. Don't dehumanize, insult, or pile on the person holding them.</p>",
+        },
+        {
+          id: "no-harassment",
+          text: "**No harassment.** No targeted abuse, threats, stalking, or campaigns meant to drive someone off the platform. Repeatedly contacting someone who's asked you to stop is harassment, circle-based or not.",
+          html: "<p><strong>No harassment.</strong> No targeted abuse, threats, stalking, or campaigns meant to drive someone off the platform. Repeatedly contacting someone who's asked you to stop is harassment, circle-based or not.</p>",
+        },
+        {
+          id: "no-discrimination",
+          text: "**No discrimination or hate.** No content that attacks, demeans, or incites hatred against people for who they are — race, ethnicity, nationality, religion, caste, sex, gender identity, sexual orientation, disability, or age.",
+          html: "<p><strong>No discrimination or hate.</strong> No content that attacks, demeans, or incites hatred against people for who they are — race, ethnicity, nationality, religion, caste, sex, gender identity, sexual orientation, disability, or age.</p>",
+        },
+        {
+          id: "no-doxxing",
+          text: "**No doxxing or non-consensual exposure.** Don't share someone's private information, location, or intimate images without their consent, regardless of where you got them.",
+          html: "<p><strong>No doxxing or non-consensual exposure.</strong> Don't share someone's private information, location, or intimate images without their consent, regardless of where you got them.</p>",
+        },
+        {
+          id: "be-honest",
+          text: "**Be honest about who you are.** No impersonating another person or organization to deceive. Parody and satire are fine when they're obviously what they are.",
+          html: "<p><strong>Be honest about who you are.</strong> No impersonating another person or organization to deceive. Parody and satire are fine when they're obviously what they are.</p>",
+        },
+        {
+          id: "no-illegal-content",
+          text: "**No illegal content.** This one isn't a judgment call: no child sexual abuse material, no credible incitement to violence, no content illegal under the law governing this server.",
+          html: "<p><strong>No illegal content.</strong> This one isn't a judgment call: no child sexual abuse material, no credible incitement to violence, no content illegal under the law governing this server.</p>",
+        },
+        {
+          id: "no-manipulation",
+          text: "**Don't manipulate the network.** No spam, no fake accounts, no coordinated inauthentic behavior designed to make something look more popular, more organic, or more credible than it is.",
+          html: "<p><strong>Don't manipulate the network.</strong> No spam, no fake accounts, no coordinated inauthentic behavior designed to make something look more popular, more organic, or more credible than it is.</p>",
+        },
+        {
+          id: "federation-courtesy",
+          text: "**Federation is a courtesy, not a loophole.** Being on a different server from someone doesn't license behavior you'd be removed for locally. Server owners can and will block servers that become a vector for abuse.",
+          html: "<p><strong>Federation is a courtesy, not a loophole.</strong> Being on a different server from someone doesn't license behavior you'd be removed for locally. Server owners can and will block servers that become a vector for abuse.</p>",
+        },
+        {
+          id: "accountable-moderation",
+          text: "**Moderation here is a person, not a policy engine.** This server's admin makes the judgment calls, can explain their reasoning, and can be appealed to. If that relationship breaks down, you're free to take your identity elsewhere — nothing here locks you in.",
+          html: "<p><strong>Moderation here is a person, not a policy engine.</strong> This server's admin makes the judgment calls, can explain their reasoning, and can be appealed to. If that relationship breaks down, you're free to take your identity elsewhere — nothing here locks you in.</p>",
+        },
+      ],
       summary:
         "Community rules new users must acknowledge at registration. Each entry: { id, text (markdown), html }. The html is rendered server-side on save.",
       to: "@public",

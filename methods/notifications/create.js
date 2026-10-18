@@ -180,9 +180,12 @@ function generateSummary(type, actorName, objectType) {
 /**
  * Generate href for notification
  */
-function generateHref(type, objectId, objectType) {
-  const { domain, protocol } = getServerSettings();
-  const baseUrl = `${protocol}://${domain}`;
+export function generateHref(type, objectId, objectType) {
+  const { domain } = getServerSettings();
+  // Kowloon publishes canonical URLs over HTTPS. `getServerSettings()` does
+  // not expose a protocol setting, so destructuring `protocol` here produced
+  // `undefined://...` links in every notification (#72).
+  const baseUrl = `https://${domain}`;
 
   if (!objectId) {
     return baseUrl;

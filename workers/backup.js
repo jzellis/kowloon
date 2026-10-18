@@ -8,6 +8,7 @@ import { BackupJob, Settings } from '#schema'
 import { loadSettings } from '#methods/settings/cache.js'
 import { runBackup, runRestore } from '#methods/backup/index.js'
 import logger from '#methods/utils/logger.js'
+import redactUri from '#methods/utils/redactUri.js'
 
 const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/kowloon'
 const POLL_MS   = parseInt(process.env.BACKUP_POLL_INTERVAL_MS || '10000', 10)
@@ -76,7 +77,7 @@ async function pollOnce() {
 }
 
 async function main() {
-  logger.info('[backup-worker] Starting', { mongoUri: MONGO_URI, pollMs: POLL_MS })
+  logger.info('[backup-worker] Starting', { mongoUri: redactUri(MONGO_URI), pollMs: POLL_MS })
 
   try {
     await mongoose.connect(MONGO_URI)

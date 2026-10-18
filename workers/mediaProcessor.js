@@ -10,6 +10,7 @@ import { getMediaProcessor } from '#methods/media/index.js'
 import { getStorageAdapter } from '#methods/files/index.js'
 import patchAttachmentDimensions from '#methods/files/patchAttachmentDimensions.js'
 import logger from '#methods/utils/logger.js'
+import redactUri from '#methods/utils/redactUri.js'
 
 const MONGO_URI    = process.env.MONGO_URI || 'mongodb://localhost:27017/kowloon'
 const POLL_MS      = parseInt(process.env.MEDIA_POLL_INTERVAL_MS || '5000', 10)
@@ -126,7 +127,7 @@ async function pollOnce() {
 }
 
 async function main() {
-  logger.info('[media-worker] Starting', { mongoUri: MONGO_URI, pollMs: POLL_MS, concurrency: CONCURRENCY })
+  logger.info('[media-worker] Starting', { mongoUri: redactUri(MONGO_URI), pollMs: POLL_MS, concurrency: CONCURRENCY })
 
   try {
     await mongoose.connect(MONGO_URI)

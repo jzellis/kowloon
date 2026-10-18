@@ -5,6 +5,7 @@
 import mongoose from "mongoose";
 import { startOutboxWorker } from "#methods/federation/outboxWorker.js";
 import logger from "#methods/utils/logger.js";
+import redactUri from "#methods/utils/redactUri.js";
 import { Settings } from "#schema";
 import { loadSettings } from "#methods/settings/cache.js";
 
@@ -17,7 +18,7 @@ const POLL_INTERVAL_MS = parseInt(process.env.OUTBOX_PUSH_INTERVAL_MS || "5000",
  */
 async function main() {
   logger.info("Outbox push worker starting", {
-    mongoUri: MONGO_URI,
+    mongoUri: redactUri(MONGO_URI),
     pollIntervalMs: POLL_INTERVAL_MS,
   });
 
